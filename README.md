@@ -1,6 +1,6 @@
 # FAST: Forecasting and time-series in PyTorch
 
-A comprehensive framework for time series analysis, supporting forecasting, imputation, and generation tasks.
+A comprehensive framework for time series analysis, supporting forecasting, imputation, and generation tasks. The key feature is its modular design that enables flexible component composition and analysis, allowing users to easily combine and customize different modules for specific time series applications.
 
 ## Features
 
