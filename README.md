@@ -1,149 +1,166 @@
+# FAST: Forecasting and time-series in PyTorch
 
-# Forecasting and time series in PyTorch (pyFAST)
+A comprehensive framework for time series analysis, supporting forecasting, imputation, and generation tasks.
 
-## (1) Install
+## Features
 
-## (2) Examples
+- Multiple time series architectures (MTS/UTS)
+- Flexible data preprocessing and fusion
+- Cross-dataset training support
+- Comprehensive evaluation metrics
+- Multi-device acceleration (CPU/GPU/MPS)
 
-## (3) License
+## Installation
 
-## (4) Coding style
+```bash
+pip install -r requirements.txt
+```
 
-    The linux coding style.
-    
-    (a) Add variable types on (member) functions.
-    
-    (b) How to do documentation?
-    
-## (5) Potential research topics.
+## Examples
 
-    (a) Generative learning for infectious disease case estimation from coarse-granulary to fine-granulary
+### Basic Usage
 
-        > Given fine-granulary data, can we estimate coarse-granulary data?
+```python
+from fast import initial_seed
+from fast.data import StandardScale
+from fast.train import Trainer
+from fast.metric import Evaluator
 
-          Some situations may require this, e.g., when we have fine-granulary data but we want to estimate coarse-granulary data.
+# Initialize components
+initial_seed(42)
+scaler = StandardScale()
+evaluator = Evaluator(['MAE', 'RMSE', 'MAPE'])
 
-        > Given coarse-granulary data, can we estimate fine-granulary data?
-    
-    (b) instance normalization vs. generative pretraining
+# Train model
+trainer = Trainer(device='cuda', model=model, evaluator=evaluator)
+trainer.fit(train_ds, val_ds)
+```
 
-        > pretraining on 'uts_dataset + instance scale' can get good inferences, but worse on generations.
+### Data Structures
 
-        > generative pretraining on 'uts_dataset + global scale' can get relative good inferences, 
-            as well as good generations.
+1. Multiple Time Series (MTS)
+```python
+x -> [batch_size, window_size, n_vars]
+```
 
-        > for increasing uts_dataset, 'glbal scale' can not be determined directly, 
-            but 'instance scale' can be determined directly.
+2. Univariate Time Series (UTS) 
+```python
+x -> [batch_size * n_vars, window_size, 1]
+```
 
-        > what is normalization, and why normalization?
+3. Data Fusion Support
+- Missing data handling with masks
+- Exogenous variable integration
+- Variable-length sequence support
 
-## (6) Notes on meetings
+## Coding Style
 
-    (a) 2025-01-13
+### Type Annotations
+```python
+def forecast(x: torch.Tensor, horizon: int = 1) -> torch.Tensor:
+    """
+    Forecast future values.
     
-        The pyFAST can do time series recovery (imputation), forecasting, and generation.
+    Args:
+        x: Input tensor [batch_size, window_size, n_vars]
+        horizon: Forecast horizon
+    
+    Returns:
+        Predicted values [batch_size, horizon, n_vars]
+    """
+    pass
+```
 
-    (b) data structure
+### Documentation Guidelines
+- Clear function descriptions
+- Parameter specifications
+- Return value details
+- Usage examples for complex functions
 
-        (b1) mts: x -> [batch_size, window_size, n_vars]
-    
-        (b2) uts dataset: x -> [batch_size * n_vars, window_size, 1]
-    
-            learning rate: 需要同时适应多个数据集
-    
-        (b3) uts dataset: 适应不同的time series length数据，比如电池ts: list of (cycle_id, SoH)
-    
-        (b4) pretrained modeling / 
+## Research Topics
 
-    (c) data fusion
+### 1. Generative Learning
+- Cross-granularity estimation
+  - Fine to coarse-grained data estimation
+  - Coarse to fine-grained data estimation
+- Applications in disease surveillance
 
-       (c1) uts dataset + mask to support data missing situations
+### 2. Normalization Studies
+- Instance vs Global Scale Analysis
+  - Instance scale: Better for inference
+  - Global scale: Better for generation
+  - Scaling strategies for growing datasets
 
-       (c2) uts dataset + exogenous time series to support generative pretrained modeling
+### 3. Data Fusion Techniques
+- Missing data handling
+- Exogenous variable integration
+- Multi-source data fusion
 
-       (c3) uts dataset + ts_mask + exogenous time series with ex_mask
+## Ongoing Projects
 
-    (d) mts dataset pyFAST-v3
+### Healthcare Analytics
 
-       (d1) deep reinforcement learning
+1. Glucose Monitoring (v1)
+- Short-term sequence forecasting
+- Cross-dataset training [sh_diabetes, kdd2018_glucose]
+- Metrics: MAE, MAPE, RMSE, PCC
+- Focus: Model training mechanism optimization
 
-    2025-01-14
+2. Glucose Estimation (v2)
+- Generative learning approach
+- Datasets: sh_diabetes, mimic-iii
+- Food intake correlation analysis
+- Metrics: MAE, MAPE, RMSE, PCC
 
-    从llm中embedding | time series variable embedding的问题
-    
-    word (id) -> embedding | vector (numeric) -> embedding 空间映射
-    
-    embedding是可以表示word：要去知道与局限
+### Energy Systems
 
-    要好过用embedding来表示多个变量的向量
+1. Battery Health Estimation
+- Generative pretrained modeling
+- Downstream task optimization
+- Metrics: MAE, MAPE, SDRE, PCC
+- Impact analysis:
+  - Annual battery capacity
+  - Industry usage patterns
+  - Recycling efficiency
+  - Environmental impact
 
-    这是两件事
-    
-    我做的实验：用xmcdc的cases数据，三种疾病，同样实验设置下，uts的实验性能更好
-    
-        一个实验：mts三个变量
-        另外一个实验：uts，三个变量作为一个
+2. Wind Power Forecasting
+- Physics-informed neural networks
+- ODE/PDE integration
+- Datasets:
+  - la-haute-borne (500% improvement)
+  - KDD2022-SDWPF
+- Physical information integration
 
-    2025-01-15 idea reconsideration
+## Development Notes
 
-    (a)（肝病）全球每年有3000多万新增肝病患者，正常肝病早期筛查方法，到2050做不完全员筛查。我们的方法是通过抽血几可以生成早期预警，预计2033年就可以筛查全球。
+### Data Structure Evolution
+1. MTS Framework
+- Tensor shape: [batch_size, window_size, n_vars]
+- Deep reinforcement learning integration
 
-    (b) 全国每年新增电池多少Ah, 退役多少Ah，每一Ah回收成本是多少，核心的回收问题在电池状态的检测，通过少量预测即可进行准确电池状态估算，
-        以及到2030年，可减排xxx二氧化碳，减少多少xxx加仑的汽油，以及节省多少xxx时间。
+2. UTS Framework
+- Tensor shape: [batch_size * n_vars, window_size, 1]
+- Variable length support
+- Cross-dataset learning rate adaptation
 
-        - 全国电池每年的新增量
-    
-        - 各行各业的使用情况
-    
-        - 电池回收利用的情况
-    
-        - Vision
+3. Fusion Capabilities
+- Mask support for missing data
+- Exogenous time series integration
+- Combined mask handling
 
+### Embedding Research
+- Time series variable embedding analysis
+- Comparison with LLM embeddings
+- Performance analysis:
+  - MTS vs UTS approach
+  - Case study: XMCDC disease data
 
-## 2025-01-17 todo
-    
-    (1). glucose-v1: short-term long-sequnce glucose forecasting, deep learning + cross-dataset training
-    
-        [sh_diabetes, kdd2018_glucose]
-    
-        evaluator=Evaluator(['MAE', 'MAPE', 'RMSE', 'PCC'])
-    
-        -- 森镇
-    
-            cut to chase: figure / plot -> model training mechnism
-    
-        -- 陈愉，73-torch2_env + v100
-    
-    
-    (2). glucose-v2: generative learning for glucose estimation
-    
-        [sh_diabetes, mimic-iii]
-    
-        evaluator=Evaluator(['MAE', 'MAPE', 'RMSE', 'PCC'])
-    
-        cut to chase: foods vs. glucose values
-    
-    
-    (3). battery-v1: generative learning for battery status of health estimation
-    
-        []
-    
-        evaluator=Evaluator(['MAE', 'MAPE', 'SDRE', 'PCC'])
-    
-        - generative pretrained modeling + downstream task
-    
-        - 胡樾：统计数据，应用背景，找几个报告，填写电池各类报告的数据。
-    
-    
-    (4). energy-v11 (pinn_wpf):  pinn / gl wind power estimation
-    
-        - PDE / ODE
-    
-        - Physical-information
-    
-        - la-haute-borne, reduced.csv: improved 500%
-    
-        - kdd2022-SDWPF
-    
-        - 胡樾
-    
+## License
+
+[Add License Information]
+
+## Citation
+
+[Add Citation Information]
+```
