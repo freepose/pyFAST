@@ -1,6 +1,6 @@
-# FAST: Forecasting and time-series in PyTorch
+# FAST: Forecasting and Time-Series in PyTorch
 
-A comprehensive framework for time series analysis, supporting forecasting, imputation, and generation tasks. The key feature is its modular design that enables flexible component composition and analysis, allowing users to easily combine and customize different modules for specific time series applications. The framework excels in model fusion, supporting seamless integration of different architectures, data types, and learning paradigms to create powerful hybrid solutions for complex time series challenges.
+FAST is a comprehensive framework for time series analysis, supporting forecasting, imputation, and generation tasks. Its modular design enables flexible component composition and analysis, allowing users to easily combine and customize different modules for specific time series applications. The framework excels in model fusion, supporting seamless integration of different architectures, data types, and learning paradigms to create powerful hybrid solutions for complex time series challenges.
 
 ## Features
 
@@ -12,155 +12,126 @@ A comprehensive framework for time series analysis, supporting forecasting, impu
 
 ## Installation
 
+To install the pyFAST library, ensure you have Python installed, then run the following command to install the required dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## Examples
+## Getting Started
 
 ### Basic Usage
+
+Here's a quick example to get you started with FAST:
 
 ```python
 from fast import initial_seed
 from fast.data import StandardScale
 from fast.train import Trainer
 from fast.metric import Evaluator
+from fast.model import YourModel  # Replace with the specific model you are using
 
 # Initialize components
 initial_seed(42)
 scaler = StandardScale()
 evaluator = Evaluator(['MAE', 'RMSE', 'MAPE'])
 
-# Train model
+# Prepare your data
+train_ds = ...  # Load or prepare your training dataset
+val_ds = ...    # Load or prepare your validation dataset
+
+# Initialize and train your model
+model = YourModel(...)  # Initialize your model with necessary parameters
 trainer = Trainer(device='cuda', model=model, evaluator=evaluator)
 trainer.fit(train_ds, val_ds)
 ```
 
 ### Data Structures
 
-1. Multiple Time Series (MTS)
-```python
-x -> [batch_size, window_size, n_vars]
+1. **Multiple Time Series (MTS)**
+   - Shape: `[batch_size, window_size, n_vars]`
+   - Used for datasets with multiple variables over time.
+
+2. **Univariate Time Series (UTS)**
+   - Shape: `[batch_size * n_vars, window_size, 1]`
+   - Used for single-variable sequences.
+
+3. **Data Fusion Support**
+   - Handles missing data with masks
+   - Integrates exogenous variables
+   - Supports variable-length sequences
+
+## Core Directory Structure
+
+```plaintext
+fast/
+├── data/
+│   ├── loader/           # Data loading utilities
+│   ├── preprocessing/    # Data preprocessing tools
+│   │   ├── scaler.py    # Data scaling implementations
+│   │   └── fusion.py    # Data fusion utilities
+│   └── dataset.py       # Dataset implementations
+├── model/
+│   ├── mts/             # Multiple Time Series models
+│   │   ├── transformer/ # Transformer-based architectures
+│   │   └── base/       # Base MTS implementations
+│   ├── uts/             # Univariate Time Series models
+│   │   ├── transformer/ # Transformer-based architectures
+│   │   └── base/       # Base UTS implementations
+│   └── base/            # Base model components
+├── generative/          # Generative model implementations
+│   ├── transvae.py      # Transformer VAE implementation
+│   └── base.py          # Base generative components
+├── train/
+│   ├── trainer.py       # Training loop implementations
+│   └── callbacks.py     # Training callbacks
+├── metric/
+│   ├── evaluator.py     # Evaluation metrics implementation
+│   └── losses.py        # Loss functions
+└── utils/
+    ├── config.py        # Configuration utilities
+    ├── logging.py       # Logging utilities
+    └── tools.py         # General utility functions
 ```
 
-2. Univariate Time Series (UTS) 
-```python
-x -> [batch_size * n_vars, window_size, 1]
-```
+Each directory serves a specific purpose:
 
-3. Data Fusion Support
-- Missing data handling with masks
-- Exogenous variable integration
-- Variable-length sequence support
+- **data/**: Handles all data-related operations
+  - Implements data loading, preprocessing, and dataset management
+  - Supports both MTS and UTS data formats
+  - Provides tools for data fusion and scaling
 
-## Coding Style
+- **model/**: Contains all model architectures
+  - Separate implementations for MTS and UTS approaches
+  - Includes transformer-based and other architectural variants
+  - Provides base components for model development
 
-### Type Annotations
-```python
-def forecast(x: torch.Tensor, horizon: int = 1) -> torch.Tensor:
-    """
-    Forecast future values.
-    
-    Args:
-        x: Input tensor [batch_size, window_size, n_vars]
-        horizon: Forecast horizon
-    
-    Returns:
-        Predicted values [batch_size, horizon, n_vars]
-    """
-    pass
-```
+- **generative/**: Focuses on generative modeling
+  - Implements VAE and other generative approaches
+  - Provides tools for synthetic data generation
 
-### Documentation Guidelines
-- Clear function descriptions
-- Parameter specifications
-- Return value details
-- Usage examples for complex functions
+- **train/**: Manages the training process
+  - Implements training loops and optimization
+  - Provides callback mechanisms for training control
 
-## Research Topics
+- **metric/**: Handles evaluation and losses
+  - Implements various evaluation metrics
+  - Provides loss functions for different tasks
 
-### 1. Generative Learning
-- Cross-granularity estimation
-  - Fine to coarse-grained data estimation
-  - Coarse to fine-grained data estimation
-- Applications in disease surveillance
-
-### 2. Normalization Studies
-- Instance vs Global Scale Analysis
-  - Instance scale: Better for inference
-  - Global scale: Better for generation
-  - Scaling strategies for growing datasets
-
-### 3. Data Fusion Techniques
-- Missing data handling
-- Exogenous variable integration
-- Multi-source data fusion
-
-## Ongoing Projects
-
-### Healthcare Analytics
-
-1. Glucose Monitoring (v1)
-- Short-term sequence forecasting
-- Cross-dataset training [sh_diabetes, kdd2018_glucose]
-- Metrics: MAE, MAPE, RMSE, PCC
-- Focus: Model training mechanism optimization
-
-2. Glucose Estimation (v2)
-- Generative learning approach
-- Datasets: sh_diabetes, mimic-iii
-- Food intake correlation analysis
-- Metrics: MAE, MAPE, RMSE, PCC
-
-### Energy Systems
-
-1. Battery Health Estimation
-- Generative pretrained modeling
-- Downstream task optimization
-- Metrics: MAE, MAPE, SDRE, PCC
-- Impact analysis:
-  - Annual battery capacity
-  - Industry usage patterns
-  - Recycling efficiency
-  - Environmental impact
-
-2. Wind Power Forecasting
-- Physics-informed neural networks
-- ODE/PDE integration
-- Datasets:
-  - la-haute-borne (500% improvement)
-  - KDD2022-SDWPF
-- Physical information integration
-
-## Development Notes
-
-### Data Structure Evolution
-1. MTS Framework
-- Tensor shape: [batch_size, window_size, n_vars]
-- Deep reinforcement learning integration
-
-2. UTS Framework
-- Tensor shape: [batch_size * n_vars, window_size, 1]
-- Variable length support
-- Cross-dataset learning rate adaptation
-
-3. Fusion Capabilities
-- Mask support for missing data
-- Exogenous time series integration
-- Combined mask handling
-
-### Embedding Research
-- Time series variable embedding analysis
-- Comparison with LLM embeddings
-- Performance analysis:
-  - MTS vs UTS approach
-  - Case study: XMCDC disease data
+- **utils/**: Contains utility functions
+  - Manages configuration and logging
+  - Provides common helper functions
 
 ## License
 
-[Add License Information]
+MIT License
+
+Copyright (c) 2024 pyFAST Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Citation
 
 [Add Citation Information]
-```
