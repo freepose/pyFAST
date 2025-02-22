@@ -1,6 +1,15 @@
 # FAST: Forecasting and Time-Series in PyTorch
 
-FAST is a comprehensive framework for time series analysis, supporting forecasting, imputation, and generation tasks. Its modular design enables flexible component composition and analysis, allowing users to easily combine and customize different modules for specific time series applications. The framework excels in model fusion, supporting seamless integration of different architectures, data types, and learning paradigms to create powerful hybrid solutions for complex time series challenges.
+FAST (Forecasting And time-Series in PyTorch) is a powerful, modular framework designed for advanced time series analysis. It provides a unified interface for forecasting, imputation, and generative modeling tasks, with specialized support for both multiple (MTS) and univariate (UTS) time series. The framework's core strength lies in its flexible architecture, which seamlessly integrates transformer-based models, variational autoencoders, and traditional approaches.
+
+Key capabilities include:
+- Efficient handling of complex time series data with support for missing values and variable-length sequences
+- Advanced data fusion techniques for combining multiple data sources and exogenous variables
+- Comprehensive model implementations ranging from basic architectures to state-of-the-art transformer models
+- Robust training pipelines with customizable evaluation metrics and device-agnostic acceleration
+- Built-in support for generative modeling and synthetic data generation
+
+Built on PyTorch, FAST emphasizes both usability and extensibility, making it suitable for both research experiments and production deployments in domains such as healthcare analytics and energy forecasting.
 
 ## Features
 
