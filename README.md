@@ -131,22 +131,6 @@ Each directory serves a specific purpose:
   - Manages configuration and logging
   - Provides common helper functions
 
-
-## Publications
-
-The FAST library has been successfully used in several research publications:
-
-### Energy Forecasting
-1. Wang, Z., Liu, H., Wu, S., Liu, N., Liu, X., Hu, Y., & Fu, Y. (2024). Explainable time-varying directional representations for photovoltaic power generation forecasting. *Journal of Cleaner Production*, 143056.
-
-2. Huang, Y., Zhao, Y., Wang, Z., Liu, X., & Fu, Y. (2024). Sparse dynamic graph learning for district heat load forecasting. *Applied Energy*, 371, 123685.
-
-3. Hu, Y., Liu, H., Wu, S., Zhao, Y., Wang, Z., & Liu, X. (2024). Temporal collaborative attention for wind power forecasting. *Applied Energy*, 357, 122502.
-
-4. Huang, Y., Zhao, Y., Wang, Z., Liu, X., Liu, H., & Fu, Y. (2023). Explainable district heat load forecasting with active deep learning. *Applied Energy*, 350, 121753.
-
-5. Wang, Z., Liu, X., Huang, Y., Zhang, P., & Fu, Y. (2023). A multivariate time series graph neural network for district heat load forecasting. *Energy*, 127911.
-
 ## License
 
 MIT License
@@ -159,4 +143,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Citation
 
-[Add Citation Information]
+If you use FAST in your research, please cite our related works:
+
+1. Wang, Z., Liu, H., Wu, S., Liu, N., Liu, X., Hu, Y., & Fu, Y. (2024). Explainable time-varying directional representations for photovoltaic power generation forecasting. *Journal of Cleaner Production*, 143056.
+
+2. Huang, Y., Zhao, Y., Wang, Z., Liu, X., & Fu, Y. (2024). Sparse dynamic graph learning for district heat load forecasting. *Applied Energy*, 371, 123685.
+
+3. Hu, Y., Liu, H., Wu, S., Zhao, Y., Wang, Z., & Liu, X. (2024). Temporal collaborative attention for wind power forecasting. *Applied Energy*, 357, 122502.
+
+4. Huang, Y., Zhao, Y., Wang, Z., Liu, X., Liu, H., & Fu, Y. (2023). Explainable district heat load forecasting with active deep learning. *Applied Energy*, 350, 121753.
+
+5. Wang, Z., Liu, X., Huang, Y., Zhang, P., & Fu, Y. (2023). A multivariate time series graph neural network for district heat load forecasting. *Energy*, 127911.
