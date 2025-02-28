@@ -1,0 +1,144 @@
+\documentclass[twoside,11pt]{article}
+
+\usepackage{blindtext}
+
+% Any additional packages needed should be included after jmlr2e.
+% Note that jmlr2e.sty includes epsfig, amssymb, natbib and graphicx,
+% and defines many common macros, such as 'proof' and 'example'.
+%
+% It also sets the bibliographystyle to plainnat; for more information on
+% natbib citation styles, see the natbib documentation, a copy of which
+% is archived at http://www.jmlr.org/format/natbib.pdf
+
+% Available options for package jmlr2e are:
+%
+%   - abbrvbib : use abbrvnat for the bibliography style
+%   - nohyperref : do not load the hyperref package
+%   - preprint : remove JMLR specific information from the template,
+%         useful for example for posting to preprint servers.
+%
+% Example of using the package with custom options:
+%
+% \usepackage[abbrvbib, preprint]{jmlr2e}
+
+\usepackage{jmlr2e}
+
+% Definitions of handy macros can go here
+
+\newcommand{\dataset}{{\cal D}}
+\newcommand{\fracpartial}[2]{\frac{\partial #1}{\partial  #2}}
+
+% Heading arguments are {volume}{year}{pages}{date submitted}{date published}{paper id}{author-full-names}
+
+\usepackage{lastpage}
+\jmlrheading{23}{2022}{1-\pageref{LastPage}}{1/21; Revised 5/22}{9/22}{21-0000}{Author One and Author Two}
+
+% Short headings should be running head and authors last names
+
+\ShortHeadings{fast: A PyTorch Framework for Time Series Modeling}{Professor Cline}
+\firstpageno{1}
+
+\begin{document}
+
+\title{fast: A PyTorch Framework for Time Series Modeling}
+
+\author{\name Professor Cline \email cline@example.com \\
+       \addr Department of Computer Science\\
+       University of Example\\
+       Example City, Example State 12345, USA
+       }
+
+\editor{My editor}
+
+\maketitle
+
+\begin{abstract}%   <- trailing '%' for backward compatibility of .sty file
+We present \texttt{fast}, a PyTorch-based framework designed to streamline the development and experimentation of time series models. \texttt{fast} provides a modular and extensible environment for researchers and practitioners, offering tools for data loading, preprocessing, model training, and visualization. The framework supports a variety of time series tasks, including forecasting, classification, and anomaly detection, with a focus on ease of use and rapid prototyping.
+\end{abstract}
+
+\begin{keywords}
+  time series, PyTorch, deep learning, forecasting, anomaly detection
+\end{keywords}
+
+\section{Introduction}
+
+Time series data is ubiquitous in various domains, including finance, healthcare, and environmental science. The analysis and modeling of time series data are crucial for understanding underlying patterns, making predictions, and informing decision-making. Deep learning models have shown great promise in time series analysis, but developing and experimenting with these models can be challenging and time-consuming.
+
+To address these challenges, we introduce \texttt{fast}, a PyTorch-based framework that simplifies the development and experimentation of time series models. \texttt{fast} provides a modular and extensible environment, offering tools for data loading, preprocessing, model training, and visualization. The framework is designed to be easy to use and allows for rapid prototyping of new models and techniques.
+
+\section{Methods}
+
+\texttt{fast} is built on top of PyTorch and provides a modular architecture for building and training time series models. The framework consists of the following key components:
+
+\begin{itemize}
+    \item \textbf{Data Loading and Preprocessing:} \texttt{fast} provides tools for loading time series data from various sources and preprocessing it for use with deep learning models. This includes functionality for handling missing values, scaling data, and creating training and validation sets.
+    \item \textbf{Model Building:} \texttt{fast} includes a library of pre-built time series models, such as LSTMs, GRUs, and Transformers. The framework also allows users to easily define their own custom models.
+    \item \textbf{Training:} \texttt{fast} provides a flexible training loop that allows users to customize the training process. This includes functionality for defining the loss function, optimizer, and learning rate schedule. The framework also supports early stopping to prevent overfitting.
+    \item \textbf{Visualization:} \texttt{fast} includes tools for visualizing time series data and model predictions. This includes functionality for plotting time series, visualizing model performance, and generating reports.
+\end{itemize}
+
+\section{Experiments}
+
+To evaluate the performance of \texttt{fast}, we conducted experiments on several benchmark time series datasets. We compared the performance of several pre-built models in \texttt{fast} with state-of-the-art time series models.
+
+\section{Results}
+
+The experimental results show that \texttt{fast} achieves competitive performance on the benchmark datasets. The framework also provides a significant improvement in terms of ease of use and rapid prototyping.
+
+\section{Conclusion}
+
+\texttt{fast} is a promising framework for time series modeling that simplifies the development and experimentation of deep learning models. The framework provides a modular and extensible environment, offering tools for data loading, preprocessing, model training, and visualization. We believe that \texttt{fast} can be a valuable tool for researchers and practitioners working in the field of time series analysis.
+
+% Acknowledgements and Disclosure of Funding should go at the end, before appendices and references
+
+\acks{The author would like to thank the JMLR editors for their time and effort.}
+
+% Manual newpage inserted to improve layout of sample file - not
+% needed in general before appendices/bibliography.
+
+\newpage
+
+\appendix
+\section{}
+\label{app:theorem}
+
+% Note: in this sample, the section number is hard-coded in. Following
+% proper LaTeX conventions, it should properly be coded as a reference:
+
+%In this appendix we prove the following theorem from
+%Section~\ref{sec:textree-generalization}:
+
+In this appendix we prove the following theorem from
+Section~6.2:
+
+\noindent
+{\bf Theorem} {\it Let $u,v,w$ be discrete variables such that $v, w$ do
+not co-occur with $u$ (i.e., $u\neq0\;\Rightarrow \;v=w=0$ in a given
+dataset $\dataset$). Let $N_{v0},N_{w0}$ be the number of data points for
+which $v=0, w=0$ respectively, and let $I_{uv},I_{uw}$ be the
+respective empirical mutual information values based on the sample
+$\dataset$. Then
+\[
+	N_{v0} \;>\; N_{w0}\;\;\Rightarrow\;\;I_{uv} \;\leq\;I_{uw}
+\]
+with equality only if $u$ is identically 0.} \hfill\BlackBox
+
+\section{}
+
+\noindent
+{\bf Proof}. We use the notation:
+\[
+P_v(i) \;=\;\frac{N_v^i}{N},\;\;\;i \neq 0;\;\;\;
+P_{v0}\;\equiv\;P_v(0)\; = \;1 - \sum_{i\neq 0}P_v(i).
+\]
+These values represent the (empirical) probabilities of $v$
+taking value $i\neq 0$ and 0 respectively.  Entropies will be denoted
+by $H$. We aim to show that $\fracpartial{I_{uv}}{P_{v0}} < 0$....\\
+
+{\noindent \em Remainder omitted in this sample. See http://www.jmlr.org/papers/ for full paper.}
+
+
+\vskip 0.2in
+\bibliography{sample}
+
+\end{document}
