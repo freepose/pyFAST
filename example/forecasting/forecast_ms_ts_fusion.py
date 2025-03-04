@@ -2,11 +2,12 @@
 # encoding: utf-8
 
 """
-    Examples on multivariate time series (MTS) forecasting using exogenous variables.
+    Examples on **multiple sources** time series forecasting using exogenous variables.
 
     (1) PINN: Using time variables as exogenous variables.
 
     (2) NARX: Using exogenous variables as input features.
+
 """
 import os
 
@@ -23,19 +24,19 @@ from fast.model.base import count_parameters, covert_parameters
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
 from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE
 
-from example.prepare_data import load_xmcdc_cases
-from example.prepare_data import load_grid_forming_converter
-from example.prepare_data import load_greek_wind, load_kddcup2022_sdwpf
+from example.prepare_xmcdc import load_xmcdc_stm
+from example.prepare_data_back import load_grid_forming_converter
+from example.prepare_data_back import load_greek_wind, load_kddcup2022_sdwpf
 
 
-def mts_fusion():
+def ms_ts_fusion():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    device = torch.device('cuda' if torch.cuda.is_available() else 'mps')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1}
-    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_cases('../../dataset/xmcdc/', 'daily', ds_params, 0.8, True)
+    ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'split_ratio': 0.8}
+    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_stm('../../dataset/xmcdc/', 'weekly', None, ['fine_grained'], ds_params)
 
     # ds_params = {'input_window_size': 10 * 24, 'output_window_size': 12, 'horizon': 1}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_greek_wind(data_root, '1hour', ds_params, 1., 0.8, True)
@@ -64,7 +65,7 @@ def mts_fusion():
         'gainge': [GAINGE, {'gat_h_dim': 4, 'dropout_rate': 0.01, 'highway_window_size': 7}],
     }
 
-    model_cls, user_settings = modeler['dgr']
+    model_cls, user_settings = modeler['dgdr']
 
     common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -82,7 +83,7 @@ def mts_fusion():
 
     criterion = nn.MSELoss()
     additive_criterion = getattr(model, 'loss', None)
-    evaluator = Evaluator(['MAE', 'RMSE', 'CV-RMSE'])
+    evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
@@ -91,11 +92,12 @@ def mts_fusion():
 
     trainer.fit(train_ds,
                 val_ds,
-                epoch_range=(1, 2000), batch_size=512, shuffle=True,
+                epoch_range=(1, 2000), batch_size=4, shuffle=False,
                 verbose=True, display_interval=0)
 
     print('Good luck!')
 
 
 if __name__ == '__main__':
-    mts_fusion()
+    initial_seed(42)
+    ms_ts_fusion()

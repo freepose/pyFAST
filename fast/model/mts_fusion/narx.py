@@ -127,7 +127,7 @@ class NARXRNN(nn.Module):
                  dropout_rate: float = 0.):
         super(NARXRNN, self).__init__()
 
-        assert input_window_size > output_window_size, 'input_window_size > output_window_size'
+        assert input_window_size >= output_window_size, 'input_window_size >= output_window_size'
 
         self.input_window_size = input_window_size
         self.input_vars = input_vars

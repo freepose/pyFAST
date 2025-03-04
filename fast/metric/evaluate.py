@@ -17,6 +17,7 @@ from .metric import mean_absolute_scaled_error, median_absolute_scaled_error
 
 from .mask_metric import mask_mean_absolute_error, mask_mean_squared_error, mask_root_mean_squared_error
 from .mask_metric import mask_mean_absolute_percentage_error, mask_symmetric_mean_absolute_percentage_error
+from .mask_metric import mask_pearson_correlation_coefficient
 
 
 class Evaluator:
@@ -51,7 +52,8 @@ class Evaluator:
             'maskMSE': mask_mean_squared_error,
             'maskRMSE': mask_root_mean_squared_error,
             'maskMAPE': mask_mean_absolute_percentage_error,
-            'masksMAPE': mask_symmetric_mean_absolute_percentage_error
+            'masksMAPE': mask_symmetric_mean_absolute_percentage_error,
+            'maskPCC': mask_pearson_correlation_coefficient
         }
 
         if metrics is None:

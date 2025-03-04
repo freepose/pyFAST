@@ -99,7 +99,9 @@ class Trainer:
     def fit(self, train_dataset: data.Dataset, val_dataset: data.Dataset = None,
             epoch_range: tuple[int, int] = (1, 10), verbose: bool = True,
             batch_size: int = 32, shuffle: bool = False,
-            display_interval: int = 0, generation_interval: int = None) -> list:
+            checkpoint_interval: int = 0, display_interval: int = 0,
+            generation_interval: int = None,
+            collate_fn=None) -> list:
         """
             Train the model.
             :param train_dataset: training dataset.
@@ -108,12 +110,14 @@ class Trainer:
             :param verbose: whether to display the training process.
             :param batch_size: the batch size of a mini-batch.
             :param shuffle: whether to shuffle the data.
+            :param checkpoint_interval: the interval of saving model.
             :param display_interval: the interval of visualization of predictions.
             :param generation_interval: the interval of model generation evaluation. Support from generative models.
+            :param collate_fn: the function to collate the data.
             :return: the trained performance list.
         """
-        train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle)
-        train_dataloader2 = data.DataLoader(train_dataset, batch_size)
+        train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
+        train_dataloader2 = data.DataLoader(train_dataset, batch_size, collate_fn=collate_fn)
 
         performance_list = []
         for epoch in range(epoch_range[0], epoch_range[1] + 1):
@@ -125,6 +129,14 @@ class Trainer:
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
+
+            if checkpoint_interval is not None and checkpoint_interval > 0 and epoch % checkpoint_interval == 0:
+                torch.save({
+                    "epoch": epoch,
+                    "model_state_dict": self.model.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "lr_scheduler_state_dict": self.lr_scheduler.state_dict() if self.lr_scheduler else None,
+                }, 'D:/checkpoint/model_{}.check'.format(epoch))
 
             if not verbose:
                 continue
@@ -141,7 +153,7 @@ class Trainer:
                     break
 
             if val_dataset is not None:
-                val_dataloader = data.DataLoader(val_dataset, batch_size)
+                val_dataloader = data.DataLoader(val_dataset, batch_size, collate_fn=collate_fn)
 
                 y_val_hat, y_val = self.predict(val_dataloader, 'evaluate val ' + message_prefix)
 
@@ -152,15 +164,16 @@ class Trainer:
                 if display_interval is not None and display_interval > 0 and epoch % display_interval == 0:
                     plot_num_vars = min(y_val_hat.shape[-1], 4)
 
-                    real_tensor = y_val[0].flatten(0, 1).detach()
-                    real_array = real_tensor.cpu().numpy()[:, :plot_num_vars]
-                    preds_tensor = y_val_hat.flatten(0, 1).detach()
-                    preds_array = preds_tensor.cpu().numpy()[:, :plot_num_vars]
+                    if len(y_val) == 1:
+                        real_tensor = y_val[0].flatten(0, 1).detach()
+                        real_array = real_tensor.cpu().numpy()[:, :plot_num_vars]
+                        preds_tensor = y_val_hat.flatten(0, 1).detach()
+                        preds_array = preds_tensor.cpu().numpy()[:, :plot_num_vars]
 
-                    plot_msg = 'epoch:' + message_prefix + ' '
-                    plot_msg += ', '.join(['{}:{:.4f}'.format(k, v) for k, v in val_metric_dict.items()])
+                        plot_msg = 'epoch:' + message_prefix + ' '
+                        plot_msg += ', '.join(['{}:{:.4f}'.format(k, v) for k, v in val_metric_dict.items()])
 
-                    plot_comparable_line_charts(real_array, preds_array, plot_msg)
+                        plot_comparable_line_charts(real_array, preds_array, plot_msg)
 
                 if generation_interval is not None and generation_interval > 0 and epoch % generation_interval == 0:
                     generate_fn = getattr(self.model, 'generate', None)

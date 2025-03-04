@@ -8,3 +8,5 @@ from .dgr import DGR
 from .mvt import MvT
 from .dgdr import DGDR
 from .gainge import GAINGE
+
+from .exdd import ExDDM

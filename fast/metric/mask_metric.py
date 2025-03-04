@@ -85,3 +85,21 @@ def mask_symmetric_mean_absolute_percentage_error(prediction: torch.tensor, real
     denominator = mask.sum()
 
     return numerator / denominator
+
+
+def mask_pearson_correlation_coefficient(prediction: torch.tensor, real: torch.tensor, mask: torch.tensor):
+    """
+        mask PCC.    Element-wise metrics.
+        :param prediction:  Predicted values (1d, 2d, or 3d torch tensor)
+        :param real:        Real values (1d, 2d, or 3d torch tensor)
+        :param mask:        Mask indicator of real values (1d, 2d, or 3d torch tensor)
+        :return: mask RMSE
+    """
+    # mask = ((real != 0) & (prediction != 0)) & mask   # remove zero values in real tensor
+    prediction = prediction[mask]
+    real = real[mask]
+    numerator = (prediction - prediction.mean()) * (real - real.mean())
+    denominator = (prediction - prediction.mean()).pow(2).sum().sqrt() * (real - real.mean()).pow(2).sum().sqrt()
+
+    return (numerator / denominator).sum() / mask.sum()
+

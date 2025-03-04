@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from prepare_data import time_series_scaler
-from fast.data import UTSDataset, Scale, StandardScale, MinMaxScale, train_test_split, STSDataset
+from prepare_data_back import time_series_scaler
+from fast.data import STMDataset, Scale, StandardScale, MinMaxScale, train_test_split, STSDataset
 
 
 def load_battery_data(data_root: str, ds_names: list[str] = 'nenergy_2019', ds_params: dict = {},
@@ -46,8 +46,8 @@ def load_battery_data(data_root: str, ds_names: list[str] = 'nenergy_2019', ds_p
     global_target_scaler = time_series_scaler(train_target, scaler)
     global_feature_scaler = time_series_scaler(train_ex_ts, scaler) if use_features else None
 
-    train_ds = UTSDataset(train_target, ex_ts=train_ex_ts, **ds_params, stride=1)
-    val_ds = UTSDataset(val_target, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_target, ex_ts=train_ex_ts, **ds_params, stride=1)
+    val_ds = STMDataset(val_target, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_target_scaler, global_feature_scaler)
 
@@ -110,9 +110,3 @@ def process_battery_data(filenames: list[str],
 
     return target_ts_list, feature_ts_list
 
-
-if __name__ == "__main__":
-    data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'  # 替换为实际路径
-    load_battery_data(data_root, ds_names=['nenergy_2019', 'hust', 'dfdq', 'calce'],
-                      ds_params={'input_window_size': 10, 'output_window_size': 1, 'horizon': 1}, split_ratio=0.8,
-                      use_features=False, scaler=Scale(), target_factor=100)

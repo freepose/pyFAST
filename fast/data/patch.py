@@ -41,7 +41,7 @@ class PatchMaker:
             Make patches based on ``x``.
             :param x: the input tensor, shape is (..., seq_len, n_vars).
         """
-        x = x.permute(0, 2, 1)  # -> (..., n_vars, seq_len)
+        x = x.transpose(-2, -1)  # -> (..., n_vars, seq_len)
         x = self.padding_layer(x)   # -> (..., n_vars, seq_len + padding)
         x = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_stride)  # -> (..., n_vars, patch_num, patch_len)
 

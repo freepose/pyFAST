@@ -16,9 +16,8 @@ class DGDR(nn.Module):
         Zhang, Peisong, et al.
         Dual-grained directional representation for infectious disease case prediction.
         Knowledge-Based Systems 256 (2022): 109806.
-        Author: Zhijin Wang
 
-        Dual-grained Directional Representation (DGDR).
+        Author: Zhijin Wang
 
         :param input_window_size: input window size of target variable and exogenous variables.
         :param input_vars: number of input variables.

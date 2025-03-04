@@ -6,16 +6,18 @@
 """
 import os, copy, sys, json
 import random
-from typing import Type, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
+from tqdm.contrib.concurrent import thread_map
 
 import torch
 
-from fast.data import UTSDataset, Scale, StandardScale, MinMaxScale, train_test_split, STSDataset
+from fast.data import Scale, StandardScale, MinMaxScale, train_test_split
+from fast.data import STMDataset, STSDataset, MTMDataset
 from dataset.read_data import get_xmcdc, get_sh_diabetes, get_greek_wind, get_kddcup2022_sdwpf_list
 from dataset.read_data import get_nacom_2024_battery, get_nenergy_2019_battery
 
@@ -87,9 +89,9 @@ def load_xmcdc_cases(data_root: str = '../dataset/xmcdc/',
         global_ex_scaler = time_series_scaler(ex_ts_tensor_list, scaler)
 
     ds_params.update({'split_ratio': split_ratio, 'split': 'train'})
-    train_ds = UTSDataset(uts_tensor_list, ex_ts=ex_ts_tensor_list, **ds_params)
+    train_ds = STMDataset(uts_tensor_list, ex_ts=ex_ts_tensor_list, **ds_params)
     ds_params.update({'split_ratio': split_ratio, 'split': 'val'})
-    val_ds = UTSDataset(uts_tensor_list, ex_ts=ex_ts_tensor_list, **ds_params)
+    val_ds = STMDataset(uts_tensor_list, ex_ts=ex_ts_tensor_list, **ds_params)
 
     return (train_ds, val_ds), (global_scaler, global_ex_scaler)
 
@@ -139,8 +141,8 @@ def load_sh_diabetes(data_root: str,
         global_ex_scaler = time_series_scaler(train_ex_ts, scaler)
 
     ds_params.update({'split_ratio': 1., 'split': 'train'})
-    train_ds = UTSDataset(train_cgm_list, ex_ts=train_ex_ts, **ds_params, stride=1)
-    val_ds = UTSDataset(val_cgm_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_cgm_list, ex_ts=train_ex_ts, **ds_params, stride=1)
+    val_ds = STMDataset(val_cgm_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_scaler, global_ex_scaler)
 
@@ -196,8 +198,8 @@ def load_kdd2018_glucose(data_root: str,
     global_scaler = time_series_scaler(train_cgm_list, scaler)
 
     ds_params.update({'split_ratio': 1., 'split': 'train'})
-    train_ds = UTSDataset(train_cgm_list, **ds_params, stride=1)
-    val_ds = UTSDataset(val_cgm_list, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_cgm_list, **ds_params, stride=1)
+    val_ds = STMDataset(val_cgm_list, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_scaler, None)
 
@@ -246,8 +248,8 @@ def load_nenergy_2019_battery(data_root: str,
         global_feature_scaler = time_series_scaler(train_ex_ts, scaler)
 
     ds_params.update({'split_ratio': 1., 'split': 'train'})
-    train_ds = UTSDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
-    val_ds = UTSDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
+    val_ds = STMDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_soh_scaler, global_feature_scaler)
 
@@ -339,8 +341,8 @@ def load_greek_wind(data_root: str,
         global_ex_scaler = time_series_scaler(train_ex_ts, ex_scaler)
 
     ds_params.update({'split_ratio': 1., 'split': 'train'})
-    train_ds = UTSDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
-    val_ds = UTSDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
+    val_ds = STMDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_scaler, global_ex_scaler)
 
@@ -392,8 +394,8 @@ def load_kddcup2022_sdwpf(data_root: str,
         global_ex_scaler = time_series_scaler(train_ex_ts, ex_scaler)
 
     ds_params.update({'split_ratio': 1., 'split': 'train'})
-    train_ds = UTSDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
-    val_ds = UTSDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
+    val_ds = STMDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_scaler, global_ex_scaler)
 
@@ -437,8 +439,10 @@ def load_grid_forming_converter(data_root: str,
             pbar.set_description(tqdm_desc)
             for name in filenames:
                 df = pd.read_csv(os.path.join(grid_forming_data_root, name), header=None, names=fields)
+
                 inputs_list.append(df[input_fields].values.astype(np.float32))
                 outputs_list.append(df[output_fields].values.astype(np.float32))
+
                 pbar.update(1)
         return inputs_list, outputs_list
 
@@ -476,7 +480,7 @@ def load_grid_forming_converter(data_root: str,
         global_feature_scaler = time_series_scaler(train_ex_ts, scaler)
 
     ds_params.update({'split_ratio': 1., 'split': 'train'})
-    train_ds = UTSDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
-    val_ds = UTSDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
+    train_ds = STMDataset(train_ts_list, ex_ts=train_ex_ts, **ds_params, stride=1)
+    val_ds = STMDataset(val_ts_list, ex_ts=val_ex_ts, **ds_params, stride=ds_params['output_window_size'])
 
     return (train_ds, val_ds), (global_soh_scaler, global_feature_scaler)

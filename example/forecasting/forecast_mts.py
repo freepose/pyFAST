@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    Examples on multivariate time series forecasting.
+    Examples on single source univariate / multivariate time series forecasting.
 """
 
 import os
@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from fast import initial_seed, get_common_params
-from fast.data import STSDataset, Scale, MinMaxScale, StandardScale
+from fast.data import Scale, MinMaxScale, StandardScale
 from fast.train import Trainer
 from fast.metric import Evaluator
 
@@ -26,34 +26,17 @@ from fast.model.mts import TimesNet, PatchTST, iTransformer, TimeXer, TimeMixer
 from fast.model.mts import TimesFM, Timer
 from fast.model.mts import COAT, GAIN
 
-from dataset.read_data import get_xmcdc, get_kddcup2022_sdwpf
+from example.prepare_xmcdc import load_xmcdc_sts
 
 
 def main():
-    time_array, *arrays = get_xmcdc(frequency='daily')
-    # date_df, *arrays = get_kddcup2022_sdwpf(frequency='30min')
-    # date, target_array, ex_array = get_kaggle_Turkey_wpf(frequency='1day', data_type=np.float64, factor=0.0001)
-    # date, target_array, ex_array = get_greek_wind(frequency='1day', data_type=np.float64, factor=0.001)
-
+    data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    tensors = [torch.tensor(array, dtype=torch_float_type) for array in arrays]
-    global_scaler = MinMaxScale().fit(tensors[0])
-
-    ds_params = {
-        'ts': tensors[0],
-        # 'ts_mask': ~tensors[0].isnan(),
-        # 'ex_ts': tensors[1:],
-        'input_window_size': 10 * 1 * 1,  # days * point/day * point/hour
-        'output_window_size': 1 * 1 * 1,  # days * point/day * point/hour
-        'horizon': 1,
-        'split_ratio': 0.8,
-    }
-
-    train_ds = STSDataset(**ds_params, stride=1, split='train')
-    val_ds = STSDataset(**ds_params, stride=ds_params['output_window_size'], split='val')
+    ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'split_ratio': 0.8}
+    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sts('../dataset/xmcdc/', 'daily', None, None, ds_params)
 
     modeler = {
         'gar': [GAR, {'activation': 'linear'}],
@@ -62,7 +45,7 @@ def main():
         'ann': [ANN, {'hidden_size': 32}],
         'drn': [DeepResidualNetwork, {'hidden_size': 64, 'number_stacks': 7, 'number_blocks_per_stack': 1,
                                       'use_rnn': False}],
-        'rnn': [TimeSeriesRNN, {'rnn_cls': 'gru', 'hidden_size': 32, 'num_layers': 1,
+        'rnn': [TimeSeriesRNN, {'rnn_cls': 'gru', 'hidden _size': 32, 'num_layers': 1,
                                 'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
         'ed': [EncoderDecoder, {'rnn_cls': 'gru', 'hidden_size': 32, 'num_layers': 1,
                                 'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
@@ -76,7 +59,7 @@ def main():
                                   'residual_window_size': 5, 'residual_ratio': 0.1}],
         'lstnet': [LSTNet, {'cnn_out_channels': 50, 'cnn_kernel_size': 9,
                             'rnn_hidden_size': 50, 'rnn_num_layers': 1,
-                            'skip_window_size': 24, 'skip_gru_hidden_size': 20,
+                            'skip_window_size': 24, 'skip_gru _hidden_size': 20,
                             'highway_window_size': 24, 'dropout_rate': 0.}],
         'nhits': [NHiTS, {'n_blocks': [1, 1, 1], 'n_layers': [2] * 8,
                           'hidden_size': [[512, 512], [512, 512], [512, 512]],
@@ -127,7 +110,7 @@ def main():
         'gain': [GAIN, {}],
     }
 
-    model_cls, user_settings = modeler['gar']
+    model_cls, user_settings = modeler['ar']
 
     common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -150,12 +133,12 @@ def main():
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
                       criterion=criterion, additive_criterion=additive_criterion, evaluator=evaluator,
-                      global_scaler=global_scaler)
+                      global_scaler=scaler, global_ex_scaler=ex_scaler)
 
     trainer.fit(train_ds,
                 val_ds,
                 epoch_range=(1, 2000), batch_size=512, shuffle=True,
-                verbose=True, display_interval=0)
+                verbose=True, display_interval=20)
 
     print('Good luck!')
 

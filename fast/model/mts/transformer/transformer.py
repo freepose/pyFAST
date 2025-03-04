@@ -38,7 +38,7 @@ class Transformer(nn.Module):
             :param dropout_rate: dropout rate.
         """
         super(Transformer, self).__init__()
-        assert output_vars == input_vars and 0 <= label_window_size, 'Invalid window parameters.'
+        assert 0 <= label_window_size, 'Invalid window parameters.'
         assert dim_ff % num_heads == 0, 'dim_ff should be divided by num_heads.'
 
         self.input_vars = input_vars

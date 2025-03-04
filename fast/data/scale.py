@@ -5,6 +5,7 @@
     Global scaler applies to the whole time series.
     Instance scaler normalized batch input data.
 """
+import copy
 
 import torch
 import torch.nn as nn
@@ -227,5 +228,24 @@ class InstanceStandardScale(InstanceScale):
         return inv
 
 """
-    mask normalization techniques.
+    Mask normalization techniques.
 """
+
+
+def time_series_scaler(ts: torch.Tensor or list[torch.Tensor], scaler: Scale()) -> Scale:
+    """
+        Scale the datasets.
+        :param ts: the list of time series.
+        :param scaler: the scaler.
+        :return: the scaled time series.
+    """
+    if type(scaler) == type(Scale()):
+        return Scale()
+
+    scale_ts = ts
+    if isinstance(ts, list):
+        scale_ts = torch.cat(ts, dim=0)
+    scaler = copy.deepcopy(scaler).fit(scale_ts)
+    del scale_ts
+
+    return scaler

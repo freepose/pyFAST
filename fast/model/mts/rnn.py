@@ -11,7 +11,17 @@ import torch.nn as nn
 
 
 class MinLSTMCell(nn.Module):
-    def __init__(self, input_size, hidden_size, bias=True):
+    """
+        A minimal LSTM cell implementation.
+
+        https://github.com/axion66/minLSTM-implementation
+
+        :param input_size: The number of features in the input.
+        :param hidden_size: The number of features in the hidden state.
+        :param bias: If False, disables the use of bias in the linear layers.
+    """
+
+    def __init__(self, input_size: int, hidden_size: int, bias: bool = True):
         super(MinLSTMCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -43,8 +53,8 @@ class MinLSTMCell(nn.Module):
 
 
 class MinLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, batch_first=False, dropout=0.0,
-                 bidirectional=False):
+    def __init__(self, input_size: int, hidden_size: int, num_layers: int = 1, bias: bool = True,
+                 batch_first: int = False, dropout: float = 0.0, bidirectional: bool = False):
         """
         A minimal LSTM implementation with support for multiple layers, dropout, and bidirectionality.
 
@@ -172,8 +182,7 @@ class TimeSeriesRNN(nn.Module):
                  rnn_cls: Literal['rnn', 'lstm', 'gru', 'minlstm'] = 'gru',
                  hidden_size: int = 32, num_layers: int = 1, bidirectional: bool = False,
                  dropout_rate: float = 0., decoder_way: Literal['inference', 'mapping'] = 'inference'):
-        assert input_vars == output_vars, 'input_vars must be equal to output_vars'
-        assert rnn_cls in ['rnn', 'lstm', 'gru', 'minlstm'], "rnn_cls must be 'rnn', 'lstm', or 'gru'"
+        assert rnn_cls in ['rnn', 'lstm', 'gru', 'minlstm'], "rnn_cls must be 'rnn', 'lstm', 'gru', 'minlstm'"
         assert decoder_way in ['inference', 'mapping'], "decoder_way must be 'inference' or 'mapping'"
 
         super(TimeSeriesRNN, self).__init__()
@@ -184,21 +193,26 @@ class TimeSeriesRNN(nn.Module):
         self.num_layers = num_layers
         self.bidirectional = bidirectional
         self.decoder_way = decoder_way
-        self.dropout_rate = dropout_rate if num_layers > 1 else 0.
+        self.dropout_rate = dropout_rate if self.num_layers > 1 else 0.
 
         rnn_cls_dict = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU, 'minlstm': MinLSTM}
 
         model_cls = rnn_cls_dict.get(rnn_cls)
-        self.rnn = model_cls(input_vars, hidden_size, num_layers, batch_first=True,
-                             bidirectional=bidirectional, dropout=dropout_rate)
+        self.rnn = model_cls(self.input_vars, self.hidden_size, self.num_layers, batch_first=True,
+                             bidirectional=self.bidirectional, dropout=self.dropout_rate)
 
-        self.fc1 = nn.Linear(hidden_size * 2 if bidirectional else hidden_size, output_vars)
+        rnn_out_dim = self.hidden_size * 2 if self.bidirectional else self.hidden_size
+        if self.decoder_way == 'inference':
+            self.l1 = nn.Linear(rnn_out_dim, self.input_vars)
+            self.l2 = nn.Linear(self.input_vars, self.output_vars)
+        else:
+            self.l3 = nn.Linear(rnn_out_dim, self.output_vars)
 
     def forward(self, x):
         """
         :param x: shape is (batch_size, input_window_size, input_vars).
         """
-        outputs = torch.zeros(x.shape[0], self.output_window_size, x.shape[2], dtype=x.dtype, device=x.device)
+        outputs = torch.zeros(x.shape[0], self.output_window_size, self.output_vars, dtype=x.dtype, device=x.device)
 
         _, hidden = self.rnn(x)
 
@@ -206,14 +220,14 @@ class TimeSeriesRNN(nn.Module):
             # Decoder: inference
             inputs = x[:, -1:, :]
             for t in range(self.output_window_size):
-                rnn_output, hidden = self.rnn(inputs, hidden)
-                out = self.fc1(rnn_output)
-                outputs[:, t, :] = out.squeeze(1)
+                rnn_output, hidden = self.rnn(inputs, hidden)   # -> (batch_size, 1, hidden_size)
+                out = self.l1(rnn_output)   # -> (batch_size, 1, input_vars)
                 inputs = out
+                outputs[:, t:t+1, :] = self.l2(out)
         else:
             # Decoder: mapping, assure that input_window_size >= output_window_size
-            rnn_output, hidden = self.rnn(x, hidden)
-            out = self.fc1(rnn_output)
+            rnn_output, hidden = self.rnn(x, hidden)    # -> (batch_size, input_window_size, hidden_size)
+            out = self.l3(rnn_output)   # -> (batch_size, input_window_size, output_vars)
             outputs = out[:, -self.output_window_size:, :]
 
         return outputs
@@ -241,7 +255,6 @@ class EncoderDecoder(nn.Module):
                  rnn_cls: Literal['rnn', 'lstm', 'gru', 'minlstm'] = 'gru', hidden_size: int = 10,
                  num_layers: int = 2, bidirectional: bool = False, dropout_rate: float = 0.,
                  decoder_way: Literal['inference', 'mapping'] = 'inference'):
-        assert input_vars == output_vars, 'input_vars must be equal to output_vars'
         assert rnn_cls in ['rnn', 'lstm', 'gru', 'minlstm'], "rnn_cls must be 'rnn', 'lstm', or 'gru'"
         assert decoder_way in ['inference', 'mapping'], "decoder_way must be 'inference' or 'mapping'"
 
@@ -260,14 +273,20 @@ class EncoderDecoder(nn.Module):
         rnn_cls_dict = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU, 'minlstm': MinLSTM}
         model_cls = rnn_cls_dict[rnn_cls]
 
-        self.rnn_encoder = model_cls(input_vars, hidden_size, num_layers, batch_first=True,
-                                     bidirectional=bidirectional, dropout=dropout_rate)
-        self.rnn_decoder = model_cls(input_vars, hidden_size, num_layers, batch_first=True,
-                                     bidirectional=bidirectional, dropout=dropout_rate)
-        self.l1 = nn.Linear(self.hidden_size * 2 if bidirectional else self.hidden_size, self.output_vars)
+        self.rnn_encoder = model_cls(self.input_vars, self.hidden_size, self.num_layers, batch_first=True,
+                                     bidirectional=bidirectional, dropout=self.dropout_rate)
+        self.rnn_decoder = model_cls(self.input_vars, self.hidden_size, self.num_layers, batch_first=True,
+                                     bidirectional=bidirectional, dropout=self.dropout_rate)
+
+        rnn_out_dim = self.hidden_size * 2 if self.bidirectional else self.hidden_size
+        if self.decoder_way == 'inference':
+            self.l1 = nn.Linear(rnn_out_dim, self.input_vars)
+            self.l2 = nn.Linear(self.input_vars, self.output_vars)
+        else:
+            self.l3 = nn.Linear(rnn_out_dim, self.output_vars)
 
         # Used to facilitate multi-GPUs (if needed)
-        self.module_list = nn.ModuleList([self.rnn_encoder, self.rnn_decoder, self.l1])
+        self.module_list = nn.ModuleList([self.rnn_encoder, self.rnn_decoder])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -279,6 +298,7 @@ class EncoderDecoder(nn.Module):
 
         # Initialize tensor for predictions
         outputs = torch.zeros(x.shape[0], self.output_window_size, self.output_vars, dtype=x.dtype, device=x.device)
+
         decoder_hidden = encoder_hidden
 
         if self.decoder_way == 'inference':
@@ -286,13 +306,13 @@ class EncoderDecoder(nn.Module):
             decoder_input = x[:, -1:, :]  # Set initial decoder input as the last value of input sequence
             for t in range(self.output_window_size):
                 decoder_output, decoder_hidden = self.rnn_decoder.forward(decoder_input, decoder_hidden)
-                out = self.l1(decoder_output)  # -> (batch_size, 1, output_vars)
-                outputs[:, t, :] = out.squeeze(1)
+                out = self.l1(decoder_output)  # -> (batch_size, 1, input_vars)
                 decoder_input = out
+                outputs[:, t:t + 1, :] = self.l2(out)
         else:
             # Decoder: mapping, assure that input_window_size >= output_window_size
             decoder_output, decoder_hidden = self.rnn_decoder(x, decoder_hidden)
-            out = self.l1(decoder_output)  # -> (batch_size, input_window_size, output_vars)
+            out = self.l3(decoder_output)  # -> (batch_size, input_window_size, output_vars)
             outputs = out[:, -self.output_window_size:, :]
 
         return outputs

@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    Single Time Series (STS) dataset.
+    Single prediction Target Single source  (STS) time series dataset.
     (1) The transformations on single univariate/multivariate time series to input / output data.
     (2) The transformations on single univariate/multivariate time series + mask time series
         to input / output data.
@@ -84,9 +84,19 @@ def train_test_split(tensors: list or tuple, split_ratio: float = 0.2, shuffle: 
 
 class STSDataset(data.Dataset):
     """
-        Single Time Series (STS) dataset.
-        STSDataset transforms a **single** univariate/multivariate time series to (masked) input / output data.
+        Single prediction Target Single source time series dataset (STS).
+
+        ``STSDataset`` transforms a **single** target (univariate or multivariate) time series
+        to supervised (input / output) data.
+
+        (1) Transformation from target time series to supervised (i.e., input / output) data.
+        (2) Support input data == output data for autoencoders or generative models.
+        (3) Support exogenous time series data.
+        (4) Support sparse time series data: target, exogenous, and both.
+        (5) Support training / validation split.
+
         The default device is the same as ``ts`` device.
+
         :param ts: univariate/multivariate time series tensor, the shape is ``[ts_len, n_vars]``.
         :param ts_mask: mask tensor of time series, the shape is ``[ts_len, n_vars]``. Support data missing situation.
         :param ex_ts: exogenous time series tensor list, each shape is ``[ts_len, ...]``, support several tensors.
@@ -103,7 +113,9 @@ class STSDataset(data.Dataset):
                  ex_ts: torch.Tensor = None, ex_ts_mask: torch.Tensor = None,
                  input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1,
                  split_ratio: float = 0.8, split: Literal['train', 'val'] = 'train'):
-        assert 0 <= split_ratio <= 1.0 and split in ['train', 'val']
+
+        assert 0 <= split_ratio <= 1.0, 'The split ratio must be in the range [0, 1].'
+        assert split in ['train', 'val'], "The split type must be 'train' or 'val'."
 
         if ts_mask is not None:
             assert ts.shape == ts_mask.shape, "The shape of ts and ts_mask must be the same."

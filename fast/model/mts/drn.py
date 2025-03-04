@@ -134,4 +134,5 @@ class DeepResidualNetwork(nn.Module):
 
         for stack in self.stacks:
             forecast, x, backsum = stack(forecast, x, backsum)
+
         return forecast

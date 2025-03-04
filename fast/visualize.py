@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+from typing import Literal
 import numpy as np
 
 from matplotlib import pyplot as plt
@@ -114,7 +115,6 @@ def plot_comparable_line_charts(real_ts: np.ndarray, preds_ts: np.ndarray,
 
     for i in range(n_features):
         ax = axs[i, 0]
-
         ax.plot(x, real_ts[:, i], '--o', color='r', label='real')
         ax.plot(x, preds_ts[:, i], '-d', color='g', label='preds')
 

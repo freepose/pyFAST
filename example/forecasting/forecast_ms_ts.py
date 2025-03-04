@@ -2,9 +2,11 @@
 # encoding: utf-8
 
 """
-    Examples on multiple univariate time series (UTS) forecasting.
+    Examples on **multiple sources** time series forecasting.
 
-    The time series length varies among different UTS.
+    The time series length varies among the sources.
+    In most occasions, the time series variables of all the sources is 1.
+
 """
 import os, random, copy
 
@@ -31,19 +33,20 @@ from fast.model.mts import TimesNet, PatchTST, iTransformer, TimeXer, TimeMixer
 from fast.model.mts import TimesFM, Timer
 from fast.model.mts import COAT
 
-from example.prepare_data import load_xmcdc_cases, load_kdd2018_glucose, load_sh_diabetes
-from example.prepare_data import load_nenergy_2019_battery
-from example.prepare_data import load_greek_wind
+from example.prepare_xmcdc import load_xmcdc_stm
+from example.prepare_data_back import load_kdd2018_glucose, load_sh_diabetes
+from example.prepare_data_back import load_nenergy_2019_battery
+from example.prepare_data_back import load_greek_wind
 
 
 def main():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    device = torch.device('cuda' if torch.cuda.is_available() else 'mps')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1}
-    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_cases('../../dataset/xmcdc/', 'daily', ds_params, 0.8, False)
+    ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'split_ratio': 0.8}
+    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_stm('../../dataset/xmcdc/', 'daily', None, None, ds_params)
 
     # ds_params = {'input_window_size': 5 * 12, 'output_window_size': 6, 'horizon': 1}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_kdd2018_glucose(data_root, ds_params, 0.8)
@@ -130,7 +133,7 @@ def main():
                         'use_instance_scale': False, 'dropout_rate': 0.}],
     }
 
-    model_cls, user_settings = modeler['gar']
+    model_cls, user_settings = modeler['ar']
 
     common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -148,7 +151,7 @@ def main():
 
     criterion = nn.MSELoss()
     additive_criterion = getattr(model, 'loss', None)   # While training
-    evaluator = Evaluator(['MAE', 'RMSE', 'MAPE'])
+    evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
@@ -158,7 +161,7 @@ def main():
     trainer.fit(train_ds,
                 val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=False,
-                verbose=True, display_interval=0)
+                verbose=True, display_interval=20)
 
     print('Good luck!')
 
