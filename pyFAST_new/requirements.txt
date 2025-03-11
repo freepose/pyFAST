@@ -1,0 +1,9 @@
+numpy
+pandas
+matplotlib
+tqdm
+pytorch>=2.0
+transformers
+datasets
+sympy
+scipy
