@@ -197,6 +197,8 @@ class TimeSeriesRNN(nn.Module):
 
         rnn_cls_dict = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU, 'minlstm': MinLSTM}
 
+        self.l0 = nn.Linear(self.input_vars, self.input_vars, bias=False)
+
         model_cls = rnn_cls_dict.get(rnn_cls)
         self.rnn = model_cls(self.input_vars, self.hidden_size, self.num_layers, batch_first=True,
                              bidirectional=self.bidirectional, dropout=self.dropout_rate)
@@ -212,6 +214,9 @@ class TimeSeriesRNN(nn.Module):
         """
         :param x: shape is (batch_size, input_window_size, input_vars).
         """
+        x = self.l0(x)  # -> (batch_size, input_window_size, input_vars)
+        x = x.relu()
+
         outputs = torch.zeros(x.shape[0], self.output_window_size, self.output_vars, dtype=x.dtype, device=x.device)
 
         _, hidden = self.rnn(x)

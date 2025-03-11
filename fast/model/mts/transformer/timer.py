@@ -246,7 +246,7 @@ class Timer(nn.Module):
 
         self.inst_scale = InstanceStandardScale()
 
-    def forward(self, x_enc, x_mark_enc=None, x_dec=None, x_mark_dec=None, mask=None):
+    def forward(self, x_enc):
         """
             将forecast改名为forward
         """

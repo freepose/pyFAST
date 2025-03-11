@@ -13,6 +13,7 @@ import torch.nn as nn
 
 from ..base.mlp import MLP
 from ..mts.ar import AR, VAR
+from ..mts.rnn import MinLSTM
 
 
 class ARX(nn.Module):
@@ -25,7 +26,8 @@ class ARX(nn.Module):
         :param ex_vars: number of exogenous input variables.
     """
 
-    def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
+    def __init__(self, input_window_size: int = 1, input_vars: int = 1,
+                 output_window_size: int = 1, out_vars: int = 1,
                  ex_retain_window_size: int = None, ex_vars: int = 1):
         super(ARX, self).__init__()
 
@@ -34,17 +36,18 @@ class ARX(nn.Module):
         self.ex_retain_window_size = input_window_size if ex_retain_window_size is None else ex_retain_window_size
         self.ex_vars = ex_vars
         self.output_window_size = output_window_size
+        self.out_vars = out_vars
 
         assert self.input_window_size >= self.ex_retain_window_size, 'input_window_size >= ex_input_window'
 
-        self.ar = VAR(self.input_window_size, self.input_vars, self.output_window_size, self.input_vars, False)
-        self.ex_ar = VAR(self.ex_retain_window_size, self.ex_vars, self.output_window_size, self.input_vars)
+        self.ar = VAR(self.input_window_size, self.input_vars, self.output_window_size, self.out_vars, False)
+        self.ex_ar = VAR(self.ex_retain_window_size, self.ex_vars, self.output_window_size, self.out_vars)
 
     def forward(self, x: torch.Tensor, ex: torch.Tensor):
         """
         :param x: shape is (batch_size, input_window_size, input_vars)
         :param ex: shape is (batch_size, input_window_size, ex_vars)
-        :return: shape is (batch_size, output_window_size, input_vars)
+        :return: shape is (batch_size, output_window_size, out_vars)
         """
         x_out = self.ar(x)
 
@@ -138,7 +141,7 @@ class NARXRNN(nn.Module):
         self.bidirectional = bidirectional
         self.dropout_rate = dropout_rate if num_layers > 1 else 0.
 
-        rnn_cls_dict = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU}
+        rnn_cls_dict = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU, 'minlstm': MinLSTM}
         model_cls = rnn_cls_dict.get(rnn_cls)
 
         self.rnn = model_cls(input_vars + ex_vars, self.hidden_size, self.num_layers, batch_first=True,

@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    Examples on single source univariate / multivariate time series forecasting.
+    Examples on single source univariate / multivariate time series forecasting using exogenous time series.
 """
 
 import os
@@ -21,22 +21,27 @@ from fast.model.mts import GAR, AR, VAR, ANN, TimeSeriesRNN, EncoderDecoder
 from fast.model.mts import NHiTS, DLinear, NLinear
 from fast.model.mts import TemporalConvNet, CNNRNN, CNNRNNRes, LSTNet
 from fast.model.mts import DeepResidualNetwork
-from fast.model.mts import Transformer, Informer, Autoformer, FiLM, FEDformer, Crossformer
-from fast.model.mts import TimesNet, PatchTST, iTransformer, TimeXer, TimeMixer
+from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
+from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TimeXer, TimeMixer
 from fast.model.mts import TimesFM, Timer
+from fast.model.mts import STID, STNorm, MAGNet, GraphWaveNet, FourierGNN
 from fast.model.mts import COAT, GAIN
 
 from example.prepare_xmcdc import load_xmcdc_sts
+from example.prepare_industrial_power_load import load_industrial_power_load_sts as load_ecpl_sts
 
 
 def main():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'mps')
 
     ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'split_ratio': 0.8}
-    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sts('../dataset/xmcdc/', 'daily', None, None, ds_params)
+    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sts('../dataset/xmcdc/', 'weekly', None, None, ds_params)
+
+    # ds_params = {'input_window_size': 8 * 24, 'output_window_size': 24, 'horizon': 1, 'split_ratio': 0.8}
+    # (train_ds, val_ds), (scaler, ex_scaler) = load_ecpl_sts(data_root, 'mice', None, None, ds_params, Scale())
 
     modeler = {
         'gar': [GAR, {'activation': 'linear'}],
@@ -45,7 +50,7 @@ def main():
         'ann': [ANN, {'hidden_size': 32}],
         'drn': [DeepResidualNetwork, {'hidden_size': 64, 'number_stacks': 7, 'number_blocks_per_stack': 1,
                                       'use_rnn': False}],
-        'rnn': [TimeSeriesRNN, {'rnn_cls': 'gru', 'hidden _size': 32, 'num_layers': 1,
+        'rnn': [TimeSeriesRNN, {'rnn_cls': 'gru', 'hidden_size': 32, 'num_layers': 1,
                                 'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
         'ed': [EncoderDecoder, {'rnn_cls': 'gru', 'hidden_size': 32, 'num_layers': 1,
                                 'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
@@ -83,6 +88,7 @@ def main():
                                   'dim_ff': 1024, 'activation': 'relu', 'moving_avg': 7, 'dropout_rate': 0.,
                                   'version': 'fourier', 'mode_select': 'random', 'modes': 32}],
         'film': [FiLM, {'d_model': 128, 'use_instance_scale': True}],
+        'triformer': [Triformer, {'channels': 32, 'patch_sizes': [5, 2], 'mem_dim': 5}],
         'crossformer': [Crossformer, {'d_model': 128, 'num_heads': 8, 'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                       'dim_ff': 512, 'dropout_rate': 0., 'factor': 5,
                                       'seg_len': 24, 'win_size': 2}],
@@ -91,6 +97,11 @@ def main():
         'patchtst': [PatchTST, {'d_model': 64, 'num_heads': 8, 'num_encoder_layers': 6, 'dim_ff': 256,
                                 'patch_len': 5, 'patch_stride': 2, 'patch_padding': 2,
                                 'use_instance_scale': True}],
+        'staeformer': [STAEformer, {'input_dim': 1, 'output_dim': 1, 'input_embedding_dim': 24,
+                                    'tod_steps_per_day': 24, 'tod_embedding_dim': 0, 'dow_embedding_dim': 0,
+                                    'spatial_embedding_dim': 0, 'adaptive_embedding_dim': 80,
+                                    'dim_ff': 256, 'num_heads': 4, 'num_layers': 3,
+                                    'dropout_rate': 0.1, 'use_mixed_proj': True}],
         'itransformer': [iTransformer, {'d_model': 128, 'num_heads': 2, 'num_encoder_layers': 6, 'dim_ff': 512,
                                         'activation': 'relu', 'dropout_rate': 0., 'use_instance_scale': True}],
         'timesfm': [TimesFM, {'d_model': 64, 'num_heads': 2, 'num_layers': 2,
@@ -105,12 +116,27 @@ def main():
                                   'top_k': 5, 'channel_independence': True, 'decomposition_method': 'moving_avg',
                                   'down_sampling_method': 'avg', 'down_sampling_window': 1, 'down_sampling_layers': 1,
                                   'use_instance_scale': True}],
-        'coat': [COAT, {'mode': 'dr', 'activation': 'relu',
+        'stid': [STID, {'node_dim': 32, 'embed_dim': 1024, 'input_dim': 1, 'num_layer': 1, 'if_node': True}],
+        'stnorm': [STNorm, {'tnorm_bool': True, 'snorm_bool': True,
+                            'channels': 16, 'kernel_size': 2, 'blocks': 1, 'layers': 2}],
+        'magnet': [MAGNet, {'label_window_size': 48, 'conv2d_in_channels': 1, 'residual_channels': 32,
+                            'conv_channels': 32, 'skip_channels': 4, 'end_channels': 128, 'node_dim': 40,
+                            'tanhalpha': 3.0, 'static_feat': None, 'dilation_exponential': 1,
+                            'kernel_size': 7, 'gcn_depth': 2, 'gcn_true': False, 'propalpha': 0.05,
+                            'layer_norm_affline': True, 'buildA_true': True, 'predefined_A': None, 'dropout': 0.3}],
+        'gwn': [GraphWaveNet, {'out_dim': 1, 'supports': None, 'gcn_bool': True, 'addaptadj': True,
+                               'aptinit': None, 'in_dim': 1, 'residual_channels': 32, 'dilation_channels': 32,
+                               'skip_channels': 256, 'end_channels': 512, 'kernel_size': 2,
+                               'blocks': 1, 'layers': 2, 'dropout': 0.3}],
+        'fgnn': [FourierGNN, {'embed_size': 128, 'hidden_size': 256, 'hard_thresholding_fraction': 1,
+                              'hidden_size_factor': 1, 'sparsity_threshold': 0.01}],
+        'coat': [COAT, {'mode': 'dr', 'activation': 'linear',
                         'use_instance_scale': False, 'dropout_rate': 0.}],
-        'gain': [GAIN, {}],
+        'gain': [GAIN, {'gat_hidden_size': 64, 'gat_nhead': 128, 'gru_hidden_size': 8, 'gru_num_layers': 1,
+                        'cnn_kernel_size': 3, 'cnn_out_channels': 16, 'highway_window_size': 10, 'dropout_rate': 0.5}],
     }
 
-    model_cls, user_settings = modeler['ar']
+    model_cls, user_settings = modeler['gain']
 
     common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -137,12 +163,12 @@ def main():
 
     trainer.fit(train_ds,
                 val_ds,
-                epoch_range=(1, 2000), batch_size=512, shuffle=True,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True,
                 verbose=True, display_interval=20)
 
     print('Good luck!')
 
 
 if __name__ == '__main__':
-    initial_seed(42)
+    initial_seed(2025)
     main()

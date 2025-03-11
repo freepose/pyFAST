@@ -2,8 +2,9 @@
 # encoding: utf-8
 
 """
-    (1) This package records experiments which the team have done.
+    Experimental settings for reproducibility.
+    This package records experiments which the team have done.
 
-    (2) Coding inspection to connect datasets and models.
+    (1) Coding inspection to connect datasets and models.
 """
 

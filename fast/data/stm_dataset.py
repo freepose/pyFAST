@@ -87,7 +87,7 @@ class STMDataset(data.Dataset):
         self.window_num_list = []  # the number of sliding windows for each time series
         self.cum_window_num_array = None  # the cumulative sum of window numbers.
 
-        self.index_dataset(ts, ts_mask, ex_ts)
+        self.index_dataset(ts, ts_mask, ex_ts, ex_ts_mask)
 
     def index_dataset(self, ts: tuple[torch.Tensor] or list[torch.Tensor],
                       ts_mask: tuple[torch.Tensor] or list[torch.Tensor] = None,
@@ -206,6 +206,9 @@ class STMDataset(data.Dataset):
 
         if self.border_ex_ts_list is not None:
             params['ex_vars'] = self.ex_vars
+
+            if self.border_ex_ts_mask_list is not None:
+                params['ex_mask'] = True
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
         params_str = 'STMDataset({})'.format(params_str)

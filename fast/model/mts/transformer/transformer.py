@@ -14,6 +14,16 @@ class Transformer(nn.Module):
         'Attention Is All You Need', NeurIPS 2017.
         url: https://arxiv.org/abs/1706.03762.
 
+        :param input_vars: number of input variables.
+        :param output_window_size: output window size.
+        :param output_vars: number of output variables.
+        :param label_window_size: label window is intersections between input and output windows.
+        :param d_model: model dimension, a.k.a., embedding size.
+        :param num_heads: head number, a.k.a., attention number.
+        :param num_encoder_layers: number of encoder layers.
+        :param num_decoder_layers: number of decoder layers.
+        :param dim_ff: feed forward dimension.
+        :param dropout_rate: dropout rate.
     """
 
     def __init__(self, input_vars: int, output_window_size: int = 96, output_vars: int = 1,
@@ -25,18 +35,6 @@ class Transformer(nn.Module):
                  dim_ff: int = 2048,
                  dropout_rate: float = 0.,
                  activation: Literal['relu', 'gelu'] = 'relu'):
-        """
-            :param input_vars: number of input variables.
-            :param output_window_size: output window size.
-            :param output_vars: number of output variables.
-            :param label_window_size: label window is intersections between input and output windows.
-            :param d_model: model dimension, a.k.a., embedding size.
-            :param num_heads: head number, a.k.a., attention number.
-            :param num_encoder_layers: number of encoder layers.
-            :param num_decoder_layers: number of decoder layers.
-            :param dim_ff: feed forward dimension.
-            :param dropout_rate: dropout rate.
-        """
         super(Transformer, self).__init__()
         assert 0 <= label_window_size, 'Invalid window parameters.'
         assert dim_ff % num_heads == 0, 'dim_ff should be divided by num_heads.'

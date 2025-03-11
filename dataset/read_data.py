@@ -53,46 +53,6 @@ def get_xmcdc(data_root: str = '../dataset/xmcdc/',
     return time_array, disease_array, weather_array, bsi_array
 
 
-def get_sh_diabetes(disease_data_root: str, diabetes_type: Literal['T1', 'T2'] = 'T1') -> tuple[list, list]:
-    """
-        Qinpei Zhao, et al.,
-        Chinese diabetes datasets for data-driven machine learning, nature scientific data, 2023.
-        DOI: 10.1038/s41597-023-01940-7
-
-        columns = ['Date','CGM (mg/dl)']
-        :param disease_data_root: '4_multiple_uts' directory.
-        :param diabetes_type: The type of diabetes, either 'T1' (Type 1) or 'T2' (Type 2).
-        :return: A tuple containing the date time series and cgm time series.
-    """
-    disease_type_to_path = {
-        'T1': 'Shanghai_T1DM',
-        'T2': 'Shanghai_T2DM'
-    }
-    filepath = os.path.join(disease_data_root, disease_type_to_path.get(diabetes_type))
-
-    time_array_list, cgm_array_list = [], []
-    for csv in sorted(os.listdir(filepath)):
-        if csv.endswith('.csv'):
-            df = pd.read_csv(os.path.join(filepath, csv), index_col=None)
-
-            df['Date'] = pd.to_datetime(df['Date'])
-
-            base_time = df['Date'].min().normalize()
-            df['month'] = df['Date'].dt.month.values
-            df['day'] = df['Date'].dt.day.values
-            df['timestamp'] = (df['Date'] - base_time).dt.total_seconds() / 60.0
-            df['dayofweek'] = df['Date'].dt.dayofweek.values
-            df['hour'] = df['Date'].dt.hour.values
-            df['minute'] = df['Date'].dt.minute.values
-
-            time_array = df[['timestamp', 'dayofweek', 'hour', 'minute']].values.astype(np.float32)
-            cgm_array = df['CGM (mg/dl)'].values.reshape(-1, 1).astype(np.float32)
-
-            time_array_list.append(time_array)
-            cgm_array_list.append(cgm_array)
-
-    return time_array_list, cgm_array_list
-
 
 """
     Energy - wind datasets.

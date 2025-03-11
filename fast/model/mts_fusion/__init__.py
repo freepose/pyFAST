@@ -8,5 +8,8 @@ from .dgr import DGR
 from .mvt import MvT
 from .dgdr import DGDR
 from .gainge import GAINGE
+from .tspt import TSPT
 
-from .exdd import ExDDM
+from .fusion_plugin import DataFirstPlugin, LearningFirstPlugin, ExogenousDataDrivenPlugin
+
+from .sparse.sparse_narx import SparseNARXRNN

@@ -124,25 +124,35 @@ class TimeOrientedGAT(nn.Module):
 
 class GAIN(nn.Module):
     """
-        Wang Z, Liu X, Huang Y, et al. 、
+        Wang Z, Liu X, Huang Y, et al.
         A multivariate time series graph neural network for district heat load forecasting[J].
         Energy, 2023, 278: 127911.
+
+        Assure input_vars === output_vars. CNN -> GAT -> GRU -> Highway
+
+        :param input_vars: number of input variables.
+        :param output_window_size: output window size.
+        :param output_vars: number of output variables.
+        :param gat_hidden_size: hidden size of GAT.
+        :param gat_nhead: number of heads of GAT.
+        :param gru_hidden_size: hidden size of GRU.
+        :param gru_num_layers: number of layers of GRU.
+        :param cnn_kernel_size: kernel size of CNN.
+        :param cnn_out_channels: output channels of CNN.
+        :param highway_window_size: window size of highway.
+        :param dropout_rate: dropout rate.
     """
 
-    def __init__(self, input_window_size: int = 64, input_size: int = 30,
-                 output_window_size: int = 1, output_size: int = 1,
+    def __init__(self, input_vars: int = 30,
+                 output_window_size: int = 1, output_vars: int = 1,
                  gat_hidden_size: int = 64, gat_nhead: int = 128,
                  gru_hidden_size: int = 8, gru_num_layers: int = 1,
                  cnn_kernel_size: int = 3, cnn_out_channels: int = 16,
                  highway_window_size: int = 10, dropout_rate: float = 0.5):
-        """
-            Assure input_size === output_size. CNN -> GAT -> GRU -> Highway
-        """
         super(GAIN, self).__init__()
-        self.input_window_size = input_window_size
-        self.input_size = input_size
+        self.input_vars = input_vars
         self.output_window_size = output_window_size
-        self.output_size = output_size
+        self.output_vars = output_vars
 
         self.dropout_rate = dropout_rate
 
@@ -157,25 +167,25 @@ class GAIN(nn.Module):
 
         self.highway_window_size = min(10, highway_window_size)
 
-        self.cnn = nn.Conv1d(self.input_size, self.cnn_out_channels,
+        self.cnn = nn.Conv1d(self.input_vars, self.cnn_out_channels,
                              self.cnn_kernel_size, padding=self.cnn_kernel_size // 2)
 
         self.gat = GAT(in_features=self.cnn_out_channels, out_features=self.gat_hidden_size,
                        n_head=self.gat_nhead, dropout_rate=self.dropout_rate, last=False)
 
-        self.gru = nn.GRU(self.gat_hidden_size * self.gat_nhead + self.input_size, self.gru_hidden_size,
+        self.gru = nn.GRU(self.gat_hidden_size * self.gat_nhead + self.input_vars, self.gru_hidden_size,
                           batch_first=True, num_layers=self.gru_num_layers)
 
-        self.l1 = nn.Linear(self.gru_hidden_size, self.output_size)
+        self.l1 = nn.Linear(self.gru_hidden_size, self.output_vars)
         self.gar1 = GAR(self.gru_num_layers, self.output_window_size)
 
         self.highway = GAR(self.highway_window_size, self.output_window_size)
-        self.highway_proj = nn.Linear(self.input_size, self.output_size)
+        self.highway_proj = nn.Linear(self.input_vars, self.output_vars)
 
     def forward(self, x):
-        """x -> [batch_size, input_window_size, input_size]"""
+        """x -> [batch_size, input_window_size, input_vars]"""
 
-        r = x.permute(0, 2, 1)  # => [batch_size, input_size, input_window_size]
+        r = x.permute(0, 2, 1)  # => [batch_size, input_vars, input_window_size]
         r = self.cnn(r)  # => [batch_size, cnn_out_channels, input_window_size]
         r = r.permute(0, 2, 1)  # => [batch_size, input_window_size, cnn_out_channels]
 
@@ -183,13 +193,13 @@ class GAIN(nn.Module):
         _, h = self.gru(torch.cat([r, x], dim=2))  # => [num_layers, batch_size, gru_hidden_size]
         h = h.permute(1, 0, 2)  # => [batch_size, num_layers, gru_hidden_size]
 
-        r = self.l1(h)  # => [batch_size, num_layers, output_size]
-        r = self.gar1(r)  # => [batch_size, output_window_size, output_size]
+        r = self.l1(h)  # => [batch_size, num_layers, output_vars]
+        r = self.gar1(r)  # => [batch_size, output_window_size, output_vars]
 
         if self.highway_window_size > 0:
-            z = x[:, -self.highway_window_size:, :]  # => [batch_size, highway_window_size, input_size]
-            z = self.highway(z)  # => [batch_size, output_window_size, input_size]
-            z = self.highway_proj(z)  # => [batch_size, output_window_size, output_size]
-            r = r + z  # => [batch_size, output_window_size, output_size]
+            z = x[:, -self.highway_window_size:, :]  # => [batch_size, highway_window_size, input_vars]
+            z = self.highway(z)  # => [batch_size, output_window_size, input_vars]
+            z = self.highway_proj(z)  # => [batch_size, output_window_size, output_vars]
+            r = r + z  # => [batch_size, output_window_size, output_vars]
 
         return r

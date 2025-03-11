@@ -21,12 +21,10 @@ class MTMDataset(data.Dataset):
 
         (3) Support exogenous time series modeling, a.k.a., modeling with exogenous variables.
 
-        (4) Support data missing situtations, both sparse target time series and sparse exogenous time series.
-        A.k.a., time seires impuation, incomplete time series forecasting.
+        (4) Support data missing situations, both sparse target time series and sparse exogenous time series.
+        A.k.a., time series imputation, incomplete time series forecasting.
 
         (5) Support multiple prediction targets, and multiple exogenous data.
-
-
 
         :param ts_sources: Group of time series tensors list.
                         The inter-list tensors have the same shapes, i.e., ts11.shape == ts21.shape, ``input_vars``.

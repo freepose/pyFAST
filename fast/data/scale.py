@@ -232,7 +232,8 @@ class InstanceStandardScale(InstanceScale):
 """
 
 
-def time_series_scaler(ts: torch.Tensor or list[torch.Tensor], scaler: Scale()) -> Scale:
+def time_series_scaler(ts: torch.Tensor or list[torch.Tensor] or tuple[torch.Tensor],
+                       scaler: Scale()) -> Scale:
     """
         Scale the datasets.
         :param ts: the list of time series.
@@ -243,7 +244,7 @@ def time_series_scaler(ts: torch.Tensor or list[torch.Tensor], scaler: Scale()) 
         return Scale()
 
     scale_ts = ts
-    if isinstance(ts, list):
+    if isinstance(ts, list) or isinstance(ts, tuple):
         scale_ts = torch.cat(ts, dim=0)
     scaler = copy.deepcopy(scaler).fit(scale_ts)
     del scale_ts

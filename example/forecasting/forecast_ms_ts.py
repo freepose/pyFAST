@@ -10,8 +10,6 @@
 """
 import os, random, copy
 
-from typing import Literal
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -34,25 +32,22 @@ from fast.model.mts import TimesFM, Timer
 from fast.model.mts import COAT
 
 from example.prepare_xmcdc import load_xmcdc_stm
-from example.prepare_data_back import load_kdd2018_glucose, load_sh_diabetes
-from example.prepare_data_back import load_nenergy_2019_battery
-from example.prepare_data_back import load_greek_wind
+from example.prepare_data import load_kdd2018_glucose
+from example.prepare_data import load_nenergy_2019_battery
+from example.prepare_data import load_greek_wind
 
 
 def main():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'mps')
 
     ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'split_ratio': 0.8}
-    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_stm('../../dataset/xmcdc/', 'daily', None, None, ds_params)
+    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_stm('../../dataset/xmcdc/', 'weekly', None, None, ds_params)
 
     # ds_params = {'input_window_size': 5 * 12, 'output_window_size': 6, 'horizon': 1}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_kdd2018_glucose(data_root, ds_params, 0.8)
-
-    # ds_params = {'input_window_size': 3 * 4, 'output_window_size': 2, 'horizon': 1}
-    # (train_ds, val_ds), (scaler, ex_scaler) = load_sh_diabetes(data_root, ds_params, 0.8, False)
 
     # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_nenergy_2019_battery(data_root, ds_params, 'SoH', 0.8, False)
@@ -67,7 +62,7 @@ def main():
         'ann': [ANN, {'hidden_size': 32}],
         'drn': [DeepResidualNetwork, {'hidden_size': 64, 'number_stacks': 7, 'number_blocks_per_stack': 1,
                                       'use_rnn': False}],
-        'rnn': [TimeSeriesRNN, {'rnn_cls': 'minlstm', 'hidden_size': 128, 'num_layers': 1,
+        'rnn': [TimeSeriesRNN, {'rnn_cls': 'minlstm', 'hidden_size': 32, 'num_layers': 1,
                                 'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'inference'}],
         'dmornn': [TimeSeriesRNN, {'rnn_cls': 'rnn', 'hidden_size': 512, 'num_layers': 2,
                                    'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
@@ -129,11 +124,11 @@ def main():
                                   'top_k': 5, 'channel_independence': True, 'decomposition_method': 'moving_avg',
                                   'down_sampling_method': 'avg', 'down_sampling_window': 1, 'down_sampling_layers': 1,
                                   'use_instance_scale': True}],
-        'coat': [COAT, {'mode': 'dr', 'activation': 'relu',
+        'coat': [COAT, {'mode': 'dr', 'activation': 'linear',
                         'use_instance_scale': False, 'dropout_rate': 0.}],
     }
 
-    model_cls, user_settings = modeler['ar']
+    model_cls, user_settings = modeler['coat']
 
     common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -160,12 +155,12 @@ def main():
 
     trainer.fit(train_ds,
                 val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=False,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True,
                 verbose=True, display_interval=20)
 
     print('Good luck!')
 
 
 if __name__ == '__main__':
-    initial_seed(42)
+    initial_seed(2025)
     main()

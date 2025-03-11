@@ -5,25 +5,15 @@
     Prepare datasets by loading XMCDC case counts as ``STSDataset`` and ``STMDataset``.
 """
 
-import os, sys, random
 from typing import Literal, List
 
 import numpy as np
 import pandas as pd
 
-from tqdm import tqdm
-from tqdm.contrib.concurrent import thread_map
-
 import torch
 
 from fast.data import Scale, StandardScale, MinMaxScale, train_test_split, time_series_scaler
-from fast.data import STSDataset, STMDataset, MTMDataset
-from dataset.read_data import get_xmcdc, get_sh_diabetes, get_greek_wind, get_kddcup2022_sdwpf_list
-from dataset.read_data import get_nacom_2024_battery, get_nenergy_2019_battery
-
-"""
-    Disease datasets.
-"""
+from fast.data import STSDataset, STMDataset
 
 
 def load_xmcdc_sts(data_root: str = '../dataset/xmcdc/',
@@ -33,7 +23,7 @@ def load_xmcdc_sts(data_root: str = '../dataset/xmcdc/',
                    ds_params: dict = None,
                    scaler: Scale = Scale()) -> tuple[tuple, tuple]:
     """
-        Load XMCDC disease inpatient case count as ``STSDataset`` for mts forecasting.
+        Load XMCDC disease inpatient case count as ``STSDataset`` for mts forecasting (using exogenous data).
 
         The data fields are as follows:
         For daily frequency:
@@ -74,7 +64,7 @@ def load_xmcdc_sts(data_root: str = '../dataset/xmcdc/',
     target_df = df.loc[:, targets]
     target_array = target_df.values.astype(np.float32)
     target_tensor = torch.tensor(target_array)
-    target_scaler = time_series_scaler(target_array, scaler)
+    target_scaler = time_series_scaler(target_tensor, scaler)
 
     ex_tensor = None
     ex_scaler = None
@@ -121,7 +111,8 @@ def load_xmcdc_stm(data_root: str = '../dataset/xmcdc/',
                    ds_params: dict = None,
                    scaler: Scale = Scale()) -> tuple[tuple, tuple]:
     """
-        Load XMCDC disease inpatient case count as ``STMDataset`` for multi-source time series forecasting.
+        Load XMCDC disease inpatient case count as ``STMDataset`` for multi-source time series forecasting (using
+        exogenous data).
 
         All diseases are used as target time series. There are three diseases: '手足口病', '肝炎', '其他感染性腹泻'.
 

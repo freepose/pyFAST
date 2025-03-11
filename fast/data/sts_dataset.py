@@ -206,6 +206,9 @@ class STSDataset(data.Dataset):
         if self.border_ex_ts is not None:
             params['ex_vars'] = self.ex_vars
 
+            if self.border_ts_mask is not None:
+                params['ex_mask'] = True
+
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
         params_str = 'STSDataset({})'.format(params_str)
 

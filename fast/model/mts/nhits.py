@@ -20,20 +20,20 @@ class NHiTS(nn.Module):
 
     """
 
-    def __init__(self, input_window_size: int, output_window_size: int,
+    def __init__(self, input_window_size: int, output_window_size: int, output_vars: int,
                  n_blocks: list, n_layers: list, hidden_size: list, pooling_sizes: list,
                  downsample_frequencies: list, pooling_mode: str = 'max', interpolation_mode: str = 'linear',
                  dropout: float = 0.0, activation: str = 'ReLU', initialization: str = 'lecun_normal',
                  batch_normalization: bool = False, shared_weights: bool = False, naive_level: bool = True):
         super().__init__()
 
-        self.input_window_size = input_window_size
-        self.output_window_size = output_window_size
+        # self.input_window_size = input_window_size
+        # self.output_window_size = output_window_size
 
-        self.context_length = self.input_window_size
-        self.prediction_length = self.output_window_size
+        self.context_length = input_window_size
+        self.prediction_length = output_window_size
 
-        self.nhits_output_size = 1
+        self.nhits_output_size = output_vars
         self.naive_level = naive_level
 
         blocks = self.create_stack(

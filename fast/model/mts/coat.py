@@ -173,6 +173,17 @@ class TCOAT(nn.Module):
         Temporal Collaborative Attention for Wind Power Forecasting.
         Applied Energy 357 (2024), 122502.
         https://doi.org/10.1016/j.apenergy.2023.122502
+
+        :param input_window_size: input window size.
+        :param input_vars: number of input variables.
+        :param output_window_size: output window size.
+        :param output_vars: output variables.
+        :param rnn_hidden_size: hidden size.
+        :param rnn_num_layers: number of layers.
+        :param rnn_bidirectional: if True, use bidirectional RNN.
+        :param residual_window_size: short-term temporal patterns.
+        :param residual_ratio: ratio of residual.
+        :param dropout_rate: dropout rate.
     """
 
     def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1, output_vars: int = 1,
@@ -221,7 +232,9 @@ class TCOAT(nn.Module):
         self.d1 = nn.Dropout(dropout_rate)
 
     def forward(self, x):
-        """ x -> [batch_size, input_window_size, input_vars] """
+        """
+            x -> (batch_size, input_window_size, input_vars)
+         """
 
         # RNN
         rnn_out, _ = self.rnn(x)  # -> [batch_size, input_window_size, rnn_hidden_size]
@@ -252,8 +265,11 @@ class TCOAT(nn.Module):
 class CTRL(nn.Module):
     """
         Collaborative Temporal Representation Learning (CTRL).
-
         Author: Zhijin Wang, Email: zhijinecnu@gmail.com
+
+        Y Hu, S Wu, Y Chen, X He, Z Xie, Z Wang, X Liu, Y Fu.
+        CTRL: Collaborative Temporal Representation Learning for Wind Power Forecasting.
+        ACM EITCE 2024, doi: 10.1145/3711129.371133
 
         :param input_window_size: input window size.
         :param input_vars:  number of input variables.

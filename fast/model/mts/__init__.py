@@ -14,15 +14,22 @@ from .transformer.informer import Informer
 from .transformer.autoformer import Autoformer
 from .transformer.fedformer import FEDformer
 from .transformer.film import FiLM
+from .transformer.triformer import Triformer
 from .transformer.crossformer import Crossformer
 from .transformer.timesnet import TimesNet
 from .transformer.patchtst import PatchTST
+from .transformer.staeformer import STAEformer
 from .transformer.itransformer import iTransformer
 from .transformer.timesfm import TimesFM
 from .transformer.timer import Timer
 from .transformer.timexer import TimeXer
 from .transformer.timemixer import TimeMixer
 
+from .gnn.stid import STID
+from .gnn.stnorm import STNorm
+from .gnn.magnat import MAGNet
+from .gnn.gwn import GraphWaveNet
+from .gnn.fgnn import FourierGNN
 from .gnn.gain import GAIN
 
 from .coat import COAT, TCOAT, CoDR, CTRL

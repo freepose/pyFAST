@@ -4,17 +4,10 @@
 """
     Batch-wise Dynamic Padding (BDP) Dataset for sequence prediction.
 """
-import sys, bisect, itertools
-import numpy as np
-
-from typing import Literal
-from tqdm import tqdm
+import itertools
 
 import torch
 import torch.utils.data as data
-from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
-
-from .patch import PatchMaker
 
 
 class BDPDataset(data.Dataset):
@@ -130,7 +123,7 @@ class BDPDataset(data.Dataset):
 
     def __str__(self):
         """
-            Print the dataset information.
+            Print the ``BDPDataset`` information.
         """
         params = {
             'device': self.device,
@@ -149,22 +142,23 @@ class BDPDataset(data.Dataset):
         if self.ex_ts is not None:
             params['ex_vars'] = self.ex_vars
 
+            if self.ex_ts_mask is not None:
+                params['ex_mask'] = True
+
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
         params_str = 'BDPDataset({})'.format(params_str)
 
         return params_str
 
 
-
-
-def collate_fn(batch):
+def bdp_collate_fn(batch):
     """
         Collect the input and output data of the dataset by batch.
         :param batch: [[windowed sequences, ...], [mask windowed sequences, ...], [exogenous windowed sequences, ...]]
     """
     # batch = data.default_collate(batch)
 
-    zipped_batch = list(zip(*batch))    # input list, output list
+    zipped_batch = list(zip(*batch))  # input list, output list
 
     ret_batch = []
     for li in zipped_batch:

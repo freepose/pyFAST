@@ -143,6 +143,11 @@ class ANN(nn.Module):
           district heating: An example for nursing homes in Nordic countries.
         Energy Conversion and Management 2022.
         url: https://doi.org/10.1016/j.enconman.2022.116163
+
+        :param input_window_size:  input window size.
+        :param input_vars: number of input variables.
+        :param output_window_size: output window size.
+        :param hidden_size: hidden size.
     """
 
     def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1,

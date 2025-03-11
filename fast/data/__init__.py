@@ -12,4 +12,4 @@ from .patch import PatchMaker
 from .sts_dataset import STSDataset, multi_step_ahead_split, train_test_split
 from .stm_dataset import STMDataset
 from .mtm_dataset import MTMDataset
-from .bdp_dataset import BDPDataset, collate_fn
+from .bdp_dataset import BDPDataset, bdp_collate_fn

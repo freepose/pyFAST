@@ -2,6 +2,6 @@
 # encoding: utf-8
 
 """
-    Experimental settings on Shanghai Diabetes Datasets.
+    Experimental settings on Xiamen Center for Disease Prevention and Control (XMCDC) dataset.
 """
 
