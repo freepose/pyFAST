@@ -3,18 +3,25 @@
 FAST (Forecasting And time-Series in PyTorch) is a powerful, modular framework designed for advanced time series analysis. It provides a unified interface for forecasting, imputation, and generative modeling tasks, with specialized support for both multiple (MTS) and univariate (UTS) time series. The framework's core strength lies in its flexible architecture, which seamlessly integrates transformer-based models, variational autoencoders, and traditional approaches.
 
 Key capabilities include:
-- Efficient handling of complex time series data with support for missing values and variable-length sequences
-- Advanced data fusion techniques for combining multiple data sources and exogenous variables
-- Comprehensive model implementations ranging from basic architectures to state-of-the-art transformer models
-- Robust training pipelines with customizable evaluation metrics and device-agnostic acceleration
-- Built-in support for generative modeling and synthetic data generation
+- **Research-Driven Design**: Facilitates rapid experimentation and prototyping of novel time series models and techniques.
+- **LLM-Inspired Models**: Includes pioneering adaptations of Large Language Models for univariate time series forecasting.
+- **Systematic and Versatile**: Offers a comprehensive and systematic approach to time series analysis.
+- **Native Sparse Data Support**: Officially supports sparse time series forecasting.
+- Efficient handling of complex time series data with robust support for missing values and variable-length sequences
+- Advanced data fusion techniques for integrating multiple data sources and exogenous variables
+- Diverse and comprehensive model library
+- Streamlined and customizable training pipelines
+- Built-in support for generative modeling
 
 Built on PyTorch, FAST emphasizes both usability and extensibility, making it suitable for both research experiments and production deployments in domains such as healthcare analytics and energy forecasting.
 
 ## Features
 
+- **Research-driven framework**
+- **LLM-inspired models**
+- Native support for sparse time series data
 - Multiple time series architectures (MTS/UTS)
-- Flexible data preprocessing and module fusion
+- Systematic and flexible data preprocessing and fusion 
 - Cross-dataset training support
 - Comprehensive evaluation metrics
 - Multi-device acceleration (CPU/GPU/MPS)
