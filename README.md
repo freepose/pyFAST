@@ -1,6 +1,6 @@
 # FAST: Forecasting and Time-Series in PyTorch
 
-FAST (Forecasting And time-Series in PyTorch) is a powerful, modular framework designed for advanced time series analysis. It provides a unified interface for forecasting, imputation, and generative modeling tasks, with specialized support for both multiple (MTS) and univariate (UTS) time series. The framework's core strength lies in its flexible architecture, which seamlessly integrates transformer-based models, variational autoencoders, and traditional approaches.
+pyFAST (Forecasting And time-Series in PyTorch) is a powerful, modular framework designed for advanced time series analysis. It provides a unified interface for forecasting, imputation, and generative modeling tasks, with specialized support for both multiple (MTS) and univariate (UTS) time series. The framework's core strength lies in its flexible architecture, which seamlessly integrates transformer-based models, variational autoencoders, and traditional approaches.
 
 Key capabilities include:
 - **Research-Driven Design**: Facilitates rapid experimentation and prototyping of novel time series models and techniques.
@@ -87,9 +87,11 @@ trainer.fit(train_ds, val_ds)
    - Integrates exogenous variables
    - Supports variable-length sequences
 
-## Benchmarking
+## Benchmarking Methodology and Results
 
-To evaluate pyFAST's performance and efficiency, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in pyFAST for forecasting tasks and compared their performance against reference implementations and existing libraries. Our benchmarking setup involved:
+To evaluate pyFAST's performance and efficiency, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in pyFAST for forecasting tasks and compared their performance against reference implementations and existing libraries. 
+
+Our benchmarking setup involved:
 
 **Datasets**: 
 1. ETT (Electricity Transformer Temperature) (ETT-small variant): a benchmark for long-term forecasting
@@ -108,7 +110,6 @@ To evaluate pyFAST's performance and efficiency, we conducted benchmarking exper
 4. MAPE
 
 **Experimental Setup**: Experiments were on a Linux server with NVIDIA GPUs, using recommended protocols and pyFAST's Trainer class with default settings. We report average performance.
-
 
 ### Benchmarking Results
 
