@@ -13,7 +13,7 @@ Key capabilities include:
 - Streamlined and customizable training pipelines
 - Built-in support for generative modeling
 
-Built on PyTorch, FAST emphasizes both usability and extensibility, making it suitable for both research experiments and production deployments in domains such as healthcare analytics and energy forecasting.
+Built on PyTorch, pyFAST emphasizes both usability and extensibility, making it suitable for both research experiments and production deployments in domains such as healthcare analytics and energy forecasting.
 
 ## Features
 
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 
 ### Basic Usage
 
-Here's a quick example to get you started with FAST:
+Here's a quick example to get you started with pyFAST:
 
 ```python
 from fast import initial_seed
