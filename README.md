@@ -33,12 +33,12 @@ The library’s core functionalities are organized into five modules, each desig
 - **data**: Dedicated to data handling and preprocessing, featuring dataset classes tailored for STS, MTM, BDP, and STM scenarios, alongside a suite of scaling methods for seamless integration of custom data pipelines.
 - **model**: Hosts a diverse collection of time series models, including classical, deep learning (CNNs, RNNs, Transformers), and GNN-based architectures for both UTS and MTS data. The `base` submodule provides fundamental building blocks for custom model creation.
 - **train**: Provides the `Trainer` class, streamlining model training with functionalities for validation, early stopping, checkpointing, and support for various optimization and learning rate scheduling techniques.
-- **metric**: Offers a comprehensive suite of evaluation metrics for time series tasks, including specialized metrics for masked data, with the `Evaluator` class simplifying results reporting.
+- **metric**: Offers a comprehensive suite of evaluation metrics for time series tasks, including specialized metrics for masked data, with the Evaluator class simplifying results reporting.
 - **visualize**: Provides visualization tools for time series data and model predictions, aiding in model analysis and interpretation.
 
 ## Installation
 
-To install the pyFAST library, ensure you have Python installed, then run the following command to install the required dependencies:
+To install pyFAST, ensure you have Python installed, then run:
 
 ```bash
 pip install -r requirements.txt
@@ -55,7 +55,7 @@ from fast import initial_seed
 from fast.data import StandardScale
 from fast.train import Trainer
 from fast.metric import Evaluator
-from fast.model import YourModel  # Replace with the specific model you are using
+from fast.model import YourModel
 
 # Initialize components
 initial_seed(42)
@@ -67,7 +67,7 @@ train_ds = ...  # Load or prepare your training dataset
 val_ds = ...    # Load or prepare your validation dataset
 
 # Initialize and train your model
-model = YourModel(...)  # Initialize your model with necessary parameters
+model = YourModel(...)
 trainer = Trainer(device='cuda', model=model, evaluator=evaluator)
 trainer.fit(train_ds, val_ds)
 ```
@@ -87,40 +87,51 @@ trainer.fit(train_ds, val_ds)
    - Integrates exogenous variables
    - Supports variable-length sequences
 
-## Benchmarking Methodology and Results
+## Benchmarking
 
-To evaluate the performance and efficiency of pyFAST, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in pyFAST for forecasting tasks and compared their performance against reference implementations and existing libraries. Our benchmarking setup involved:
+To evaluate pyFAST's performance and efficiency, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in pyFAST for forecasting tasks and compared their performance against reference implementations and existing libraries. Our benchmarking setup involved:
 
-**Datasets**: (1) ETT (Electricity Transformer Temperature) (ETT-small variant), a benchmark for long-term forecasting; (2) Electricity Load Dataset of hourly electricity consumption; and (3) XMC-DC Dataset, a real-world outpatient dataset.
+**Datasets**: 
+1. ETT (Electricity Transformer Temperature) (ETT-small variant): a benchmark for long-term forecasting
+2. Electricity Load Dataset: hourly electricity consumption data
+3. XMC-DC Dataset: a real-world outpatient dataset
 
-**Baselines**: We compared against (1) Informer [[1]](#informer-ref), (2) PatchTST [[2]](#patchtst-ref), and (3) GluonTS [[3]](#gluonts-ref) (DeepAR and Transformer models).
+**Baselines**: We compared against: 
+1. Informer 
+2. PatchTST 
+3. GluonTS (DeepAR and Transformer models)
 
-**Evaluation Metrics**: We used (1) MSE, (2) MAE, (3) RMSE, and (4) MAPE.
+**Evaluation Metrics**: We used: 
+1. MSE
+2. MAE
+3. RMSE
+4. MAPE
 
 **Experimental Setup**: Experiments were on a Linux server with NVIDIA GPUs, using recommended protocols and pyFAST's Trainer class with default settings. We report average performance.
 
-### Results
+
+### Benchmarking Results
 
 The benchmarking results demonstrate pyFAST's competitive performance. Table 1 summarizes the forecasting performance of pyFAST models and baseline methods on the ETT, Electricity Load, and XMC-DC datasets.
 
-Table 1: Benchmarking Results on Time Series Forecasting Datasets. Lower MSE, MAE, RMSE, and MAPE indicate better performance. **MSE**: Mean Squared Error, **MAE**: Mean Absolute Error, **RMSE**: Root Mean Squared Error, **MAPE**: Mean Absolute Percentage Error.
+Table 1: Benchmarking Results on Time Series Forecasting Datasets. Lower MSE, MAE, RMSE, and MAPE indicate better performance. 
 
-| Model                     | Dataset          |    MSE|   MAE |   RMSE|   MAPE|
-|:--------------------------|:-----------------|------:|------:|------:|------:|
-| pyFAST (Transformer)      | ETT-small        | 0.123 | 0.087 |  0.351|  0.054|
-| Informer [1]              | ETT-small        | 0.135 | 0.092 |  0.367|  0.058|
-| PatchTST [2]              | ETT-small        | 0.128 | 0.090 |  0.358|  0.056|
-| GluonTS (Transformer) [3] | ETT-small        | 0.140 | 0.095 |  0.374|  0.060|
-| pyFAST (Transformer)      | Electricity Load | 0.085 | 0.063 |  0.292|  0.041|
-| GluonTS (DeepAR) [3]      | Electricity Load | 0.092 | 0.068 |  0.303|  0.045|
-| pyFAST (GNN)              | XMC-DC           | 0.057 | 0.042 |  0.239|  0.032|
-| LSTM                      | XMC-DC           | 0.065 | 0.048 |  0.255|  0.036|
+| Model                     | Dataset          |    MSE |   MAE |  RMSE |  MAPE |
+|---------------------------|------------------|-------:|------:|------:|------:|
+| pyFAST (Transformer)      | ETT-small        |  0.123 | 0.087 | 0.351 | 0.054 |
+| Informer                  | ETT-small        |  0.135 | 0.092 | 0.367 | 0.058 |
+| PatchTST                  | ETT-small        |  0.128 | 0.090 | 0.358 | 0.056 |
+| GluonTS (Transformer)      | ETT-small        |  0.140 | 0.095 | 0.374 | 0.060 |
+| pyFAST (Transformer)      | Electricity Load |  0.085 | 0.063 | 0.292 | 0.041 |
+| GluonTS (DeepAR)          | Electricity Load |  0.092 | 0.068 | 0.303 | 0.045 |
+| pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |
+| LSTM                      | XMC-DC           |  0.065 | 0.048 | 0.255 | 0.036 |
 
-We observed that pyFAST models, particularly Transformer-based architectures, exhibit strong performance on long-term forecasting tasks, while also maintaining computational efficiency due to the optimized implementations and modular design. The modularity of pyFAST also allows for easy customization and adaptation of models, which can lead to further performance improvements for specific datasets and tasks.
+We observed that pyFAST models, particularly Transformer-based architectures, exhibit strong performance on long-term forecasting tasks, while also maintaining computational efficiency due to the optimized implementations and modular design. pyFAST's modularity also allows for easy customization and adaptation of models, which can lead to further performance improvements for specific datasets and tasks.
 
-## Usability and Code Example
+## Code Example (Usability)
 
-To illustrate the usability of pyFAST, we provide a Python code example demonstrating a typical workflow for time series forecasting using the Transformer model on the ETT dataset. This example showcases the ease of use and flexibility of the library, highlighting how users can quickly get started with time series analysis using pyFAST.
+To illustrate pyFAST's usability, here is a Python code example demonstrating a typical workflow for time series forecasting using the Transformer model on the ETT dataset. This example showcases the ease of use and flexibility of the library, highlighting how users can quickly get started with time series analysis using pyFAST.
 
 ```python
 from fast.data.dataset import TimeSeriesDataset
