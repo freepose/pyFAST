@@ -17,14 +17,24 @@ Built on PyTorch, FAST emphasizes both usability and extensibility, making it su
 
 ## Features
 
-- **Research-driven framework**
-- **LLM-inspired models**
+- Research-driven framework
+- LLM-inspired models
 - Native support for sparse time series data
 - Multiple time series architectures (MTS/UTS)
 - Systematic and flexible data preprocessing and fusion
 - Cross-dataset training support
 - Comprehensive evaluation metrics
 - Multi-device acceleration (CPU/GPU/MPS)
+
+## Core Modules
+
+The library’s core functionalities are organized into five modules, each designed with specific capabilities to ensure a cohesive and versatile framework:
+
+- **data**: Dedicated to data handling and preprocessing, featuring dataset classes tailored for STS, MTM, BDP, and STM scenarios, alongside a suite of scaling methods for seamless integration of custom data pipelines.
+- **model**: Hosts a diverse collection of time series models, including classical, deep learning (CNNs, RNNs, Transformers), and GNN-based architectures for both UTS and MTS data. The `base` submodule provides fundamental building blocks for custom model creation.
+- **train**: Provides the `Trainer` class, streamlining model training with functionalities for validation, early stopping, checkpointing, and support for various optimization and learning rate scheduling techniques.
+- **metric**: Offers a comprehensive suite of evaluation metrics for time series tasks, including specialized metrics for masked data, with the `Evaluator` class simplifying results reporting.
+- **visualize**: Provides visualization tools for time series data and model predictions, aiding in model analysis and interpretation.
 
 ## Installation
 
@@ -62,140 +72,57 @@ trainer = Trainer(device='cuda', model=model, evaluator=evaluator)
 trainer.fit(train_ds, val_ds)
 ```
 
-### Data Structures
+## Data Structures
 
-1. **Multiple Time Series (MTS)**
+### Multiple Time Series (MTS)
    - Shape: `[batch_size, window_size, n_vars]`
    - Used for datasets with multiple variables over time.
 
-2. **Univariate Time Series (UTS)**
+### Univariate Time Series (UTS)
    - Shape: `[batch_size * n_vars, window_size, 1]`
    - Used for single-variable sequences.
 
-3. **Data Fusion Support**
+### Data Fusion Support
    - Handles missing data with masks
    - Integrates exogenous variables
    - Supports variable-length sequences
 
-## Core Directory Structure
+## Benchmarking Methodology and Results
 
-```plaintext
-fast/
-├── data/
-│   ├── loader/           # Data loading utilities
-│   ├── preprocessing/    # Data preprocessing tools
-│   │   ├── scaler.py    # Data scaling implementations
-│   │   └── fusion.py    # Data fusion utilities
-│   └── dataset.py       # Dataset implementations
-├── model/
-│   ├── mts/             # Multiple Time Series models
-│   │   ├── transformer/ # Transformer-based architectures
-│   │   └── base/       # Base MTS implementations
-│   ├── uts/             # Univariate Time Series models
-│   │   ├── transformer/ # Transformer-based architectures
-│   │   └── base/       # Base UTS implementations
-│   └── base/            # Base model components
-├── generative/          # Generative model implementations
-│   ├── transvae.py      # Transformer VAE implementation
-│   └── base.py          # Base generative components
-├── train/
-│   ├── trainer.py       # Training loop implementations
-│   └── callbacks.py     # Training callbacks
-├── metric/
-│   ├── evaluator.py     # Evaluation metrics implementation
-│   └── losses.py        # Loss functions
-└── utils/
-    ├── config.py        # Configuration utilities
-    ├── logging.py       # Logging utilities
-    └── tools.py         # General utility functions
-```
+To evaluate the performance and efficiency of pyFAST, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in pyFAST for forecasting tasks and compared their performance against reference implementations and existing libraries. Our benchmarking setup involved:
 
-Each directory serves a specific purpose:
+**Datasets**: (1) ETT (Electricity Transformer Temperature) (ETT-small variant), a benchmark for long-term forecasting; (2) Electricity Load Dataset of hourly electricity consumption; and (3) XMC-DC Dataset, a real-world outpatient dataset.
 
-- **data/**: Handles all data-related operations
-  - Implements data loading, preprocessing, and dataset management
-  - Supports both MTS and UTS data formats
-  - Provides tools for data fusion and scaling
+**Baselines**: We compared against (1) Informer [[1]](#informer-ref), (2) PatchTST [[2]](#patchtst-ref), and (3) GluonTS [[3]](#gluonts-ref) (DeepAR and Transformer models).
 
-- **model/**: Contains all model architectures
-  - Separate implementations for MTS and UTS approaches
-  - Includes transformer-based and other architectural variants
-  - Provides base components for model development
+**Evaluation Metrics**: We used (1) MSE, (2) MAE, (3) RMSE, and (4) MAPE.
 
-- **generative/**: Focuses on generative modeling
-  - Implements VAE and other generative approaches
-  - Provides tools for synthetic data generation
+**Experimental Setup**: Experiments were on a Linux server with NVIDIA GPUs, using recommended protocols and pyFAST's Trainer class with default settings. We report average performance.
 
-- **train/**: Manages the training process
-  - Implements training loops and optimization
-  - Provides callback mechanisms for training control
+### Results
 
-- **metric/**: Handles evaluation and losses
-  - Implements various evaluation metrics
-  - Provides loss functions for different tasks
+The benchmarking results demonstrate pyFAST's competitive performance. Table 1 summarizes the forecasting performance of pyFAST models and baseline methods on the ETT, Electricity Load, and XMC-DC datasets.
 
-- **utils/**: Contains utility functions
-  - Manages configuration and logging
-  - Provides common helper functions
+Table 1: Benchmarking Results on Time Series Forecasting Datasets. Lower MSE, MAE, RMSE, and MAPE indicate better performance. **MSE**: Mean Squared Error, **MAE**: Mean Absolute Error, **RMSE**: Root Mean Squared Error, **MAPE**: Mean Absolute Percentage Error.
 
-## License
+| Model                     | Dataset          |    MSE|   MAE |   RMSE|   MAPE|
+|:--------------------------|:-----------------|------:|------:|------:|------:|
+| pyFAST (Transformer)      | ETT-small        | 0.123 | 0.087 |  0.351|  0.054|
+| Informer [1]              | ETT-small        | 0.135 | 0.092 |  0.367|  0.058|
+| PatchTST [2]              | ETT-small        | 0.128 | 0.090 |  0.358|  0.056|
+| GluonTS (Transformer) [3] | ETT-small        | 0.140 | 0.095 |  0.374|  0.060|
+| pyFAST (Transformer)      | Electricity Load | 0.085 | 0.063 |  0.292|  0.041|
+| GluonTS (DeepAR) [3]      | Electricity Load | 0.092 | 0.068 |  0.303|  0.045|
+| pyFAST (GNN)              | XMC-DC           | 0.057 | 0.042 |  0.239|  0.032|
+| LSTM                      | XMC-DC           | 0.065 | 0.048 |  0.255|  0.036|
 
-MIT License
+We observed that pyFAST models, particularly Transformer-based architectures, exhibit strong performance on long-term forecasting tasks, while also maintaining computational efficiency due to the optimized implementations and modular design. The modularity of pyFAST also allows for easy customization and adaptation of models, which can lead to further performance improvements for specific datasets and tasks.
 
-Copyright (c) 2024 pyFAST Contributors
+## Usability and Code Example
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+To illustrate the usability of pyFAST, we provide a Python code example demonstrating a typical workflow for time series forecasting using the Transformer model on the ETT dataset. This example showcases the ease of use and flexibility of the library, highlighting how users can quickly get started with time series analysis using pyFAST.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-## Citation
-
-If you use FAST in your research, please cite our related works:
-
-1. Wang, Z., Liu, H., Wu, S., Liu, N., Liu, X., Hu, Y., & Fu, Y. (2024). Explainable time-varying directional representations for photovoltaic power generation forecasting. *Journal of Cleaner Production*, 143056.
-
-2. Huang, Y., Zhao, Y., Wang, Z., Liu, X., & Fu, Y. (2024). Sparse dynamic graph learning for district heat load forecasting. *Applied Energy*, 371, 123685.
-
-3. Hu, Y., Liu, H., Wu, S., Zhao, Y., Wang, Z., & Liu, X. (2024). Temporal collaborative attention for wind power forecasting. *Applied Energy*, 357, 122502.
-
-4. Huang, Y., Zhao, Y., Wang, Z., Liu, X., Liu, H., & Fu, Y. (2023). Explainable district heat load forecasting with active deep learning. *Applied Energy*, 350, 121753.
-
-5. Wang, Z., Liu, X., Huang, Y., Zhang, P., & Fu, Y. (2023). A multivariate time series graph neural network for district heat load forecasting. *Energy*, 127911.
-
-# Methodology and Benchmarking
-To evaluate the performance and efficiency of \texttt{pyFAST}, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in \texttt{pyFAST} for forecasting tasks and compared their performance against reference implementations and existing libraries.  Our benchmarking setup involved: \textbf{Datasets}: (1) ETT (Electricity Transformer Temperature) (ETT-small variant), a benchmark for long-term forecasting; (2) Electricity Load Dataset of hourly electricity consumption; and (3) XMC-DC Dataset, a real-world outpatient dataset. \textbf{Baselines}: We compared against (1) Informer \cite{informer}, (2) PatchTST \cite{patchtst}, and (3) GluonTS \cite{gluonts} (DeepAR and Transformer models). \textbf{Evaluation Metrics}: We used (1) MSE, (2) MAE, (3) RMSE, and (4) MAPE. \textbf{Experimental Setup}: Experiments were on a Linux server with NVIDIA GPUs, using recommended protocols and \texttt{pyFAST}'s \texttt{Trainer} class with default settings. We report average performance.
-
-## Results
-The benchmarking results demonstrate \texttt{pyFAST}'s competitive performance. Table~\ref{tab:benchmarking} summarizes the forecasting performance of \texttt{pyFAST} models and baseline methods on the ETT, Electricity Load, and XMC-DC datasets.
-
-\begin{table}[h]
-    \caption{Benchmarking Results on Time Series Forecasting Datasets. Lower MSE, MAE, RMSE, and MAPE indicate better performance. \textbf{MSE}: Mean Squared Error, \textbf{MAE}: Mean Absolute Error, \textbf{RMSE}: Root Mean Squared Error, \textbf{MAPE}: Mean Absolute Percentage Error.}
-    \label{tab:benchmarking}
-    \centering
-    \begin{tabular}{llllll}
-        \hline
-        \textbf{Model} & \textbf{Dataset} & \textbf{MSE} & \textbf{MAE} & \textbf{RMSE} & \textbf{MAPE} \\
-        \hline
-        \texttt{pyFAST} (Transformer) & ETT-small & 0.123 & 0.087 & 0.351 & 0.054 \\
-        Informer \cite{informer} & ETT-small & 0.135 & 0.092 & 0.367 & 0.058 \\
-        PatchTST \cite{patchtst} & ETT-small & 0.128 & 0.090 & 0.358 & 0.056 \\
-        GluonTS (Transformer) \cite{gluonts} & ETT-small & 0.140 & 0.095 & 0.374 & 0.060 \\
-        \hline
-        \texttt{pyFAST} (Transformer) & Electricity Load & 0.085 & 0.063 & 0.292 & 0.041 \\
-        GluonTS (DeepAR) \cite{gluonts} & Electricity Load & 0.092 & 0.068 & 0.303 & 0.045 \\
-        \hline
-        \texttt{pyFAST} (GNN) & XMC-DC & 0.057 & 0.042 & 0.239 & 0.032 \\
-        LSTM & XMC-DC & 0.065 & 0.048 & 0.255 & 0.036 \\
-        \hline
-    \end{tabular}
-\end{table}
-
-We observed that \texttt{pyFAST} models, particularly Transformer-based architectures, exhibit strong performance on long-term forecasting tasks, while also maintaining computational efficiency due to the optimized implementations and modular design. The modularity of \texttt{pyFAST} also allows for easy customization and adaptation of models, which can lead to further performance improvements for specific datasets and tasks.
-
-# Usability and Code Example
-To illustrate the usability of \texttt{pyFAST}, we provide a Python code example demonstrating a typical workflow for time series forecasting using the Transformer model on the ETT dataset. This example showcases the ease of use and flexibility of the library, highlighting how users can quickly get started with time series analysis using \texttt{pyFAST}.
-
-\begin{verbatim}
+```python
 from fast.data.dataset import TimeSeriesDataset
 from fast.model.transformer import TransformerModel
 from fast.train import Trainer
@@ -232,6 +159,16 @@ trainer.train(
 test_loss, test_metrics = trainer.evaluate(test_data)
 print(f"Test Loss: {test_loss}")
 print(f"Test Metrics: {test_metrics}")
-\end{verbatim}
+```
 
-This code snippet demonstrates the key steps in using \texttt{pyFAST}: loading a dataset, initializing a model, defining metrics, setting up the trainer, and training and evaluating the model. The modular design allows users to easily swap out different datasets, models, or metrics by modifying just a few lines of code.
+This code snippet demonstrates the key steps in using pyFAST: loading a dataset, initializing a model, defining metrics, setting up the trainer, and training and evaluating the model. The modular design allows users to easily swap out different datasets, models, or metrics by modifying just a few lines of code.
+
+## License
+
+MIT License
+
+Copyright (c) 2024 pyFAST Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
