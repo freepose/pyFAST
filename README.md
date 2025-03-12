@@ -1,4 +1,4 @@
-# FAST: Forecasting and Time-Series in PyTorch
+# pyFAST: Forecasting and Time-Series in PyTorch
 
 pyFAST (Forecasting And time-Series in PyTorch) is a powerful, modular framework designed for advanced time series analysis. It provides a unified interface for forecasting, imputation, and generative modeling tasks, with specialized support for both multiple (MTS) and univariate (UTS) time series. The framework's core strength lies in its flexible architecture, which seamlessly integrates transformer-based models, variational autoencoders, and traditional approaches.
 
