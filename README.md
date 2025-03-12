@@ -130,7 +130,7 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 | pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |
 | LSTM                      | XMC-DC           |  0.065 | 0.048 | 0.255 | 0.036 |
 
-*For detailed benchmarking methodology and comprehensive results, please refer to our JMLR-MLOSS paper [Paper Citation - Add citation once available].*
+
 
 ## Code Example: Transformer Forecasting on ETT Dataset (Usability)
 
