@@ -1,44 +1,44 @@
-# pyFAST: Forecasting and Time-Series in PyTorch
+# pyFAST: Flexible, Advanced Framework for Multi-source and Sparse Time Series Analysis in PyTorch
 
-pyFAST (Forecasting And time-Series in PyTorch) is a powerful, modular framework designed for advanced time series analysis. It provides a unified interface for forecasting, imputation, and generative modeling tasks, with specialized support for both multiple (MTS) and univariate (UTS) time series. The framework's core strength lies in its flexible architecture, which seamlessly integrates transformer-based models, variational autoencoders, and traditional approaches.
+[![Software Overview Figure](software_overview.png)](software_overview.png) 
+*[Click to Enlarge: pyFAST Software Overview Diagram]*
 
-Key capabilities include:
-- **Research-Driven Design**: Facilitates rapid experimentation and prototyping of novel time series models and techniques.
-- **LLM-Inspired Models**: Includes pioneering adaptations of Large Language Models for univariate time series forecasting.
-- **Systematic and Versatile**: Offers a comprehensive and systematic approach to time series analysis.
-- **Native Sparse Data Support**: Officially supports sparse time series forecasting.
-- Efficient handling of complex time series data with robust support for missing values and variable-length sequences
-- Advanced data fusion techniques for integrating multiple data sources and exogenous variables
-- Diverse and comprehensive model library
-- Streamlined and customizable training pipelines
-- Built-in support for generative modeling
+pyFAST (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
 
-Built on PyTorch, pyFAST emphasizes both usability and extensibility, making it suitable for both research experiments and production deployments in domains such as healthcare analytics and energy forecasting.
+**Unlock the Power of pyFAST for:**
 
-## Features
+*   **Alignment-Free Multi-source Time Series Analysis:**  Process and fuse data from diverse sources without the need for strict temporal alignment, inspired by Large Language Model principles.
+*   **Native Sparse Time Series Forecasting:**  Effectively handle and forecast sparse time series data with specialized metrics and loss functions, addressing a critical gap in existing libraries.
+*   **Rapid Research Prototyping:**  Experiment and prototype novel time series models and techniques with unparalleled flexibility and modularity.
+*   **Seamless Customization and Extensibility:**  Tailor and extend the library to your specific research or application needs with its component-based modular design.
+*   **High Performance and Scalability:**  Benefit from optimized PyTorch implementations and multi-device acceleration for efficient handling of large datasets and complex models.
 
-- Research-driven framework
-- LLM-inspired models
-- Native support for sparse time series data
-- Multiple time series architectures (MTS/UTS)
-- Systematic and flexible data preprocessing and fusion
-- Cross-dataset training support
-- Comprehensive evaluation metrics
-- Multi-device acceleration (CPU/GPU/MPS)
+**Key Capabilities:**
 
-## Core Modules
+*   **Pioneering LLM-Inspired Models:** First-of-its-kind adaptations of Large Language Models specifically for alignment-free multi-source time series forecasting.
+*   **Native Sparse Data Support:** Comprehensive support for sparse time series, including specialized metrics, loss functions, and efficient data handling.
+*   **Flexible Multi-source Data Fusion:**  Integrate and analyze time series data from diverse, potentially misaligned sources.
+*   **Extensive Model Library:**  Includes a broad range of classical, deep learning (Transformers, RNNs, CNNs, GNNs), and generative time series models for both multivariate (MTS) and univariate (UTS) data.
+*   **Modular and Extensible Architecture:**  Component-based design enables easy customization, extension, and combination of modules.
+*   **Streamlined Training Pipeline:**  `Trainer` class simplifies model training with built-in validation, early stopping, checkpointing, and multi-device support.
+*   **Comprehensive Evaluation Suite:**  Includes a wide array of standard and sparse-specific evaluation metrics via the `Evaluator` class.
+*   **Built-in Generative Modeling:**  Dedicated module for time series Variational Autoencoders (VAEs), including Transformer-based VAEs.
+*   **Reproducibility Focus:**  Utilities like `initial_seed()` ensure experiment reproducibility.
 
-The library’s core functionalities are organized into five modules, each designed with specific capabilities to ensure a cohesive and versatile framework:
+**Explore the Core Modules (See Figure Above):**
 
-- **data**: Dedicated to data handling and preprocessing, featuring dataset classes tailored for STS, MTM, BDP, and STM scenarios, alongside a suite of scaling methods for seamless integration of custom data pipelines.
-- **model**: Hosts a diverse collection of time series models, including classical, deep learning (CNNs, RNNs, Transformers), and GNN-based architectures for both UTS and MTS data. The `base` submodule provides fundamental building blocks for custom model creation.
-- **train**: Provides the `Trainer` class, streamlining model training with functionalities for validation, early stopping, checkpointing, and support for various optimization and learning rate scheduling techniques.
-- **metric**: Offers a comprehensive suite of evaluation metrics for time series tasks, including specialized metrics for masked data, with the Evaluator class simplifying results reporting.
-- **visualize**: Provides visualization tools for time series data and model predictions, aiding in model analysis and interpretation.
+As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` library is structured into five core modules, ensuring a cohesive and versatile framework:
+
+*   **`data/` Module:**  Handles data loading, preprocessing, and dataset creation for STS, MTS, STM, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
+*   **`model/` Module:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
+*   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
+*   **`metric/` Module:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
+*   **`visualize.py` Module:**  Equips users with visualization tools to plot time series data and model predictions, facilitating model analysis and interpretation through line charts and comparable real vs. predicted plots.
+*   **`generative/` Module:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
 
 ## Installation
 
-To install pyFAST, ensure you have Python installed, then run:
+Ensure you have Python installed. Then, to install pyFAST and its dependencies, run:
 
 ```bash
 pip install -r requirements.txt
@@ -46,76 +46,78 @@ pip install -r requirements.txt
 
 ## Getting Started
 
-### Basic Usage
+### Basic Usage Example
 
-Here's a quick example to get you started with pyFAST:
+Jumpstart your time series projects with pyFAST using this basic example:
 
 ```python
 from fast import initial_seed
 from fast.data import StandardScale
 from fast.train import Trainer
 from fast.metric import Evaluator
-from fast.model import YourModel
+from fast.model.mlp import MLPModel # Example: Using a simple MLP model
 
-# Initialize components
+# Initialize components for reproducibility and evaluation
 initial_seed(42)
-scaler = StandardScale()
-evaluator = Evaluator(['MAE', 'RMSE', 'MAPE'])
+scaler = StandardScale() # Data scaling
+evaluator = Evaluator(['MAE', 'RMSE', 'MAPE']) # Evaluation metrics
 
-# Prepare your data
-train_ds = ...  # Load or prepare your training dataset
-val_ds = ...    # Load or prepare your validation dataset
+# Prepare your time series data (replace with your actual data loading)
+# Example placeholders:
+train_ds = ...  # Your training dataset (e.g., TimeSeriesDataset instance)
+val_ds = ...    # Your validation dataset
 
-# Initialize and train your model
-model = YourModel(...)
-trainer = Trainer(device='cuda', model=model, evaluator=evaluator)
-trainer.fit(train_ds, val_ds)
+# Initialize your chosen model (e.g., MLPModel)
+model = MLPModel(
+    input_size=train_ds.n_vars, # Adapt input size to your dataset
+    output_size=train_ds.n_vars, # Adapt output size
+    seq_len=train_ds.window_size, # Define sequence length
+    pred_len=train_ds.pred_len   # Define prediction length
+)
+
+
+# Set up the Trainer for model training and evaluation
+trainer = Trainer(device='cuda', model=model, evaluator=evaluator) # Use 'cuda', 'cpu', or 'mps'
+
+# Train your model using your prepared datasets
+trainer.fit(train_ds, val_ds, epochs=10) # Train for 10 epochs
+
+# After training, you can evaluate on a test dataset (if available)
+# test_ds = ... # Your test dataset
+# test_loss, test_metrics = trainer.evaluate(test_ds)
+# print(f"Test Loss: {test_loss}")
+# print(f"Test Metrics: {test_metrics}")
 ```
 
-## Data Structures
+### Data Structures Overview
 
-### Multiple Time Series (MTS)
-   - Shape: `[batch_size, window_size, n_vars]`
-   - Used for datasets with multiple variables over time.
+pyFAST is designed to handle various time series data structures:
 
-### Univariate Time Series (UTS)
-   - Shape: `[batch_size * n_vars, window_size, 1]`
-   - Used for single-variable sequences.
+*   **Multiple Time Series (MTS):**
+    *   Shape: `[batch_size, window_size, n_vars]`
+    *   For datasets with multiple variables recorded over time (e.g., sensor readings, stock prices of multiple companies).
 
-### Data Fusion Support
-   - Handles missing data with masks
-   - Integrates exogenous variables
-   - Supports variable-length sequences
+*   **Univariate Time Series (UTS):**
+    *   Shape: `[batch_size * n_vars, window_size, 1]`
+    *   For datasets focusing on single-variable sequences, often processed in batches for efficiency.
 
-## Benchmarking Methodology and Results
+*   **Advanced Data Handling:**
+    *   **Sparse Data Ready:**  Models and metrics are designed to effectively work with sparse time series data and missing values, utilizing masks for accurate computations.
+    *   **Exogenous Variable Integration:** Seamlessly incorporate external factors (exogenous variables) to enrich your time series models.
+    *   **Variable-Length Sequence Support:**  Utilizes dynamic padding to efficiently process time series with varying lengths within batches, optimizing training and inference.
 
-To evaluate pyFAST's performance and efficiency, we conducted benchmarking experiments on established time series datasets. We evaluated a range of models implemented in pyFAST for forecasting tasks and compared their performance against reference implementations and existing libraries. 
+## Benchmarking Performance
 
-Our benchmarking setup involved:
+pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.
 
-**Datasets**: 
-1. ETT (Electricity Transformer Temperature) (ETT-small variant): a benchmark for long-term forecasting
-2. Electricity Load Dataset: hourly electricity consumption data
-3. XMC-DC Dataset: a real-world outpatient dataset
+**Benchmarking Highlights:**
 
-**Baselines**: We compared against: 
-1. Informer 
-2. PatchTST 
-3. GluonTS (DeepAR and Transformer models)
+*   **Datasets:** Evaluated on ETT-small (long-term forecasting), Electricity Load, and XMC-DC (real-world outpatient) datasets.
+*   **Baselines:** Compared against strong baselines including Informer, PatchTST, and GluonTS (DeepAR, Transformer).
+*   **Metrics:** Performance assessed using MSE, MAE, RMSE, and MAPE.
+*   **Results:**  pyFAST models, especially Transformer-based architectures, demonstrate **competitive or superior performance** in forecasting accuracy while maintaining **computational efficiency** due to optimized implementations and modular design.
 
-**Evaluation Metrics**: We used: 
-1. MSE
-2. MAE
-3. RMSE
-4. MAPE
-
-**Experimental Setup**: Experiments were on a Linux server with NVIDIA GPUs, using recommended protocols and pyFAST's Trainer class with default settings. We report average performance.
-
-### Benchmarking Results
-
-The benchmarking results demonstrate pyFAST's competitive performance. Table 1 summarizes the forecasting performance of pyFAST models and baseline methods on the ETT, Electricity Load, and XMC-DC datasets.
-
-Table 1: Benchmarking Results on Time Series Forecasting Datasets. Lower MSE, MAE, RMSE, and MAPE indicate better performance. 
+**Example Benchmarking Results (Table 1 from Paper):**
 
 | Model                     | Dataset          |    MSE |   MAE |  RMSE |  MAPE |
 |---------------------------|------------------|-------:|------:|------:|------:|
@@ -128,11 +130,11 @@ Table 1: Benchmarking Results on Time Series Forecasting Datasets. Lower MSE, MA
 | pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |
 | LSTM                      | XMC-DC           |  0.065 | 0.048 | 0.255 | 0.036 |
 
-We observed that pyFAST models, particularly Transformer-based architectures, exhibit strong performance on long-term forecasting tasks, while also maintaining computational efficiency due to the optimized implementations and modular design. pyFAST's modularity also allows for easy customization and adaptation of models, which can lead to further performance improvements for specific datasets and tasks.
+*For detailed benchmarking methodology and comprehensive results, please refer to our JMLR-MLOSS paper [Paper Citation - Add citation once available].*
 
-## Code Example (Usability)
+## Code Example: Transformer Forecasting on ETT Dataset (Usability)
 
-To illustrate pyFAST's usability, here is a Python code example demonstrating a typical workflow for time series forecasting using the Transformer model on the ETT dataset. This example showcases the ease of use and flexibility of the library, highlighting how users can quickly get started with time series analysis using pyFAST.
+Explore pyFAST's ease of use with this Python code example, showcasing a typical forecasting workflow using a Transformer model on the ETT dataset:
 
 ```python
 from fast.data.dataset import TimeSeriesDataset
@@ -140,40 +142,43 @@ from fast.model.transformer import TransformerModel
 from fast.train import Trainer
 from fast.metric.metric import MeanSquaredError, MeanAbsoluteError
 
-# Load ETT dataset
+# Load ETT dataset directly from CSV
 dataset = TimeSeriesDataset.from_csv('dataset/ETT/ETT-small.csv')
-train_data, val_data, test_data = dataset.split([0.7, 0.2, 0.1])
+train_data, val_data, test_data = dataset.split([0.7, 0.2, 0.1]) # Split into train/val/test sets
 
-# Initialize Transformer model
+# Initialize Transformer model with dataset-aware input/output sizes
 model = TransformerModel(
-    input_size=dataset.n_vars,
-    output_size=dataset.n_vars,
-    seq_len=24,
-    pred_len=24
+    input_size=dataset.n_vars,    # Automatically infer input size from dataset
+    output_size=dataset.n_vars,   # Match output size to input variables
+    seq_len=24,                  # Define input sequence length (window size)
+    pred_len=24                   # Define prediction length (forecast horizon)
 )
 
-# Define metrics and trainer
+# Define evaluation metrics
 metrics = [MeanSquaredError(), MeanAbsoluteError()]
+
+# Initialize the Trainer, specifying model, metrics, and device
 trainer = Trainer(
     model=model,
     metrics=metrics,
-    device='cuda'  # or 'cpu'
+    device='cuda'  # Use 'cuda' for GPU acceleration if available, else 'cpu'
 )
 
-# Train the model
+# Train the model using training and validation data, for 10 epochs
 trainer.train(
     train_data=train_data,
     val_data=val_data,
     epochs=10
 )
 
-# Evaluate on test data
+# Evaluate the trained model on the test dataset
 test_loss, test_metrics = trainer.evaluate(test_data)
 print(f"Test Loss: {test_loss}")
 print(f"Test Metrics: {test_metrics}")
 ```
 
-This code snippet demonstrates the key steps in using pyFAST: loading a dataset, initializing a model, defining metrics, setting up the trainer, and training and evaluating the model. The modular design allows users to easily swap out different datasets, models, or metrics by modifying just a few lines of code.
+This example highlights pyFAST's straightforward API and modular design, enabling users to quickly set up and run time series forecasting experiments with minimal code.
+
 
 ## License
 
