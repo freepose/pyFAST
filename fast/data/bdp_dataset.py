@@ -12,7 +12,7 @@ import torch.utils.data as data
 
 class BDPDataset(data.Dataset):
     """
-        Single prediction Target Multiple sources (STM) sequence dataset using Batch-wise Dynamic Padding (BDP).
+        Single prediction object Multiple sources sequence dataset using Batch-wise Dynamic Padding (BDP).
 
         ``BDPDataset`` pads zero values to **several** varying-length sequences in a batch.
 
@@ -156,9 +156,8 @@ def bdp_collate_fn(batch):
         Collect the input and output data of the dataset by batch.
         :param batch: [[windowed sequences, ...], [mask windowed sequences, ...], [exogenous windowed sequences, ...]]
     """
-    # batch = data.default_collate(batch)
 
-    zipped_batch = list(zip(*batch))  # input list, output list
+    zipped_batch = list(zip(*batch))  # (input list, output list)
 
     ret_batch = []
     for li in zipped_batch:

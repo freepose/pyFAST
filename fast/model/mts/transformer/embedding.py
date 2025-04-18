@@ -34,13 +34,14 @@ class PositionalEncoding(nn.Module):
         :param d_model: model dimension, a.k.a., embedding size.
         :param max_seq_len: maximum sequence length.
     """
-    def __init__(self, d_model: int, max_seq_len: int=5000):
+
+    def __init__(self, d_model: int, max_seq_len: int = 5000):
         super(PositionalEncoding, self).__init__()
 
         self.pe = nn.Parameter(torch.zeros(max_seq_len, d_model), requires_grad=False)
 
-        position = torch.arange(0, max_seq_len).unsqueeze(1)    # -> (max_seq_len, 1)
-        div_term = (torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model)).exp() # -> (d_model // 2)
+        position = torch.arange(0, max_seq_len).unsqueeze(1)  # -> (max_seq_len, 1)
+        div_term = (torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model)).exp()  # -> (d_model // 2)
         self.pe[:, 0::2] = torch.sin(position * div_term)
         self.pe[:, 1::2] = torch.cos(position * div_term)
 

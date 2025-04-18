@@ -3,4 +3,6 @@
 
 """
     This package provides models working with spatio-temporal data.
+
+    Spatio-temporal prediction.
 """

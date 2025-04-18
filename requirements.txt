@@ -2,8 +2,5 @@ numpy
 pandas
 matplotlib
 tqdm
-pytorch>=2.0
-transformers
-datasets
-sympy
+torch>=2.0.0
 scipy

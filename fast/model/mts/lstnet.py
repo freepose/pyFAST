@@ -11,7 +11,7 @@ class LSTNet(nn.Module):
     """
         Guokun Lai, Wei-Cheng Chang, Yiming Yang, Hanxiao Liu
         Modeling Long- and Short-Term Temporal Patterns with Deep Neural Networks
-        SIGIR 2018. url: https://arxiv.org/abs/1703.07015
+        SIGIR 2018. url: https://arxiv.org/pdf/1703.07015
 
         LSTNet has two major shortcomings:
         (1) the skip length of the recurrent-skip layer must be manually tuned,

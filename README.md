@@ -1,6 +1,6 @@
 # pyFAST: Flexible, Advanced Framework for Multi-source and Sparse Time Series Analysis in PyTorch
 
-[![Software Overview Figure](software_overview.png)](software_overview.png) 
+[![Software Overview Figure](overview.png)](overview.png) 
 
 
 pyFAST (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
@@ -20,16 +20,16 @@ pyFAST (Forecasting And time-Series in PyTorch) is a **research-driven, modular 
 *   **Flexible Multi-source Data Fusion:**  Integrate and analyze time series data from diverse, potentially misaligned sources.
 *   **Extensive Model Library:**  Includes a broad range of classical, deep learning (Transformers, RNNs, CNNs, GNNs), and generative time series models for both multivariate (MTS) and univariate (UTS) data.
 *   **Modular and Extensible Architecture:**  Component-based design enables easy customization, extension, and combination of modules.
-*   **Streamlined Training Pipeline:**  `Trainer` class simplifies model training with built-in validation, early stopping, checkpointing, and multi-device support.
-*   **Comprehensive Evaluation Suite:**  Includes a wide array of standard and sparse-specific evaluation metrics via the `Evaluator` class.
-*   **Built-in Generative Modeling:**  Dedicated module for time series Variational Autoencoders (VAEs), including Transformer-based VAEs.
-*   **Reproducibility Focus:**  Utilities like `initial_seed()` ensure experiment reproducibility.
+*   **Streamlined Training Pipeline:** `Trainer` class simplifies model training with built-in validation, early stopping, checkpointing, and multi-device support.
+*   **Comprehensive Evaluation Suite:** Includes a wide array of standard and sparse-specific evaluation metrics via the `Evaluator` class.
+*   **Built-in Generative Modeling:** Dedicated module for time series Variational Autoencoders (VAEs), including Transformer-based VAEs.
+*   **Reproducibility Focus:** Utilities like `initial_seed()` ensure experiment reproducibility.
 
 **Explore the Core Modules (See Figure Above):**
 
 As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` library is structured into five core modules, ensuring a cohesive and versatile framework:
 
-*   **`data/` Module:**  Handles data loading, preprocessing, and dataset creation for STS, MTS, STM, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
+*   **`data/` Module:**  Handles data loading, preprocessing, and dataset creation for SST, SMT, MTM, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
 *   **`model/` Module:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
 *   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
 *   **`metric/` Module:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
@@ -51,42 +51,45 @@ pip install -r requirements.txt
 Jumpstart your time series projects with pyFAST using this basic example:
 
 ```python
-from fast import initial_seed
-from fast.data import StandardScale
-from fast.train import Trainer
+import torch
+import torch.utils.data as data
+
+from fast import initial_seed, get_device
+from fast.data import SSTDataset
+from fast.train import Trainer, to_string
 from fast.metric import Evaluator
-from fast.model.mlp import MLPModel # Example: Using a simple MLP model
+from fast.model.mts.ar import ANN # Example: Using a simple ANN model
 
 # Initialize components for reproducibility and evaluation
-initial_seed(42)
-scaler = StandardScale() # Data scaling
-evaluator = Evaluator(['MAE', 'RMSE', 'MAPE']) # Evaluation metrics
+initial_seed(2025)
 
-# Prepare your time series data (replace with your actual data loading)
-# Example placeholders:
-train_ds = ...  # Your training dataset (e.g., TimeSeriesDataset instance)
-val_ds = ...    # Your validation dataset
+# Prepare your time series data: replace with actual data loading.
+ts = torch.sin(torch.arange(0, 100, 0.1)).unsqueeze(1)  # Shape: (1000, 1)
+train_ds = SSTDataset(ts, input_window_size=10, output_window_size=1, split_ratio=0.8, split='train')
+val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1, split_ratio=0.8, split='val')
 
-# Initialize your chosen model (e.g., MLPModel)
-model = MLPModel(
-    input_size=train_ds.n_vars, # Adapt input size to your dataset
-    output_size=train_ds.n_vars, # Adapt output size
-    seq_len=train_ds.window_size, # Define sequence length
-    pred_len=train_ds.pred_len   # Define prediction length
+# Initialize the model (e.g., ANN)
+model = ANN(
+    input_window_size=train_ds.input_window_size,   # Adapt input window size from dataset
+    input_vars=train_ds.input_vars,                 # Adapt input variable number from dataset
+    output_window_size=train_ds.output_window_size, # Adapt output window size from dataset, a.k.a. prediction steps
+    hidden_size=32                                  # Hidden layer size
 )
 
-
 # Set up the Trainer for model training and evaluation
-trainer = Trainer(device='cuda', model=model, evaluator=evaluator) # Use 'cuda', 'cpu', or 'mps'
+device = get_device('cpu')  # Use 'cuda', 'cpu', or 'mps'
+evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 
-# Train your model using your prepared datasets
-trainer.fit(train_ds, val_ds, epochs=10) # Train for 10 epochs
+trainer = Trainer(device, model, evaluator=evaluator)
 
-# After training, you can evaluate on a test dataset (if available)
-# test_ds = ... # Your test dataset
-# test_loss, test_metrics = trainer.evaluate(test_ds)
-# print(f"Test Loss: {test_loss}")
-# print(f"Test Metrics: {test_metrics}")
+# Train model using prepared datasets
+trainer.fit(train_ds, val_ds, epoch_range=(1, 10)) # Train for 10 epochs
+
+# After training, evaluate on a test dataset (if available)
+y_hat, y = trainer.predict(data.DataLoader(val_ds), 'evaluate val ')
+loss = trainer.criterion(y_hat, *y)
+metric_dict = trainer.evaluator.evaluate(y_hat, *y)
+print(to_string('val: ', loss, *metric_dict.values()))
 ```
 
 ### Data Structures Overview
@@ -129,56 +132,6 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 | GluonTS (DeepAR)          | Electricity Load |  0.092 | 0.068 | 0.303 | 0.045 |
 | pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |
 | LSTM                      | XMC-DC           |  0.065 | 0.048 | 0.255 | 0.036 |
-
-
-
-## Code Example: Transformer Forecasting on ETT Dataset (Usability)
-
-Explore pyFAST's ease of use with this Python code example, showcasing a typical forecasting workflow using a Transformer model on the ETT dataset:
-
-```python
-from fast.data.dataset import TimeSeriesDataset
-from fast.model.transformer import TransformerModel
-from fast.train import Trainer
-from fast.metric.metric import MeanSquaredError, MeanAbsoluteError
-
-# Load ETT dataset directly from CSV
-dataset = TimeSeriesDataset.from_csv('dataset/ETT/ETT-small.csv')
-train_data, val_data, test_data = dataset.split([0.7, 0.2, 0.1]) # Split into train/val/test sets
-
-# Initialize Transformer model with dataset-aware input/output sizes
-model = TransformerModel(
-    input_size=dataset.n_vars,    # Automatically infer input size from dataset
-    output_size=dataset.n_vars,   # Match output size to input variables
-    seq_len=24,                  # Define input sequence length (window size)
-    pred_len=24                   # Define prediction length (forecast horizon)
-)
-
-# Define evaluation metrics
-metrics = [MeanSquaredError(), MeanAbsoluteError()]
-
-# Initialize the Trainer, specifying model, metrics, and device
-trainer = Trainer(
-    model=model,
-    metrics=metrics,
-    device='cuda'  # Use 'cuda' for GPU acceleration if available, else 'cpu'
-)
-
-# Train the model using training and validation data, for 10 epochs
-trainer.train(
-    train_data=train_data,
-    val_data=val_data,
-    epochs=10
-)
-
-# Evaluate the trained model on the test dataset
-test_loss, test_metrics = trainer.evaluate(test_data)
-print(f"Test Loss: {test_loss}")
-print(f"Test Metrics: {test_metrics}")
-```
-
-This example highlights pyFAST's straightforward API and modular design, enabling users to quickly set up and run time series forecasting experiments with minimal code.
-
 
 ## License
 

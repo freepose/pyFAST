@@ -33,3 +33,4 @@ from .gnn.fgnn import FourierGNN
 from .gnn.gain import GAIN
 
 from .coat import COAT, TCOAT, CoDR, CTRL
+from .dred import DRED

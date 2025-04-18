@@ -64,6 +64,12 @@ class MinMaxScale(Scale):
         normalized_x = (x - self.min) / self.range * self.given_range + self.feature_range[0]
         return normalized_x
 
+    def fit_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
+        """ Fit and normalize. """
+        self.fit(x)
+        normalized_x = self.transform(x)
+        return normalized_x
+
     def inverse_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
         recovered_x = (x - self.feature_range[0]) * self.range / self.given_range + self.min
         return recovered_x
@@ -124,6 +130,11 @@ class StandardScale(Scale):
 
     def transform(self, x: torch.tensor, x_mask: torch.tensor = None):
         normalized_x = (x - self.miu) / self.sigma
+        return normalized_x
+
+    def fit_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
+        self.fit(x)
+        normalized_x = self.transform(x)
         return normalized_x
 
     def inverse_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
@@ -240,8 +251,9 @@ def time_series_scaler(ts: torch.Tensor or list[torch.Tensor] or tuple[torch.Ten
         :param scaler: the scaler.
         :return: the scaled time series.
     """
-    if type(scaler) == type(Scale()):
-        return Scale()
+
+    # if type(scaler) == type(Scale()):
+    #     return Scale()
 
     scale_ts = ts
     if isinstance(ts, list) or isinstance(ts, tuple):

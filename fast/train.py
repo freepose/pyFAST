@@ -79,7 +79,15 @@ class Trainer:
         self.initialize_device()
 
         if self.is_compile:
+            # MPS device may not support for compiling.
             self.model = torch.compile(self.model)
+
+        if self.optimizer is None:
+            model_params = filter(lambda p: p.requires_grad, model.parameters())
+            self.optimizer = torch.optim.Adam(model_params, lr=0.0001)
+
+        if self.lr_scheduler is None:
+            self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.1)
 
     def initialize_device(self):
         """ initialize accelerator. """
@@ -224,6 +232,7 @@ class Trainer:
                     batch_inputs[num_x] = self.global_ex_scaler.transform(batch_inputs[num_x])
 
                 if self.device.type != dataloader.dataset.device:
+                    # Prepare for target model device
                     batch_inputs = [x.to(self.device) for x in batch_inputs]
                     batch_outputs = [y.to(self.device) for y in batch_outputs]
 
@@ -328,3 +337,34 @@ class Trainer:
             y = [torch.cat(tensors, dim=0) for tensors in zip(*y_list)]
 
             return y_hat, y
+
+
+    def __str__(self):
+        """ Print Trainer information. (to REDO) """
+
+        params = {
+            'device': self.device,
+            'optimizer': self.optimizer,
+            'lr_scheduler': self.lr_scheduler,
+            'criterion': self.criterion,
+            'evaluator': self.evaluator,
+            'is_initial_weights': self.is_initial_weights,
+            'is_compile': self.is_compile,
+        }
+
+        if self.stopper is not None:
+            params['stopper'] = self.stopper
+
+        if self.additive_criterion is not None:
+            params['additive_criterion'] = self.additive_criterion
+
+        if self.global_scaler is not None:
+            params['global_scaler'] = self.global_scaler
+
+        if self.global_ex_scaler is not None:
+            params['global_ex_scaler'] = self.global_ex_scaler
+
+        params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
+        params_str = 'Trainer({})'.format(params_str)
+
+        return params_str

@@ -42,7 +42,15 @@ class PatchMaker:
             :param x: the input tensor, shape is (..., seq_len, n_vars).
         """
         x = x.transpose(-2, -1)  # -> (..., n_vars, seq_len)
-        x = self.padding_layer(x)   # -> (..., n_vars, seq_len + padding)
-        x = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_stride)  # -> (..., n_vars, patch_num, patch_len)
 
-        return x
+        if self.padding > 0:
+            x = self.padding_layer(x)   # -> (..., n_vars, seq_len + padding)
+
+        ## -> (..., n_vars, patch_num, patch_len)
+        # patches = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_stride)
+
+        start_indices = torch.arange(0, self.patch_num * self.patch_stride, self.patch_stride, device=x.device)
+        window_indices = start_indices.unsqueeze(1) + torch.arange(self.patch_len, device=x.device)
+        patches = x[..., window_indices]  # -> (..., n_vars, patch_num, patch_len)
+
+        return patches
