@@ -319,6 +319,7 @@ class Informer(nn.Module):
         Informer: Beyond efficient transformer for long sequence time-series forecasting [C]
         Proceedings of the 35th AAAI conference on artificial intelligence. 2021, 35(12): 11106 -- 11115.
         Paper link: https://ojs.aaai.org/index.php/AAAI/article/view/17325/17132
+
         :param input_vars: number of input variables.
         :param output_window_size: output window size.
         :param output_vars: number of output variables.

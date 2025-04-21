@@ -155,11 +155,6 @@ class Trainer:
             train_metric_dict = self.evaluator.evaluate(y_train_hat, *y_train)
             message.extend([train_loss, *train_metric_dict.values()])
 
-            if self.stopper is not None:
-                self.stopper(train_loss)
-                if self.stopper.stop:
-                    break
-
             if val_dataset is not None:
                 val_dataloader = data.DataLoader(val_dataset, batch_size, collate_fn=collate_fn)
 
@@ -168,6 +163,11 @@ class Trainer:
                 val_loss = self.criterion(y_val_hat, *y_val)
                 val_metric_dict = self.evaluator.evaluate(y_val_hat, *y_val)
                 message.extend([val_loss, *val_metric_dict.values()])
+
+                if self.stopper is not None:
+                    self.stopper(val_loss)
+                    if self.stopper.stop:
+                        break
 
                 if display_interval is not None and display_interval > 0 and epoch % display_interval == 0:
                     plot_num_vars = min(y_val_hat.shape[-1], 4)

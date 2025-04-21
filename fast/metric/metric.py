@@ -211,7 +211,7 @@ def empirical_correlation_coefficient(prediction: torch.tensor, real: torch.tens
     return pcc
 
 
-def root_mean_square_percentage_error(real: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+def root_mean_square_percentage_error(prediction: torch.Tensor, real: torch.Tensor) -> torch.Tensor:
     """
         Root Mean Square Percentage Error (RMSPE).
         Element-wise metrics.
@@ -225,7 +225,7 @@ def root_mean_square_percentage_error(real: torch.Tensor, prediction: torch.Tens
     return rmspe
 
 
-def root_median_square_percentage_error(real: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+def root_median_square_percentage_error(prediction: torch.Tensor, real: torch.Tensor) -> torch.Tensor:
     """
         Root Median Square Percentage Error (RMdSPE).
         Element-wise metrics.

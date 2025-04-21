@@ -1,6 +1,6 @@
 # pyFAST: Flexible, Advanced Framework for Multi-source and Sparse Time Series Analysis in PyTorch
 
-[![Software Overview Figure](overview.png)](overview.png) 
+[![Software Overview Figure](overview.svg)](overview.svg) 
 
 
 pyFAST (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
@@ -120,6 +120,8 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 *   **Metrics:** Performance assessed using MSE, MAE, RMSE, and MAPE.
 *   **Results:**  pyFAST models, especially Transformer-based architectures, demonstrate **competitive or superior performance** in forecasting accuracy while maintaining **computational efficiency** due to optimized implementations and modular design.
 
+
+### Benchmarking on Univariate/Multivariate Time Series Datasets
 **Example Benchmarking Results (Table 1 from Paper):**
 
 | Model                     | Dataset          |    MSE |   MAE |  RMSE |  MAPE |
@@ -132,6 +134,14 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 | GluonTS (DeepAR)          | Electricity Load |  0.092 | 0.068 | 0.303 | 0.045 |
 | pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |
 | LSTM                      | XMC-DC           |  0.065 | 0.048 | 0.255 | 0.036 |
+
+### Benchmarking on Sparse Time Series Datasets
+
+Protein dataset
+
+### Benchmarking on Fusible Time Series Datasets
+
+
 
 ## License
 

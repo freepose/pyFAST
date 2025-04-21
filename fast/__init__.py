@@ -30,7 +30,8 @@ def get_device(preferred_device: Literal['cpu', 'cuda', 'mps'] = 'cpu', cuda_vis
         :return: if preferred device is available, then return the preferred device,
                 otherwise return the fallback device (i.e., cpu).
     """
-    os.environ['CUDA_VISIBLE_DEVICES'] = cuda_visible_devices
+    if preferred_device == 'cuda':
+        os.environ['CUDA_VISIBLE_DEVICES'] = cuda_visible_devices
 
     device_dict = {
         'cpu': torch.device('cpu'),
