@@ -73,6 +73,7 @@ class CNNRNNRes(nn.Module):
         Yuexin Wu, Yiming Yang, Hiroshi Nishiura, Masaya Saitoh
         Deep Learning for Epidemiological Predictions
         SIGIR 2018, pp. 1085 - 1088
+
         url: https://dl.acm.org/doi/10.1145/3209978.3210077
 
         :param input_window_size: input window size.

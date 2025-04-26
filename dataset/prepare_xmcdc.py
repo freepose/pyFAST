@@ -212,11 +212,9 @@ def load_xmcdc_smt(freq: Literal['1day', '1week'] = '1day',
         'ts': None,
         'ex_ts': None,
         'ex_ts2': None,
-        'split_ratio': split_ratio,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'stride': stride,
     }
 
     csv_file = r'../../dataset/xmcdc/outpatients_2011_2020_{}.csv'.format(freq)
@@ -274,11 +272,10 @@ def load_xmcdc_smt(freq: Literal['1day', '1week'] = '1day',
     stm_params['ex_ts2'] = ex_ts2_list
 
     if split_ratio == 1.:
-        train_ds = SMTDataset(**stm_params, split='train')
+        train_ds = SMTDataset(**stm_params, stride=stride)
         return (train_ds, None), (scaler, ex_scaler)
 
-    train_ds = SMTDataset(**stm_params, split='train')
-    del stm_params['stride']
-    val_ds = SMTDataset(**stm_params, stride=stm_params['output_window_size'], split='val')
+    train_ds = SMTDataset(**stm_params, stride=stride).split(split_ratio, 'train', 'train')
+    val_ds = SMTDataset(**stm_params, stride=stm_params['output_window_size']).split(split_ratio, 'val', 'val')
 
     return (train_ds, val_ds), (scaler, ex_scaler)

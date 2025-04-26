@@ -193,7 +193,6 @@ def load_sh_diabetes_smt(data_root: str,
             'input_window_size': input_window_size,
             'output_window_size': output_window_size,
             'horizon': horizon,
-            'split_ratio': split_ratio,
         }
 
         if scaler is not None and type(scaler) != type(Scale()):
@@ -202,7 +201,7 @@ def load_sh_diabetes_smt(data_root: str,
         if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
             ex_scaler = time_series_scaler(data[1], ex_scaler)
 
-        train_ds = SMTDataset(**smt_params, stride=stride, split='train')
+        train_ds = SMTDataset(**smt_params, stride=stride)
         return (train_ds, None), (scaler, ex_scaler)
 
     random.shuffle(csv_files)
@@ -220,7 +219,6 @@ def load_sh_diabetes_smt(data_root: str,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'split_ratio': 1.,
     }
 
     val_smt_params = {
@@ -231,7 +229,6 @@ def load_sh_diabetes_smt(data_root: str,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'split_ratio': 1.,
     }
 
     if scaler is not None and type(scaler) != type(Scale()):
@@ -240,7 +237,7 @@ def load_sh_diabetes_smt(data_root: str,
     if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
         ex_scaler = time_series_scaler(train_data[1], ex_scaler)
 
-    train_ds = SMTDataset(**train_smt_params, stride=stride, split='train')
-    val_ds = SMTDataset(**val_smt_params, stride=output_window_size, split='train')
+    train_ds = SMTDataset(**train_smt_params, stride=stride)
+    val_ds = SMTDataset(**val_smt_params, stride=output_window_size)
 
     return (train_ds, val_ds), (scaler, ex_scaler)

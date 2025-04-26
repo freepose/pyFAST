@@ -71,7 +71,6 @@ def load_industrial_power_load_sst(data_root: str,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'stride': stride,
     }
 
     if vars is None:
@@ -106,12 +105,11 @@ def load_industrial_power_load_sst(data_root: str,
             ex_scaler = ex_scaler.fit(ex_tensor)
 
     if split_ratio == 1.0:
-        train_ds = SSTDataset(**sts_params, split='train')
+        train_ds = SSTDataset(**sts_params, stride=1)
         return (train_ds, None), (scaler, ex_scaler)
 
-    train_ds = SSTDataset(**sts_params, split='train')
-    del sts_params['stride']
-    val_ds = SSTDataset(**sts_params, stride=sts_params['output_window_size'], split='val')
+    train_ds = SSTDataset(**sts_params, stride=1).split(split_ratio, 'train', 'train')
+    val_ds = SSTDataset(**sts_params, stride=sts_params['output_window_size']).split(split_ratio, 'val', 'val')
 
     return (train_ds, val_ds), (scaler, ex_scaler)
 
@@ -205,11 +203,10 @@ def load_industrial_power_load_smt(data_root: str,
     stm_params['ex_ts2'] = ex_ts2_list
 
     if split_ratio == 1.:
-        train_ds = SMTDataset(**stm_params, split='train')
+        train_ds = SMTDataset(**stm_params, stride=1)
         return (train_ds, None), (scaler, ex_scaler)
 
-    train_ds = SMTDataset(**stm_params, split='train')
-    del stm_params['stride']
-    val_ds = SMTDataset(**stm_params, stride=stm_params['output_window_size'], split='val')
+    train_ds = SMTDataset(**stm_params, stride=1).split(split_ratio, 'train', 'train')
+    val_ds = SMTDataset(**stm_params, stride=stm_params['output_window_size']).split(split_ratio, 'val', 'val')
 
     return (train_ds, val_ds), (scaler, ex_scaler)

@@ -22,7 +22,7 @@ class EarlyStop:
         Early stopper to stop the training when the loss does not improve after certain epochs.
         :param patience: How long to wait after last time validation loss improved. Default is 3.
         :param delta:  Minimum change in the monitored quantity to qualify as an improvement. Default is 0.
-        :param verbose:
+        :param verbose: If True, prints a message for each validation loss improvement. Default is False.
     """
 
     def __init__(self, patience: int = 3, delta: float = 0, verbose: bool = False):
@@ -129,11 +129,11 @@ class Trainer:
 
         performance_list = []
         for epoch in range(epoch_range[0], epoch_range[1] + 1):
-            message_prefix = '{}/{}'.format(epoch, epoch_range[1])
-            message = [message_prefix, self.optimizer.param_groups[0]['lr']]
+            prefix = '{}/{}'.format(epoch, epoch_range[1])
+            message = [prefix, self.optimizer.param_groups[0]['lr']]
 
             self.model.train()
-            self.fit_step(train_dataloader, 'training ' + message_prefix)
+            self.fit_step(train_dataloader, 'training ' + prefix)
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
@@ -149,20 +149,14 @@ class Trainer:
             if not verbose:
                 continue
 
-            y_train_hat, y_train = self.predict(train_dataloader2, 'evaluate train ' + message_prefix)
-
-            train_loss = self.criterion(y_train_hat, *y_train)
-            train_metric_dict = self.evaluator.evaluate(y_train_hat, *y_train)
-            message.extend([train_loss, *train_metric_dict.values()])
+            (train_loss, *train_metrics), _ = self.evaluate(train_dataloader2, 'evaluate train ' + prefix)
+            message.extend([train_loss, *train_metrics])
 
             if val_dataset is not None:
                 val_dataloader = data.DataLoader(val_dataset, batch_size, collate_fn=collate_fn)
 
-                y_val_hat, y_val = self.predict(val_dataloader, 'evaluate val ' + message_prefix)
-
-                val_loss = self.criterion(y_val_hat, *y_val)
-                val_metric_dict = self.evaluator.evaluate(y_val_hat, *y_val)
-                message.extend([val_loss, *val_metric_dict.values()])
+                (val_loss, *val_metrics), (y_val_hat, *y_val) = self.evaluate(val_dataloader, 'evaluate val ' + prefix)
+                message.extend([val_loss, *val_metrics])
 
                 if self.stopper is not None:
                     self.stopper(val_loss)
@@ -178,8 +172,9 @@ class Trainer:
                         preds_tensor = y_val_hat.flatten(0, 1).detach()
                         preds_array = preds_tensor.cpu().numpy()[:, :plot_num_vars]
 
-                        plot_msg = 'epoch:' + message_prefix + ' '
-                        plot_msg += ', '.join(['{}:{:.4f}'.format(k, v) for k, v in val_metric_dict.items()])
+                        plot_msg = 'epoch:' + prefix + ' '
+                        zip_name_value = zip(self.evaluator.metric_dict.keys(), val_metrics)
+                        plot_msg += ', '.join(['{}:{:.4f}'.format(k, v) for k, v in zip_name_value])
 
                         plot_comparable_line_charts(real_array, preds_array, plot_msg)
 
@@ -188,7 +183,7 @@ class Trainer:
                     if generate_fn is not None:
                         plot_num_vars = min(y_val_hat.shape[-1], 4)
 
-                        y_gen_hat, y_gen = self.generate(val_dataloader, 'generate val ' + message_prefix)
+                        y_gen_hat, y_gen = self.generate(val_dataloader, 'generate val ' + prefix)
 
                         gen_loss = self.criterion(y_gen_hat, *y_gen)
                         gen_metric_dict = self.evaluator.evaluate(y_gen_hat, *y_gen)
@@ -199,7 +194,7 @@ class Trainer:
                         preds_tensor = y_gen_hat.flatten(0, 1).detach()
                         preds_array = preds_tensor.cpu().numpy()[:, :plot_num_vars]
 
-                        plot_msg = 'epoch:' + message_prefix + ' '
+                        plot_msg = 'epoch:' + prefix + ' '
                         plot_msg += ', '.join(['{}:{:.4f}'.format(k, v) for k, v in gen_metric_dict.items()])
 
                         plot_comparable_line_charts(real_array, preds_array, plot_msg)
@@ -294,6 +289,19 @@ class Trainer:
 
             return y_hat, y
 
+    def evaluate(self, dataloader: data.DataLoader, tqdm_desc: str = None) -> tuple:
+        """
+            Evaluate the model using ``dataloader``. Design for evaluation, not for common prediction.
+            :param dataloader: the data loader of the prediction data.
+            :param tqdm_desc: the description of tqdm.
+            :return: the prediction values and real values.
+        """
+        y_hat, y = self.predict(dataloader, tqdm_desc)
+        loss = self.criterion(y_hat, *y)
+        metric_dict = self.evaluator.evaluate(y_hat, *y)
+
+        return (loss, *metric_dict.values()), (y_hat, *y)
+
     def generate(self, dataloader: data.DataLoader, tqdm_desc: str = None) -> tuple:
         """
             Predict the model using ``dataloader``. Design for evaluation, not for common prediction.
@@ -337,7 +345,6 @@ class Trainer:
             y = [torch.cat(tensors, dim=0) for tensors in zip(*y_list)]
 
             return y_hat, y
-
 
     def __str__(self):
         """ Print Trainer information. (to REDO) """

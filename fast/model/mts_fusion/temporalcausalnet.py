@@ -12,8 +12,11 @@ from ..base import MLP, DirectionalRepresentation
 
 class TemporalCausalNet(nn.Module):
     """
-        Temporal Causal Net is also called ``TCN is not Convolutional Network``, which author is Senzhen WU ect.
-        It applied causal relation architecture to Encoder-Decoder architecture, and achieved amazing forecasting performance.
+        Temporal Causal Net.
+        It applied causal relation architecture to Encoder-Decoder architecture,
+        and achieved amazing personalized forecasting performance.
+
+        Author: Senzhen Wu
 
         :param input_window_size: input window size of target variable.
         :param input_vars: number of input variables.

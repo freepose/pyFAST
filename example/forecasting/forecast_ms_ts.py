@@ -49,7 +49,7 @@ def main():
     # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_sdwpf_smt(data_root, '1day', None, False, 'inter', **ds_params, factor=0.001)
 
-    model_cls, user_settings = ts_modeler['coat']
+    model_cls, user_settings = ts_modeler['ar']
 
     common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -62,7 +62,7 @@ def main():
     print(model_name, count_parameters(model, 'M'))
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
+    optimizer = optim.Adam(model_params, lr=0.0005, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
 
     criterion = nn.MSELoss()
@@ -76,7 +76,7 @@ def main():
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=True,
-                verbose=True, display_interval=0)
+                verbose=True, display_interval=50)
 
     print('Good luck!')
 

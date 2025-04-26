@@ -63,7 +63,7 @@ class MMTDataset(data.Dataset):
 
         self.split_ratio = split_ratio
         self.split = split
-        self.split_position = {'train': 0, 'val': 1}
+        self.split_as = {'train': 0, 'val': 1}
 
         self.ts_sources = ts_sources
         self.ex_ts_sources = ex_ts_sources
@@ -100,7 +100,7 @@ class MMTDataset(data.Dataset):
 
                 train_ts_len = int(ts_len * self.split_ratio)
                 borders = [[0, train_ts_len], [train_ts_len - self.input_window_size - self.horizon + 1, ts_len]]
-                split_border = borders[self.split_position[self.split]]
+                split_border = borders[self.split_as[self.split]]
 
                 start, end = split_border
                 border_len = end - start

@@ -1,17 +1,5 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
-"""
-    Single prediction object Single source Time series dataset (SST).
-    (1) The transformations on single univariate/multivariate time series to input / output data.
-    (2) The transformations on single univariate/multivariate time series + mask time series
-        to input / output data.
-    (3) The transformations on single univariate/multivariate time series + exogenous time series
-        to input / output data.
-    (4) The transformations on single univariate/multivariate time series + mask time series +
-        exogenous time series to input / output data.
-"""
-
 from typing import Literal
 
 import numpy as np
@@ -89,10 +77,10 @@ class SSTDataset(data.Dataset):
         ``SSTDataset`` transforms a **single** (univariate or multivariate) time series to supervised (input / output) data.
 
         (1) Transformation from target time series to supervised (i.e., input / output) data.
-        (2) Support input data == output data for autoencoders or generative models.
+        (2) Support input data == output data for autoencoders or generative models. ``horizon`` == 1 - ``output_window_size``.
         (3) Support exogenous time series data.
         (4) Support sparse time series data: target, exogenous, and both.
-        (5) Support training / validation split.
+        (5) Support training / validation ``split`` function.
 
         The default device is the same as ``ts`` device.
 
@@ -106,17 +94,13 @@ class SSTDataset(data.Dataset):
         :param output_window_size: the window size of samples of **output** tensors.
         :param horizon: the time step distance between x and y (maybe overlapping).
         :param stride: spacing between two consecutive (input or output) windows.
-        :param split_ratio: split ratio of training set and test set.
-        :param split: the split type of dataset, the value is 'train' or 'val'.
     """
 
     def __init__(self, ts: torch.Tensor, ts_mask: torch.Tensor = None,
                  ex_ts: torch.Tensor = None, ex_ts_mask: torch.Tensor = None,
                  ex_ts2: torch.Tensor = None,
-                 input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1,
-                 split_ratio: float = 0.8, split: Literal['train', 'val'] = 'train'):
-        assert split in ['train', 'val'], "The split type must be 'train' or 'val'."
-        assert 0 <= split_ratio <= 1.0, 'The split ratio must be in the range [0, 1].'
+                 input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1):
+        assert ts.ndim == 2, "The time series must be a 2D tensor."
 
         if ts_mask is not None:
             assert ts.shape == ts_mask.shape, "The shape of ts and ts_mask must be the same."
@@ -135,31 +119,62 @@ class SSTDataset(data.Dataset):
         self.horizon = horizon
         self.stride = stride
 
-        self.split_ratio = split_ratio
-        self.split = split
-        self.split_position = {'train': 0, 'val': 1}
-
         self.input_vars = ts.shape[1]
         self.output_vars = self.input_vars
         self.ex_vars = ex_ts.shape[1] if ex_ts is not None else None
         self.ex2_vars = ex_ts2.shape[1] if ex_ts2 is not None else None
         self.device = ts.device
 
-        ts_len = ts.shape[0]
-        train_ts_len = int(ts_len * self.split_ratio)
-        borders = [[0, train_ts_len], [train_ts_len - input_window_size - horizon + 1, ts_len]]
-        split_border = borders[self.split_position[self.split]]
+        self.ratio = 1.       # the ratio of the whole dataset
+        self.split_as = None
+        self.mark = None      # None denotes non-split for 'train' or 'val'
 
-        start, end = split_border
-        self.border_ts = ts[start:end]
-        self.border_ts_mask = ts_mask[start:end] if ts_mask is not None else None
-        self.border_ex_ts = ex_ts[start:end] if ex_ts is not None else None
-        self.border_ex_ts_mask = ex_ts_mask[start:end] if ex_ts_mask is not None else None
-        self.border_ex_ts2 = ex_ts2[start:end] if ex_ts2 is not None else None
+        self.sample_num = (ts.shape[0] - input_window_size - output_window_size - horizon + 1) // stride + 1
+        assert self.sample_num > 0, "No samples can be generated."
+
+        self.ts = ts
+        self.ts_mask = ts_mask
+        self.ex_ts = ex_ts
+        self.ex_ts_mask = ex_ts_mask
+        self.ex_ts2 = ex_ts2
+
+    def split(self, split_ratio: float = 1.0, split_as: Literal['train', 'val'] = 'train', mark: str = None):
+        """
+            Split the time series to left part (a.k.a., training set) and right part (a.k.a., validation set).
+            :param split_ratio: ratio of left part (a.k.a., training set). Default is 1.0.
+            :param split_as: the part of dataset, the value is 'train' or 'val', default is 'train'.
+            :param mark: the mark the name of the dataset.
+        """
+        assert 0 < split_ratio <= 1.0, 'The split ratio must be in the range [0, 1].'
+        assert split_as in ['train', 'val'], "The split type must be 'train' or 'val'."
+
+        ts_len = self.ts.shape[0]
+        train_ts_len = int(ts_len * split_ratio)
+
+        split_as_lookup = {'train': 0, 'val': 1}
+        borders = [[0, train_ts_len], [train_ts_len - self.input_window_size - self.horizon + 1, ts_len]]
+        start, end = borders[split_as_lookup[split_as]]
 
         border_len = end - start
-        self.sample_num = (border_len - input_window_size - output_window_size - horizon + 1) // stride + 1
-        assert self.sample_num > 0, "No samples can be generated."
+        self.sample_num = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
+        self.sample_num = self.sample_num // self.stride + 1
+        assert self.sample_num > 0, 'No samples can be generated in {} set.'.format(self.split_as)
+
+        border_ts = self.ts[start:end]
+        border_ts_mask = self.ts_mask[start:end] if self.ts_mask is not None else None
+        border_ex_ts = self.ex_ts[start:end] if self.ex_ts is not None else None
+        border_ex_ts_mask = self.ex_ts_mask[start:end] if self.ex_ts_mask is not None else None
+        border_ex_ts2 = self.ex_ts2[start:end] if self.ex_ts2 is not None else None
+
+        dataset = SSTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
+                             self.input_window_size, self.output_window_size, self.horizon, self.stride)
+
+        current_ratio = split_ratio if split_as == 'train' else (1.0 - split_ratio)
+        dataset.ratio = round(self.ratio * current_ratio, 15)
+        dataset.split_as = split_as
+        dataset.mark = mark
+
+        return dataset
 
     def __len__(self) -> int:
         return self.sample_num
@@ -167,32 +182,32 @@ class SSTDataset(data.Dataset):
     def __getitem__(self, index) -> tuple[list, list]:
         start_x = self.stride * index
         end_x = start_x + self.input_window_size
-        x_seq = self.border_ts[start_x:end_x]
+        x_seq = self.ts[start_x:end_x]
 
         start_y = start_x + self.input_window_size + self.horizon - 1
         end_y = start_y + self.output_window_size
-        y_seq = self.border_ts[start_y:end_y]
+        y_seq = self.ts[start_y:end_y]
 
         input_list, output_list = [x_seq], [y_seq]
 
-        if self.border_ts_mask is not None:
-            x_seq_mask = self.border_ts_mask[start_x:end_x]
-            y_seq_mask = self.border_ts_mask[start_y:end_y]
+        if self.ts_mask is not None:
+            x_seq_mask = self.ts_mask[start_x:end_x]
+            y_seq_mask = self.ts_mask[start_y:end_y]
             input_list.append(x_seq_mask)
             output_list.append(y_seq_mask)
 
-        if self.border_ex_ts is not None:
-            ex_seq = self.border_ex_ts[start_x:end_x]
+        if self.ex_ts is not None:
+            ex_seq = self.ex_ts[start_x:end_x]
             input_list.append(ex_seq)
 
-            if self.border_ex_ts_mask is not None:
-                ex_seq_mask = self.border_ex_ts_mask[start_x:end_x]
+            if self.ex_ts_mask is not None:
+                ex_seq_mask = self.ex_ts_mask[start_x:end_x]
                 input_list.append(ex_seq_mask)
 
-        if self.border_ex_ts2 is not None:
+        if self.ex_ts2 is not None:
             # for pre-known exogenous variables, e.g., time, or pre-known forecasted weather.
-            ex2_seq_current = self.border_ex_ts2[start_x:end_x]
-            ex2_seq_upcoming = self.border_ex_ts2[start_y:end_y]
+            ex2_seq_current = self.ex_ts2[start_x:end_x]
+            ex2_seq_upcoming = self.ex_ts2[start_y:end_y]
             ex2_seq = torch.cat([ex2_seq_current, ex2_seq_upcoming], dim=0)
             input_list.append(ex2_seq)
 
@@ -205,8 +220,13 @@ class SSTDataset(data.Dataset):
 
         params = {
             'device': self.device,
-            'split': self.split,
-            'split_ratio': self.split_ratio,
+            'ratio': self.ratio,
+        }
+
+        if self.mark is not None:
+            params['mark'] = self.mark
+
+        params.update(**{
             'input_window_size': self.input_window_size,
             'output_window_size': self.output_window_size,
             'horizon': self.horizon,
@@ -214,18 +234,18 @@ class SSTDataset(data.Dataset):
             'sample_num': self.sample_num,
             'input_vars': self.input_vars,
             'output_vars': self.output_vars
-        }
+        })
 
-        if self.border_ts_mask is not None:
+        if self.ts_mask is not None:
             params['mask'] = True
 
-        if self.border_ex_ts is not None:
+        if self.ex_ts is not None:
             params['ex_vars'] = self.ex_vars
 
-            if self.border_ex_ts_mask is not None:
+            if self.ex_ts_mask is not None:
                 params['ex_mask'] = True
 
-        if self.border_ex_ts2 is not None:
+        if self.ex_ts2 is not None:
             params['ex2_vars'] = self.ex2_vars
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])

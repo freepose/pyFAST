@@ -35,11 +35,11 @@ def ms_ts_fusion():
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    # (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_smt('1week', None, ['weather'], **ds_params)
+    ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
+    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_smt('1week', None, ['weather'], **ds_params)
 
-    ds_params = {'input_window_size': 8 * 24, 'output_window_size': 24, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    (train_ds, val_ds), (scaler, ex_scaler) = load_ipl_smt(data_root, ex_vars=['temperature', 'humidity'], **ds_params)
+    # ds_params = {'input_window_size': 8 * 24, 'output_window_size': 24, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
+    # (train_ds, val_ds), (scaler, ex_scaler) = load_ipl_smt(data_root, ex_vars=['temperature', 'humidity'], **ds_params)
 
     # ds_params = {'input_window_size': 6 * 4, 'output_window_size': 4, 'horizon': 1}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_diabetes_smt(data_root, 'all', ds_params, True, 'inter', 0.8)

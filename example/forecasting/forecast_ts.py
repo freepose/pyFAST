@@ -62,7 +62,7 @@ def main():
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=False,
-                verbose=True, display_interval=0)
+                verbose=True, display_interval=20)
 
     print('Good luck!')
 

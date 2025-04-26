@@ -58,22 +58,22 @@ from fast import initial_seed, get_device
 from fast.data import SSTDataset
 from fast.train import Trainer, to_string
 from fast.metric import Evaluator
-from fast.model.mts.ar import ANN # Example: Using a simple ANN model
+from fast.model.mts.ar import ANN  # Example: Using a simple ANN model
 
 # Initialize components for reproducibility and evaluation
 initial_seed(2025)
 
 # Prepare your time series data: replace with actual data loading.
 ts = torch.sin(torch.arange(0, 100, 0.1)).unsqueeze(1)  # Shape: (1000, 1)
-train_ds = SSTDataset(ts, input_window_size=10, output_window_size=1, split_ratio=0.8, split='train')
-val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1, split_ratio=0.8, split='val')
+train_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 'train')
+val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 'val')
 
 # Initialize the model (e.g., ANN)
 model = ANN(
-    input_window_size=train_ds.input_window_size,   # Adapt input window size from dataset
-    input_vars=train_ds.input_vars,                 # Adapt input variable number from dataset
-    output_window_size=train_ds.output_window_size, # Adapt output window size from dataset, a.k.a. prediction steps
-    hidden_size=32                                  # Hidden layer size
+    input_window_size=train_ds.input_window_size,  # Adapt input window size from dataset
+    input_vars=train_ds.input_vars,  # Adapt input variable number from dataset
+    output_window_size=train_ds.output_window_size,  # Adapt output window size from dataset, a.k.a. prediction steps
+    hidden_size=32  # Hidden layer size
 )
 
 # Set up the Trainer for model training and evaluation
@@ -83,7 +83,7 @@ evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 trainer = Trainer(device, model, evaluator=evaluator)
 
 # Train model using prepared datasets
-trainer.fit(train_ds, val_ds, epoch_range=(1, 10)) # Train for 10 epochs
+trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
 
 # After training, evaluate on a test dataset (if available)
 y_hat, y = trainer.predict(data.DataLoader(val_ds), 'evaluate val ')
@@ -129,7 +129,7 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 | pyFAST (Transformer)      | ETT-small        |  0.123 | 0.087 | 0.351 | 0.054 |
 | Informer                  | ETT-small        |  0.135 | 0.092 | 0.367 | 0.058 |
 | PatchTST                  | ETT-small        |  0.128 | 0.090 | 0.358 | 0.056 |
-| GluonTS (Transformer)      | ETT-small        |  0.140 | 0.095 | 0.374 | 0.060 |
+| GluonTS (Transformer)     | ETT-small        |  0.140 | 0.095 | 0.374 | 0.060 |
 | pyFAST (Transformer)      | Electricity Load |  0.085 | 0.063 | 0.292 | 0.041 |
 | GluonTS (DeepAR)          | Electricity Load |  0.092 | 0.068 | 0.303 | 0.045 |
 | pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |

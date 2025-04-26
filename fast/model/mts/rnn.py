@@ -169,7 +169,7 @@ class TimeSeriesRNN(nn.Module):
         :param input_vars: input variable number.
         :param output_window_size: output window size.
         :param output_vars: output size.
-        :param rnn_cls: rnn, lstm, gru.
+        :param rnn_cls: the rnn type is in ['rnn', 'lstm', 'gru', 'minlstm'].
         :param hidden_size: hidden size of rnn.
         :param num_layers: number of rnn layers.
         :param bidirectional: whether to use bidirectional rnn or not.

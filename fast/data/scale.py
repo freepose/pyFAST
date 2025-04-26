@@ -133,8 +133,8 @@ class StandardScale(Scale):
         return normalized_x
 
     def fit_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
-        self.fit(x)
-        normalized_x = self.transform(x)
+        self.fit(x, x_mask)
+        normalized_x = self.transform(x, x_mask)
         return normalized_x
 
     def inverse_transform(self, x: torch.tensor, x_mask: torch.tensor = None):

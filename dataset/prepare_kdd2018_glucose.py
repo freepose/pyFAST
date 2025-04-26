@@ -79,13 +79,12 @@ def load_kdd2018_glucose_smt(data_root: str,
             'input_window_size': input_window_size,
             'output_window_size': output_window_size,
             'horizon': horizon,
-            'split_ratio': split_ratio,
         }
 
         if scaler is not None and type(scaler) != type(Scale()):
             scaler = time_series_scaler(cgm_uts_list, scaler)
 
-        train_ds = SMTDataset(**smt_params, stride=stride, split='train')
+        train_ds = SMTDataset(**smt_params, stride=stride)
         return (train_ds, None), (scaler, None)
 
     random.shuffle(cgm_uts_list)
@@ -100,8 +99,6 @@ def load_kdd2018_glucose_smt(data_root: str,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'split_ratio': 1,
-        'split': 'train',
     }
 
     val_smt_params = {
@@ -112,8 +109,6 @@ def load_kdd2018_glucose_smt(data_root: str,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'split_ratio': 1,
-        'split': 'train',
     }
 
     if scaler is not None and type(scaler) != type(Scale()):
