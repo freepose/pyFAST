@@ -9,6 +9,54 @@ import torch.nn as nn
 from .rnn import TimeSeriesRNN
 
 
+class CNN1D(nn.Module):
+    """
+        Yuexin Wu, Yiming Yang, Hiroshi Nishiura, Masaya Saitoh
+        Deep Learning for Epidemiological Predictions
+        SIGIR 2018, pp. 1085 - 1088
+        url: https://dl.acm.org/doi/10.1145/3209978.3210077
+
+        :param input_window_size: input window size.
+        :param input_vars: input variable number.
+        :param output_window_size: output window size.
+        :param output_vars: output variable number.
+        :param out_channels: number of out channels.
+        :param kernel_size: kernel size of cnn.
+    """
+
+    def __init__(self, input_window_size: int, input_vars: int, output_window_size: int = 1, output_vars: int = 1,
+                 out_channels: int = 32, kernel_size: int = 9):
+        super(CNN1D, self).__init__()
+        self.input_window_size = input_window_size
+        self.input_vars = input_vars
+        self.output_window_size = output_window_size
+        self.output_vars = output_vars
+
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+
+        self.conv1d = nn.Conv1d(self.input_vars, self.out_channels, self.kernel_size, padding=self.kernel_size // 2)
+
+        # self.l0 = nn.Linear(self.out_channels * self.window_size, self.output_window_size * self.output_vars)
+
+        self.l1 = nn.Linear(self.input_window_size, self.output_window_size)
+        self.l2 = nn.Linear(self.out_channels, self.output_vars)
+
+    def forward(self, x):
+        """ x => [batch_size, window_size, input_vars] """
+        x = x.permute(0, 2, 1)  # => [batch_size, input_vars, input_window_size]
+        x = self.conv1d(x)  # => [batch_size, out_channels, input_window_size]
+
+        # x = self.l0(x.flatten(1, 2))
+        # x = x.unflatten(1, (self.output_window_size, self.output_vars))
+
+        x = self.l1(x)  # => [batch_size, out_channels, output_window_size]
+        x = x.permute(0, 2, 1)  # => [batch_size, output_window_size, out_channels]
+        x = self.l2(x)  # => [batch_size, output_window_size, output_vars]
+
+        return x
+
+
 class CNNRNN(nn.Module):
     """
         Yuexin Wu, Yiming Yang, Hiroshi Nishiura, Masaya Saitoh
@@ -152,3 +200,5 @@ class CNNRNNRes(nn.Module):
             res = res * self.residual_ratio + z
 
         return res
+
+

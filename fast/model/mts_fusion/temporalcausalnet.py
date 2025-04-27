@@ -75,13 +75,12 @@ class TemporalCausalNet(nn.Module):
             :param ex: Exogenous input tensor of shape (batch_size, input_window_size, ex_vars).
             :return: Prediction tensor of shape (batch_size, output_window_size, output_vars).
         """
-        if ex is not None:
-            out_ex = self.mlp(ex[:, -self.ex_retain_window_size:].clone())  # -> (batch_size, input_window_size, hidden_size)
-
         out_x = self.mlp(x.clone())  # -> (batch_size, ex_retain_window_size, hidden_size)
 
         if ex is not None:
+            out_ex = self.ex_mlp(ex[:, -self.ex_retain_window_size:, :].clone())  # -> (batch_size, input_window_size, hidden_size)
             out_x = torch.cat([out_ex * self.weight, out_x], 1)  # -> (batch_size, ex_retain_window_size + input_window_size, hidden_size)
+
         out_x = self.ed(out_x)  # -> (batch_size, ex_retain_window_size, hidden_size)
 
         out = out_x.clone()

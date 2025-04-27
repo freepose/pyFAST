@@ -4,7 +4,7 @@
 from .ar import GAR, AR, VAR, ANN
 from .rnn import TimeSeriesRNN, EncoderDecoder
 from .tcn import TemporalConvNet
-from .cnn import CNNRNN, CNNRNNRes
+from .cnn import CNN1D, CNNRNN, CNNRNNRes
 from .lstnet import LSTNet
 from .nhits import NHiTS
 from .dlinear import DLinear, NLinear

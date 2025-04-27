@@ -94,12 +94,14 @@ class SSTDataset(data.Dataset):
         :param output_window_size: the window size of samples of **output** tensors.
         :param horizon: the time step distance between x and y (maybe overlapping).
         :param stride: spacing between two consecutive (input or output) windows.
+        :param mark: the mark of the dataset, default is None.
     """
 
     def __init__(self, ts: torch.Tensor, ts_mask: torch.Tensor = None,
                  ex_ts: torch.Tensor = None, ex_ts_mask: torch.Tensor = None,
                  ex_ts2: torch.Tensor = None,
-                 input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1):
+                 input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1,
+                 mark: str = None):
         assert ts.ndim == 2, "The time series must be a 2D tensor."
 
         if ts_mask is not None:
@@ -127,7 +129,7 @@ class SSTDataset(data.Dataset):
 
         self.ratio = 1.       # the ratio of the whole dataset
         self.split_as = None
-        self.mark = None      # None denotes non-split for 'train' or 'val'
+        self.mark = mark      # None denotes non-split for 'train' or 'val'
 
         self.sample_num = (ts.shape[0] - input_window_size - output_window_size - horizon + 1) // stride + 1
         assert self.sample_num > 0, "No samples can be generated."
@@ -167,12 +169,11 @@ class SSTDataset(data.Dataset):
         border_ex_ts2 = self.ex_ts2[start:end] if self.ex_ts2 is not None else None
 
         dataset = SSTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
-                             self.input_window_size, self.output_window_size, self.horizon, self.stride)
+                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
 
         current_ratio = split_ratio if split_as == 'train' else (1.0 - split_ratio)
         dataset.ratio = round(self.ratio * current_ratio, 15)
         dataset.split_as = split_as
-        dataset.mark = mark
 
         return dataset
 

@@ -156,7 +156,7 @@ def load_kdd2022_sdwpf_smt(data_root: str,
         val_ds = SMTDataset(**smt_params, stride=output_window_size).split(split_ratio, 'val', 'val')
         return (train_ds, val_ds), (scaler, ex_scaler)
 
-    elif split_task == 'inter':
+    else:    # elif split_task == 'inter':
 
         if split_ratio == 1.0:
             data = get_kdd2022_sdwpf(csv_files, factor, ex_vars, use_time_features, desc='Loading training files...')
@@ -184,8 +184,7 @@ def load_kdd2022_sdwpf_smt(data_root: str,
         split_position = int(len(csv_files) * split_ratio)
         train_files, val_files = csv_files[:split_position], csv_files[split_position:]
 
-        train_data = get_kdd2022_sdwpf(train_files, factor, ex_vars, use_time_features,
-                                       desc='Loading training files...')
+        train_data = get_kdd2022_sdwpf(train_files, factor, ex_vars, use_time_features, desc='Loading training files...')
         val_data = get_kdd2022_sdwpf(val_files, factor, ex_vars, use_time_features, desc='Loading validation files...')
 
         train_smt_params = {
@@ -214,7 +213,7 @@ def load_kdd2022_sdwpf_smt(data_root: str,
         if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
             ex_scaler = time_series_scaler(train_data[1], ex_scaler)
 
-        train_ds = SMTDataset(**train_smt_params, stride=stride)
-        val_ds = SMTDataset(**val_smt_params, stride=output_window_size)
+        train_ds = SMTDataset(**train_smt_params, stride=stride, mark='train')
+        val_ds = SMTDataset(**val_smt_params, stride=output_window_size, mark='val')
 
         return (train_ds, val_ds), (scaler, ex_scaler)

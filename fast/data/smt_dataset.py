@@ -34,6 +34,7 @@ class SMTDataset(data.Dataset):
         :param output_window_size: output window size.
         :param horizon: the time steps between input window and output window.
         :param stride: the stride of two consecutive sliding windows.
+        :param mark: the mark of the dataset, default is None.
     """
 
     def __init__(self, ts: Tuple[torch.Tensor] or List[torch.Tensor],
@@ -41,7 +42,8 @@ class SMTDataset(data.Dataset):
                  ex_ts: Tuple[torch.Tensor] or List[torch.Tensor] = None,
                  ex_ts_mask: Tuple[torch.Tensor] or List[torch.Tensor] = None,
                  ex_ts2: Tuple[torch.Tensor] or List[torch.Tensor] = None,
-                 input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1):
+                 input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1,
+                 mark: str = None):
 
         if ts_mask is not None:
             assert len(ts) == len(ts_mask), "The number of ts and ts_mask should be the same."
@@ -69,7 +71,7 @@ class SMTDataset(data.Dataset):
 
         self.ratio = 1.         # the ratio of the whole dataset
         self.split_as = None    # 'train' or 'val': left part or right part of each time series
-        self.mark = None        # None denotes non-split for 'train' or 'val'
+        self.mark = mark        # None denotes non-split for 'train' or 'val'
 
         self.ts = ts
         self.ts_mask = ts_mask
@@ -160,12 +162,12 @@ class SMTDataset(data.Dataset):
                 pbar.set_postfix(window_num='{}'.format(sample_num))
                 pbar.update(1)
 
-        dataset = SMTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2)
+        dataset = SMTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
+                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
 
         current_ratio = split_ratio if split_as == 'train' else (1.0 - split_ratio)
         dataset.ratio = round(self.ratio * current_ratio, 15)
         dataset.split_as = split_as
-        dataset.mark = mark
 
         return dataset
 
