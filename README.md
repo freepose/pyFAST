@@ -86,10 +86,8 @@ trainer = Trainer(device, model, evaluator=evaluator)
 trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
 
 # After training, evaluate on a test dataset (if available)
-y_hat, y = trainer.predict(data.DataLoader(val_ds), 'evaluate val ')
-loss = trainer.criterion(y_hat, *y)
-metric_dict = trainer.evaluator.evaluate(y_hat, *y)
-print(to_string('val: ', loss, *metric_dict.values()))
+(val_loss, *val_metrics), _ = trainer.evaluate(torch.utils.data.DataLoader(val_ds), 'evaluate test ')
+print(to_string('test: ', val_loss, *val_metrics))
 ```
 
 ### Data Structures Overview
