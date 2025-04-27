@@ -178,7 +178,7 @@ def load_greece_wpf_smt(data_root: str,
 
         return (train_ds, val_ds), (scaler, ex_scaler)
 
-    elif split_task == 'inter':
+    else: # elif split_task == 'inter':
 
         if split_ratio == 1.0:
             data = get_greek_wind(csv_files, factor, ex_vars, use_time_features, desc='Loading training files...')
@@ -191,7 +191,6 @@ def load_greece_wpf_smt(data_root: str,
                 'input_window_size': input_window_size,
                 'output_window_size': output_window_size,
                 'horizon': horizon,
-                'split_ratio': split_ratio,
             }
 
             if scaler is not None and type(scaler) != type(Scale()):
@@ -218,7 +217,6 @@ def load_greece_wpf_smt(data_root: str,
             'input_window_size': input_window_size,
             'output_window_size': output_window_size,
             'horizon': horizon,
-            'split_ratio': 1.
         }
 
         val_smt_params = {
@@ -229,7 +227,6 @@ def load_greece_wpf_smt(data_root: str,
             'input_window_size': input_window_size,
             'output_window_size': output_window_size,
             'horizon': horizon,
-            'split_ratio': 1.
         }
 
         if scaler is not None and type(scaler) != type(Scale()):
@@ -238,7 +235,7 @@ def load_greece_wpf_smt(data_root: str,
         if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
             ex_scaler = time_series_scaler(train_data[1], ex_scaler)
 
-        train_ds = SMTDataset(**train_smt_params, stride=stride)
-        val_ds = SMTDataset(**val_smt_params, stride=output_window_size)
+        train_ds = SMTDataset(**train_smt_params, stride=stride, mark='train')
+        val_ds = SMTDataset(**val_smt_params, stride=output_window_size, mark='val')
 
         return (train_ds, val_ds), (scaler, ex_scaler)
