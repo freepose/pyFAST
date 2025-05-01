@@ -58,7 +58,7 @@ class Trainer:
                  model: nn.Module, is_initial_weights: bool = False, is_compile: bool = False,
                  optimizer=None, lr_scheduler=None, stopper=None,
                  criterion=nn.MSELoss(), additive_criterion=None, evaluator=None,
-                 global_scaler=None, global_ex_scaler=None):
+                 scaler=None, ex_scaler=None):
         self.device = device
 
         self.optimizer = optimizer
@@ -69,8 +69,8 @@ class Trainer:
         self.additive_criterion = additive_criterion
         self.evaluator = evaluator
 
-        self.global_scaler = global_scaler
-        self.global_ex_scaler = global_ex_scaler
+        self.scaler = scaler
+        self.ex_scaler = ex_scaler
 
         self.model = model
         self.is_initial_weights = is_initial_weights
@@ -222,12 +222,12 @@ class Trainer:
                 num_x = len(batch_outputs)
                 num_ex = len(batch_inputs) - num_x
 
-                if self.global_scaler is not None:
-                    batch_inputs[0] = self.global_scaler.transform(*batch_inputs[:num_x])
-                    batch_outputs[0] = self.global_scaler.transform(*batch_outputs[:num_x])
+                if self.scaler is not None:
+                    batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_x])
+                    batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_x])
 
-                if num_ex > 0 and (self.global_ex_scaler is not None):
-                    batch_inputs[num_x] = self.global_ex_scaler.transform(batch_inputs[num_x])
+                if num_ex > 0 and (self.ex_scaler is not None):
+                    batch_inputs[num_x] = self.ex_scaler.transform(batch_inputs[num_x])
 
                 if self.device.type != dataloader.dataset.device:
                     # Prepare for target model device
@@ -266,11 +266,11 @@ class Trainer:
 
                 num_x = len(batch_outputs)
                 num_ex = len(batch_inputs) - num_x
-                if self.global_scaler is not None:
-                    batch_inputs[0] = self.global_scaler.transform(*batch_inputs[:num_x])
+                if self.scaler is not None:
+                    batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_x])
 
-                if num_ex > 0 and (self.global_ex_scaler is not None):
-                    batch_inputs[num_x] = self.global_ex_scaler.transform(batch_inputs[num_x])
+                if num_ex > 0 and (self.ex_scaler is not None):
+                    batch_inputs[num_x] = self.ex_scaler.transform(batch_inputs[num_x])
 
                 if self.device.type != dataloader.dataset.device:
                     batch_inputs = [x.to(self.device) for x in batch_inputs]
@@ -279,8 +279,8 @@ class Trainer:
                 if self.device.type != dataloader.dataset.device:
                     batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
 
-                if self.global_scaler is not None:
-                    batch_y_hat = self.global_scaler.inverse_transform(batch_y_hat)
+                if self.scaler is not None:
+                    batch_y_hat = self.scaler.inverse_transform(batch_y_hat)
 
                 y_hat_list.append(batch_y_hat)
                 y_list.append(batch_outputs)
@@ -325,8 +325,8 @@ class Trainer:
                 # if self.global_scaler is not None:
                 #     batch_inputs[0] = self.global_scaler.transform(*batch_inputs[:num_x])
 
-                if num_ex > 0 and (self.global_ex_scaler is not None):
-                    batch_inputs[num_x] = self.global_ex_scaler.transform(*batch_inputs[num_x:num_x + 1])
+                if num_ex > 0 and (self.ex_scaler is not None):
+                    batch_inputs[num_x] = self.ex_scaler.transform(*batch_inputs[num_x:num_x + 1])
 
                 if self.device.type != dataloader.dataset.device:
                     batch_inputs = [x.to(self.device) for x in batch_inputs]
@@ -336,8 +336,8 @@ class Trainer:
                 if self.device.type != dataloader.dataset.device:
                     batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
 
-                if self.global_scaler is not None:
-                    batch_y_hat = self.global_scaler.inverse_transform(batch_y_hat)
+                if self.scaler is not None:
+                    batch_y_hat = self.scaler.inverse_transform(batch_y_hat)
 
                 y_hat_list.append(batch_y_hat)
                 y_list.append(batch_outputs)
@@ -354,25 +354,25 @@ class Trainer:
 
         params = {
             'device': self.device,
-            'optimizer': self.optimizer,
-            'lr_scheduler': self.lr_scheduler,
-            'criterion': self.criterion,
-            'evaluator': self.evaluator,
-            'is_initial_weights': self.is_initial_weights,
-            'is_compile': self.is_compile,
+            'optimizer': type(self.optimizer).__name__,
+            'lr': self.optimizer.param_groups[0]['lr'],
+            'criterion': self.criterion if isinstance(self.criterion, torch.nn.Module) else self.criterion.__name__,
+            'metrics': list(self.evaluator.metric_dict.keys()),
+            'initial_weights': self.is_initial_weights,
+            'compile': self.is_compile,
         }
 
         if self.stopper is not None:
-            params['stopper'] = self.stopper
+            params['stopper'] = type(self.stopper).__name__
 
         if self.additive_criterion is not None:
             params['additive_criterion'] = self.additive_criterion
 
-        if self.global_scaler is not None:
-            params['global_scaler'] = self.global_scaler
+        if self.scaler is not None:
+            params['scaler'] = type(self.scaler).__name__
 
-        if self.global_ex_scaler is not None:
-            params['global_ex_scaler'] = self.global_ex_scaler
+        if self.ex_scaler is not None:
+            params['ex_scaler'] = type(self.ex_scaler).__name__
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
         params_str = 'Trainer({})'.format(params_str)
@@ -571,7 +571,7 @@ class StreamTrainer:
             'criterion': self.criterion if isinstance(self.criterion, torch.nn.Module) else self.criterion.__name__,
             'metrics': list(self.evaluator.metric_dict.keys()),
             'initial_weights': self.is_initial_weights,
-            'is_compile': self.is_compile,
+            'compile': self.is_compile,
         }
 
         if self.scaler is not None:

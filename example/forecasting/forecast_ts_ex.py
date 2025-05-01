@@ -78,7 +78,7 @@ def mts_fusion():
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
                       criterion=criterion, additive_criterion=additive_criterion, evaluator=evaluator,
-                      global_scaler=scaler, global_ex_scaler=ex_scaler)
+                      scaler=scaler, ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=512, shuffle=True,

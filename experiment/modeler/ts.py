@@ -42,7 +42,7 @@ ts_modeler = {
                       'batch_normalization': False, 'shared_weights': False, 'naive_level': True}],
     'dlinear': [DLinear, {'individual': False, 'kernel_size': 7}],
     'nlinear': [NLinear, {'individual': False}],
-    'transformer': [Transformer, {'label_window_size': 0, 'd_model': 128, 'num_heads': 8,
+    'transformer': [Transformer, {'label_window_size': 6, 'd_model': 128, 'num_heads': 8,
                                   'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                   'dim_ff': 512, 'dropout_rate': 0.}],
     'informer': [Informer, {'label_window_size': 0, 'd_model': 128, 'num_heads': 8,
