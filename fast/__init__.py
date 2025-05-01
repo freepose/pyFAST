@@ -22,16 +22,21 @@ def initial_seed(seed: int = 10):
     torch.backends.cudnn.deterministic = True
 
 
-def get_device(preferred_device: Literal['cpu', 'cuda', 'mps'] = 'cpu', cuda_visible_devices: str = '-1'):
+def get_device(preferred_device: str = 'cpu'):
     """
         Get the device with fallback support.
-        :param preferred_device: preferred device. Values in ['cpu', 'cuda', 'mps']. Default: 'cpu'.
-        :param cuda_visible_devices: CUDA_VISIBLE_DEVICES.
+        :param preferred_device: preferred device. Values in ['cpu', 'cuda:0', 'mps']. Default: 'cpu'.
         :return: if preferred device is available, then return the preferred device,
                 otherwise return the fallback device (i.e., cpu).
     """
-    if preferred_device == 'cuda':
-        os.environ['CUDA_VISIBLE_DEVICES'] = cuda_visible_devices
+    assert preferred_device in ('cpu', 'mps') or preferred_device.__contains__('cuda'), \
+        'preferred_device must be in [cpu, mps] or cuda:0, cuda:1, ...'
+
+    if preferred_device.__contains__('cuda'):
+        cuda_devices = preferred_device.split(':')
+        if len(cuda_devices) > 1:
+            os.environ['CUDA_VISIBLE_DEVICES'] = preferred_device.split(':')[1]
+        preferred_device = 'cuda'
 
     device_dict = {
         'cpu': torch.device('cpu'),

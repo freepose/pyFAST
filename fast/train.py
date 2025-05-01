@@ -220,7 +220,7 @@ class Trainer:
             :param tqdm_desc: the description of tqdm.
             :return: the loss value of this pass.
         """
-        with tqdm(total=len(dataloader), leave=False, file=sys.stdout) as pbar:
+        with tqdm(total=len(dataloader), leave=False, file=sys.stderr) as pbar:
             pbar.set_description(tqdm_desc)
 
             for batch_inputs, batch_outputs in dataloader:
@@ -264,7 +264,7 @@ class Trainer:
         """
         self.model.eval()
 
-        with tqdm(total=len(dataloader), leave=False, file=sys.stdout) as pbar:
+        with tqdm(total=len(dataloader), leave=False, file=sys.stderr) as pbar:
             pbar.set_description(tqdm_desc)
 
             y_list, y_hat_list = [], []
@@ -320,7 +320,7 @@ class Trainer:
         """
         self.model.eval()
 
-        with tqdm(total=len(dataloader), leave=False, file=sys.stdout) as pbar:
+        with tqdm(total=len(dataloader), leave=False, file=sys.stderr) as pbar:
             pbar.set_description(tqdm_desc)
 
             y_list, y_hat_list = [], []
@@ -447,7 +447,7 @@ class StreamTrainer:
         total_loss = 0.0
         total_samples = 0
 
-        with tqdm(total=len(dataloader), leave=False, file=sys.stdout) as pbar:
+        with tqdm(total=len(dataloader), leave=False, file=sys.stderr) as pbar:
             pbar.set_description(tqdm_desc)
 
             self.evaluator.reset()
