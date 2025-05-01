@@ -130,7 +130,13 @@ class Trainer:
         train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
         train_dataloader2 = data.DataLoader(train_dataset, batch_size, collate_fn=collate_fn)
 
-        performance_list = []
+        if verbose:
+            header = ['lr', 'train_loss'] + ['train_{}'.format(k) for k in self.evaluator.metric_dict.keys()]
+            if val_dataset is not None:
+                header.extend(['val_loss'] + ['val_{}'.format(k) for k in self.evaluator.metric_dict.keys()])
+            print('epoch\t' + '\t'.join(['{:^10}'.format(s) for s in header]))
+
+        performance_histor_list = []
         for epoch in range(epoch_range[0], epoch_range[1] + 1):
             prefix = '{}/{}'.format(epoch, epoch_range[1])
             message = [prefix, self.optimizer.param_groups[0]['lr']]
@@ -202,10 +208,10 @@ class Trainer:
 
                         plot_comparable_line_charts(real_array, preds_array, plot_msg)
 
-            performance_list.append(message)
+            performance_histor_list.append(message)
             print(to_string(*message))
 
-        return performance_list
+        return performance_histor_list
 
     def fit_step(self, dataloader: data.DataLoader, tqdm_desc: str = None):
         """
@@ -502,7 +508,14 @@ class StreamTrainer:
 
         train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
 
-        performance_list = []
+        if verbose:
+            metric_names = self.evaluator.metric_dict.keys()
+            header = ['lr', 'train_loss'] + ['train_{}'.format(k) for k in metric_names]
+            if val_dataset is not None:
+                header.extend(['val_loss'] + ['val_{}'.format(k) for k in metric_names])
+            print('epoch\t' + '\t'.join(['{:^10}'.format(s) for s in header]))
+
+        performance_history_list = []
         for epoch in range(epoch_range[0], epoch_range[1] + 1):
             prefix = '{}/{}'.format(epoch, epoch_range[1])
             message = [prefix, self.optimizer.param_groups[0]['lr']]
@@ -525,12 +538,12 @@ class StreamTrainer:
                 val_loss, val_metrics = self.evaluate(val_dataset, batch_size, collate_fn, prefix, False)
                 message.extend([val_loss, *val_metrics.values()])
 
-            performance_list.append(message)
+            performance_history_list.append(message)
 
             if verbose:
                 print(to_string(*message))
 
-        return performance_list
+        return performance_history_list
 
     def evaluate(self, val_dataset: data.Dataset, batch_size: int = 32, collate_fn=None,
                  tqdm_desc_prefix: str = None, is_online: bool = False):
