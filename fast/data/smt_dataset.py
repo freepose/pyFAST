@@ -84,11 +84,11 @@ class SMTDataset(data.Dataset):
 
         self.index_dataset(self.ts)
 
-    def index_dataset(self, ts) -> np.array:
+    def index_dataset(self, ts: Tuple[torch.Tensor] or List[torch.Tensor]) -> np.ndarray:
         """
             Index the dataset (list of time series).
-            :param ts: list of univariate time series dataset.
-            :return: sample intervals of each time series. E.g., [0, 1840, 3988, ...]
+            :param ts: list of time series dataset.
+            :return: sample intervals of each time series. E.g., [1840, 3988, ...]
         """
         with tqdm(total=len(ts), leave=False, file=sys.stdout) as pbar:
             pbar.set_description('Indexing')
@@ -171,18 +171,18 @@ class SMTDataset(data.Dataset):
 
         return dataset
 
-    def __getitem__(self, index) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+    def __getitem__(self, index) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """
             Get the input and output data of the dataset by index.
         """
-        uts_index = bisect.bisect_left(self.cum_window_num_array, index)  # find the target UTS index
+        ts_index = bisect.bisect_left(self.cum_window_num_array, index)  # find the target UTS index
 
-        # The right boundary of sample index in a UTS, should
-        if index == self.cum_window_num_array[uts_index]:
-            uts_index += 1
+        # The right boundary of sample index in a TS, should
+        if index == self.cum_window_num_array[ts_index]:
+            ts_index += 1
 
-        local_index = (index - self.cum_window_num_array[uts_index - 1]) if uts_index > 0 else index
-        border_ts = self.ts[uts_index]
+        local_index = (index - self.cum_window_num_array[ts_index - 1]) if ts_index > 0 else index
+        border_ts = self.ts[ts_index]
 
         start_x = self.stride * local_index
         end_x = start_x + self.input_window_size
@@ -195,24 +195,24 @@ class SMTDataset(data.Dataset):
         input_list, output_list = [x_seq], [y_seq]
 
         if self.ts_mask is not None:
-            local_ts_mask = self.ts_mask[uts_index]
+            local_ts_mask = self.ts_mask[ts_index]
             x_seq_mask = local_ts_mask[start_x:end_x]
             y_seq_mask = local_ts_mask[start_y:end_y]
             input_list.append(x_seq_mask)
             output_list.append(y_seq_mask)
 
         if self.ex_ts is not None:
-            local_ex_ts = self.ex_ts[uts_index]
+            local_ex_ts = self.ex_ts[ts_index]
             ex_seq = local_ex_ts[start_x:end_x]
             input_list.append(ex_seq)
 
             if self.ex_ts_mask is not None:
-                local_ex_ts_mask = self.ex_ts_mask[uts_index]
+                local_ex_ts_mask = self.ex_ts_mask[ts_index]
                 ex_seq_mask = local_ex_ts_mask[start_x:end_x]
                 input_list.append(ex_seq_mask)
 
         if self.ex_ts2 is not None:
-            local_ex_ts2 = self.ex_ts2[uts_index]
+            local_ex_ts2 = self.ex_ts2[ts_index]
             ex2_seq_current = local_ex_ts2[start_x:end_x]
             ex2_seq_upcoming = local_ex_ts2[start_y:end_y]
             ex2_seq = torch.cat([ex2_seq_current, ex2_seq_upcoming], dim=0)

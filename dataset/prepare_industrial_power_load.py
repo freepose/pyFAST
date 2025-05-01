@@ -12,7 +12,7 @@ import pandas as pd
 
 import torch
 
-from fast.data import Scale, time_series_scaler
+from fast.data import Scale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 
 from dataset.time_feature import TimeAsFeature
@@ -193,10 +193,10 @@ def load_industrial_power_load_smt(data_root: str,
             ex_ts2_list.append(time_feature_tensor)
 
     if scaler is not None and type(scaler) != type(Scale()):
-        scaler = time_series_scaler(ts_list, scaler)
+        scaler = scale_several_time_series(ts_list, scaler)
 
     if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
-        ex_scaler = time_series_scaler(ex_ts_list, ex_scaler)
+        ex_scaler = scale_several_time_series(ex_ts_list, ex_scaler)
 
     stm_params['ts'] = ts_list
     stm_params['ex_ts'] = ex_ts_list

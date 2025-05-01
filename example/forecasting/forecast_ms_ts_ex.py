@@ -82,7 +82,7 @@ def ms_ts_fusion():
                       global_scaler=scaler, global_ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=4, shuffle=False,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True,
                 verbose=True, display_interval=0)
 
     print('Good luck!')

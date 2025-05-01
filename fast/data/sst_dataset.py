@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from typing import Literal
+from typing import Literal, Tuple, List
 
 import numpy as np
 
@@ -180,7 +180,7 @@ class SSTDataset(data.Dataset):
     def __len__(self) -> int:
         return self.sample_num
 
-    def __getitem__(self, index) -> tuple[list, list]:
+    def __getitem__(self, index) -> Tuple[List, List]:
         start_x = self.stride * index
         end_x = start_x + self.input_window_size
         x_seq = self.ts[start_x:end_x]

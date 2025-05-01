@@ -17,4 +17,7 @@ from .metric import mean_absolute_scaled_error, median_absolute_scaled_error
 from .mask_metric import mask_mean_absolute_error, mask_mean_squared_error, mask_root_mean_squared_error
 from .mask_metric import mask_mean_absolute_percentage_error, mask_symmetric_mean_absolute_percentage_error
 
+from .stream_metric import StreamMSE, StreamMAE
+
 from .evaluate import Evaluator
+from .evaluate_stream import StreamEvaluator

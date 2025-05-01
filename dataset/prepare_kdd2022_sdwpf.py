@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from fast.data import Scale, StandardScale, MinMaxScale, time_series_scaler
+from fast.data import Scale, StandardScale, MinMaxScale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 from dataset.time_feature import TimeAsFeature
 
@@ -143,10 +143,10 @@ def load_kdd2022_sdwpf_smt(data_root: str,
         }
 
         if scaler is not None and type(scaler) != type(Scale()):
-            scaler = time_series_scaler(data[0], scaler)
+            scaler = scale_several_time_series(data[0], scaler)
 
         if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
-            ex_scaler = time_series_scaler(data[1], ex_scaler)
+            ex_scaler = scale_several_time_series(data[1], ex_scaler)
 
         if split_ratio == 1.0:
             train_ds = SMTDataset(**smt_params, stride=stride)
@@ -172,10 +172,10 @@ def load_kdd2022_sdwpf_smt(data_root: str,
             }
 
             if scaler is not None and type(scaler) != type(Scale()):
-                scaler = time_series_scaler(data[0], scaler)
+                scaler = scale_several_time_series(data[0], scaler)
 
             if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
-                ex_scaler = time_series_scaler(data[1], ex_scaler)
+                ex_scaler = scale_several_time_series(data[1], ex_scaler)
 
             train_ds = SMTDataset(**smt_params, stride=stride)
             return (train_ds, None), (scaler, ex_scaler)
@@ -208,10 +208,10 @@ def load_kdd2022_sdwpf_smt(data_root: str,
         }
 
         if scaler is not None and type(scaler) != type(Scale()):
-            scaler = time_series_scaler(train_data[0], scaler)
+            scaler = scale_several_time_series(train_data[0], scaler)
 
         if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
-            ex_scaler = time_series_scaler(train_data[1], ex_scaler)
+            ex_scaler = scale_several_time_series(train_data[1], ex_scaler)
 
         train_ds = SMTDataset(**train_smt_params, stride=stride, mark='train')
         val_ds = SMTDataset(**val_smt_params, stride=output_window_size, mark='val')

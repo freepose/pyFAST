@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from fast.data import Scale, StandardScale, MinMaxScale, time_series_scaler
+from fast.data import Scale, StandardScale, MinMaxScale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 from dataset.time_feature import TimeAsFeature
 

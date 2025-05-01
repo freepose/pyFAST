@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 import torch
 
-from fast.data import Scale, StandardScale, MinMaxScale, time_series_scaler
+from fast.data import Scale, StandardScale, MinMaxScale, scale_several_time_series
 from fast.data import SMTDataset
 
 
@@ -82,7 +82,7 @@ def load_kdd2018_glucose_smt(data_root: str,
         }
 
         if scaler is not None and type(scaler) != type(Scale()):
-            scaler = time_series_scaler(cgm_uts_list, scaler)
+            scaler = scale_several_time_series(cgm_uts_list, scaler)
 
         train_ds = SMTDataset(**smt_params, stride=stride)
         return (train_ds, None), (scaler, None)
@@ -112,7 +112,7 @@ def load_kdd2018_glucose_smt(data_root: str,
     }
 
     if scaler is not None and type(scaler) != type(Scale()):
-        scaler = time_series_scaler(train_data, scaler)
+        scaler = scale_several_time_series(train_data, scaler)
 
     train_ds = SMTDataset(**train_smt_params, stride=stride)
     val_ds = SMTDataset(**val_smt_params, stride=output_window_size)

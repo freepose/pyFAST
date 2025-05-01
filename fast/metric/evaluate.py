@@ -4,6 +4,8 @@
 """
     The Evaluator supports a set of metric functions.
 """
+from typing import Literal, Tuple, List
+
 import torch
 
 from .metric import mean_squared_error, root_mean_squared_error, coefficient_of_variation_of_RMSE
@@ -21,7 +23,7 @@ from .mask_metric import mask_pearson_correlation_coefficient
 
 
 class Evaluator:
-    def __init__(self, metrics: list[str] or tuple[str] = None, metric_params: dict = None):
+    def __init__(self, metrics: List[str] or Tuple[str] = None, metric_params: dict = None):
         """
             Initialize the Evaluator with a list of metrics and their parameters.
             The metrics support both complete and incomplete time series.
@@ -67,7 +69,7 @@ class Evaluator:
 
         self.metric_params = metric_params if metric_params is not None else {}
 
-    def evaluate(self, *tensors: tuple[torch.Tensor] or list[torch.Tensor]) -> dict:
+    def evaluate(self, *tensors: Tuple[torch.Tensor] or List[torch.Tensor]) -> dict:
         """
             Evaluate the prediction performance using the error / accuracy metrics.
 

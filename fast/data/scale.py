@@ -243,8 +243,8 @@ class InstanceStandardScale(InstanceScale):
 """
 
 
-def time_series_scaler(ts: torch.Tensor or list[torch.Tensor] or tuple[torch.Tensor],
-                       scaler: Scale()) -> Scale:
+def scale_several_time_series(ts: torch.Tensor or list[torch.Tensor] or tuple[torch.Tensor],
+                              scaler: Scale()) -> Scale:
     """
         Scale the datasets.
         :param ts: the list of time series.

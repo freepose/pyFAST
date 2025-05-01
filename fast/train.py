@@ -7,6 +7,8 @@
 """
 
 import os, sys, platform
+from typing import Literal, Tuple, List
+
 import torch
 import torch.nn as nn
 import torch.utils.data as data
@@ -20,6 +22,7 @@ from .visualize import plot_comparable_line_charts
 class EarlyStop:
     """
         Early stopper to stop the training when the loss does not improve after certain epochs.
+
         :param patience: How long to wait after last time validation loss improved. Default is 3.
         :param delta:  Minimum change in the monitored quantity to qualify as an improvement. Default is 0.
         :param verbose: If True, prints a message for each validation loss improvement. Default is False.
@@ -55,7 +58,7 @@ class Trainer:
                  model: nn.Module, is_initial_weights: bool = False, is_compile: bool = False,
                  optimizer=None, lr_scheduler=None, stopper=None,
                  criterion=nn.MSELoss(), additive_criterion=None, evaluator=None,
-                 global_scaler=None, global_ex_scaler = None):
+                 global_scaler=None, global_ex_scaler=None):
         self.device = device
 
         self.optimizer = optimizer
@@ -79,7 +82,7 @@ class Trainer:
         self.initialize_device()
 
         if self.is_compile:
-            # MPS device may not support for compiling.
+            # MPS device may not support for this compiling.
             self.model = torch.compile(self.model)
 
         if self.optimizer is None:
@@ -105,11 +108,11 @@ class Trainer:
             pass
 
     def fit(self, train_dataset: data.Dataset, val_dataset: data.Dataset = None,
-            epoch_range: tuple[int, int] = (1, 10), verbose: bool = True,
+            epoch_range: Tuple[int, int] = (1, 10), verbose: bool = True,
             batch_size: int = 32, shuffle: bool = False,
             checkpoint_interval: int = 0, display_interval: int = 0,
             generation_interval: int = None,
-            collate_fn=None) -> list:
+            collate_fn=None) -> List:
         """
             Train the model.
             :param train_dataset: training dataset.
@@ -144,7 +147,7 @@ class Trainer:
                     "model_state_dict": self.model.state_dict(),
                     "optimizer_state_dict": self.optimizer.state_dict(),
                     "lr_scheduler_state_dict": self.lr_scheduler.state_dict() if self.lr_scheduler else None,
-                }, 'D:/checkpoint/model_{}.check'.format(epoch))
+                }, os.path.expanduser('~') + '/pretrained_checkpoint/model_{}.check'.format(epoch))
 
             if not verbose:
                 continue
@@ -375,3 +378,176 @@ class Trainer:
         params_str = 'Trainer({})'.format(params_str)
 
         return params_str
+
+
+class StreamTrainer:
+    def __init__(self, device: torch.device,
+                 model: nn.Module, is_initial_weights: bool = False, is_compile: bool = False,
+                 optimizer=None, lr_scheduler=None, stopper=None,
+                 criterion=nn.MSELoss(), evaluator=None,
+                 scaler=None, ex_scaler=None):
+        self.device = device
+
+        self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
+        self.stopper = stopper
+
+        self.criterion = criterion
+        self.evaluator = evaluator
+
+        self.scaler = scaler
+        self.ex_scaler = ex_scaler
+
+        self.model = model
+        self.is_initial_weights = is_initial_weights
+        self.is_compile = is_compile
+
+        if self.is_initial_weights:
+            model.apply(init_weights)
+
+        self.initialize_device()
+
+        if self.is_compile:
+            # MPS device may not support for this compiling.
+            self.model = torch.compile(self.model)
+
+        if self.optimizer is None:
+            model_params = filter(lambda p: p.requires_grad, model.parameters())
+            self.optimizer = torch.optim.Adam(model_params, lr=0.0001)
+
+        if self.lr_scheduler is None:
+            self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.1)
+
+    def initialize_device(self):
+        """ Initialize accelerator. """
+        self.model = self.model.to(self.device)
+
+        if self.device.type == 'cpu':
+            if platform.machine() == 'x86_64':
+                torch.set_num_threads(os.cpu_count() - 2)
+            elif platform.machine() == 'arm64':
+                torch.set_num_threads(os.cpu_count())
+        elif self.device.type == 'cuda':
+            if torch.cuda.device_count() > 1:
+                self.model = nn.DataParallel(self.model)
+        elif self.device.type == 'mps':
+            pass
+
+    def run_epoch(self, dataloader: data.DataLoader, mode: Literal['train', 'val', 'online'] = 'train',
+                  tqdm_desc: str = None):
+
+        self.model.train() if mode in ['train', 'online'] else self.model.eval()
+
+        total_loss = 0.0
+        total_samples = 0
+
+        with tqdm(total=len(dataloader), leave=False, file=sys.stdout) as pbar:
+            pbar.set_description(tqdm_desc)
+
+            self.evaluator.reset()
+            for batch_inputs, batch_outputs in dataloader:
+                num_x = len(batch_outputs)
+                num_ex = len(batch_inputs) - num_x
+
+                if self.scaler is not None:
+                    batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_x])
+                    batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_x])
+
+                if num_ex > 0 and (self.ex_scaler is not None):
+                    batch_inputs[num_x] = self.ex_scaler.transform(batch_inputs[num_x])
+
+                if self.device.type != dataloader.dataset.device:
+                    # Prepare for target model device
+                    batch_inputs = [x.to(self.device) for x in batch_inputs]
+                    batch_outputs = [y.to(self.device) for y in batch_outputs]
+
+                batch_y_hat = self.model(*batch_inputs)
+                batch_loss = self.criterion(batch_y_hat, *batch_outputs)
+
+                if mode in ['train', 'online']:
+                    self.optimizer.zero_grad()  # clear gradients for next train
+                    batch_loss.backward()
+                    self.optimizer.step()
+
+                batch_loss_value = batch_loss.detach().item()
+                total_loss += (batch_loss_value * batch_y_hat.shape[0])
+                total_samples += batch_y_hat.shape[0]
+
+                if self.scaler is not None:
+                    batch_y_hat = self.scaler.inverse_transform(batch_y_hat)
+                    batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_x])
+
+                self.evaluator.update(batch_y_hat, *batch_outputs)
+
+                pbar.set_postfix(batch_loss='{:.6f}'.format(batch_loss_value))
+                pbar.update(1)
+
+        avg_loss = total_loss / total_samples
+        metrics = self.evaluator.compute()
+
+        return avg_loss, metrics
+
+    def fit(self, train_dataset: data.Dataset,
+            val_dataset: data.Dataset = None,
+            epoch_range: Tuple[int, int] = (1, 10),
+            batch_size: int = 32, shuffle: bool = False,
+            checkpoint_interval: int = 0,
+            collate_fn=None,
+            verbose: bool = True) -> List:
+
+        train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
+
+        performance_list = []
+        for epoch in range(epoch_range[0], epoch_range[1] + 1):
+            prefix = '{}/{}'.format(epoch, epoch_range[1])
+            message = [prefix, self.optimizer.param_groups[0]['lr']]
+
+            train_loss, train_metrics = self.run_epoch(train_dataloader, 'train', 'training ' + prefix)
+            message.extend([train_loss, *train_metrics.values()])
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
+
+            if checkpoint_interval is not None and checkpoint_interval > 0 and epoch % checkpoint_interval == 0:
+                torch.save({
+                    "epoch": epoch,
+                    "model_state_dict": self.model.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "lr_scheduler_state_dict": self.lr_scheduler.state_dict() if self.lr_scheduler else None,
+                }, os.path.expanduser('~') + '/pretrained_checkpoint/model_{}.check'.format(epoch))
+
+            if val_dataset is not None:
+                val_loss, val_metrics = self.evaluate(val_dataset, batch_size, collate_fn, prefix, False)
+                message.extend([val_loss, *val_metrics.values()])
+
+            performance_list.append(message)
+            print(to_string(*message))
+
+        return performance_list
+
+    def evaluate(self, val_dataset: data.Dataset, batch_size: int = 32, collate_fn=None,
+                 tqdm_desc_prefix: str = None, is_online: bool = False):
+        """
+            Evaluate the model using ``dataloader``. Design for evaluation, not for common prediction.
+            :param val_dataset: the data loader of the prediction data.
+            :param batch_size: the batch size of a mini-batch.
+            :param collate_fn: the function to collate the data.
+            :param tqdm_desc_prefix: the tqdm desc.
+            :param is_online: whether to use online evaluation.
+            :return: loss value and metric values.
+        """
+        if tqdm_desc_prefix is None:
+            tqdm_desc_prefix = ''
+
+        if is_online:
+            tqdm_desc = 'online ' + tqdm_desc_prefix
+            val_mode = 'online'
+            val_dataloader = data.DataLoader(val_dataset, 1, collate_fn=collate_fn)
+        else:
+            tqdm_desc = 'validating ' + tqdm_desc_prefix
+            val_mode = 'val'
+            val_dataloader = data.DataLoader(val_dataset, batch_size, collate_fn=collate_fn)
+
+        loss, metrics = self.run_epoch(val_dataloader, val_mode, tqdm_desc)
+
+        return loss, metrics

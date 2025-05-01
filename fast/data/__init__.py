@@ -7,7 +7,7 @@
 
 from .scale import Scale, MinMaxScale, MeanScale, MaxScale, StandardScale, LogScale
 from .scale import InstanceScale, InstanceStandardScale
-from .scale import time_series_scaler
+from .scale import scale_several_time_series
 from .patch import PatchMaker
 from .sst_dataset import SSTDataset, multi_step_ahead_split, train_test_split
 from .smt_dataset import SMTDataset
