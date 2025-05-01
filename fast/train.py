@@ -474,6 +474,11 @@ class StreamTrainer:
                 total_samples += batch_y_hat.shape[0]
 
                 if self.scaler is not None:
+                    if self.device.type != dataloader.dataset.device:
+                        # Prepare for dataset device
+                        batch_outputs = [y.to(dataloader.dataset.device) for y in batch_outputs]
+                        batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
+
                     batch_y_hat = self.scaler.inverse_transform(batch_y_hat)
                     batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_x])
 
@@ -521,7 +526,9 @@ class StreamTrainer:
                 message.extend([val_loss, *val_metrics.values()])
 
             performance_list.append(message)
-            print(to_string(*message))
+
+            if verbose:
+                print(to_string(*message))
 
         return performance_list
 
@@ -551,3 +558,29 @@ class StreamTrainer:
         loss, metrics = self.run_epoch(val_dataloader, val_mode, tqdm_desc)
 
         return loss, metrics
+
+    def __str__(self):
+        """
+            Print the information of this class instance.
+        """
+
+        params = {
+            'device': self.device,
+            'optimizer': type(self.optimizer).__name__,
+            'lr': self.optimizer.param_groups[0]['lr'],
+            'criterion': self.criterion if isinstance(self.criterion, torch.nn.Module) else self.criterion.__name__,
+            'metrics': list(self.evaluator.metric_dict.keys()),
+            'initial_weights': self.is_initial_weights,
+            'is_compile': self.is_compile,
+        }
+
+        if self.scaler is not None:
+            params['scaler'] = type(self.scaler).__name__
+
+        if self.ex_scaler is not None:
+            params['ex_scaler'] = type(self.ex_scaler).__name__
+
+        params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
+        params_str = 'StreamTrainer({})'.format(params_str)
+
+        return params_str
