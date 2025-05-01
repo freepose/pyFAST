@@ -56,8 +56,8 @@ import torch.utils.data as data
 
 from fast import initial_seed, get_device
 from fast.data import SSTDataset
-from fast.train import Trainer, to_string
-from fast.metric import Evaluator
+from fast.train import Trainer, StreamTrainer
+from fast.metric import Evaluator, StreamEvaluator
 from fast.model.mts.ar import ANN  # Example: Using a simple ANN model
 
 # Initialize components for reproducibility and evaluation
@@ -78,16 +78,20 @@ model = ANN(
 
 # Set up the Trainer for model training and evaluation
 device = get_device('cpu')  # Use 'cuda', 'cpu', or 'mps'
-evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 
+evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 trainer = Trainer(device, model, evaluator=evaluator)
+
+## You can also use ``StreamTrainer`` for streaming data
+# evaluator = StreamEvaluator(['MAE', 'RMSE'])  # Streaming aggregated evaluation metrics
+# trainer = StreamTrainer(device, model, evaluator=evaluator) # Streaming trainer 
 
 # Train model using prepared datasets
 trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
 
 # After training, evaluate on a test dataset (if available)
 (val_loss, *val_metrics), _ = trainer.evaluate(torch.utils.data.DataLoader(val_ds), 'evaluate test ')
-print(to_string('test: ', val_loss, *val_metrics))
+print({'val_loss': val_loss, **val_metrics})
 ```
 
 ### Data Structures Overview
