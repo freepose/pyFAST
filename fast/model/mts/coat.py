@@ -202,7 +202,7 @@ class TCOAT(nn.Module):
         self.rnn_num_layers = rnn_num_layers
         self.rnn_bidirectional = rnn_bidirectional
 
-        self.rnn = nn.GRU(input_vars=self.input_vars, hidden_size=self.rnn_hidden_size,
+        self.rnn = nn.GRU(input_size=self.input_vars, hidden_size=self.rnn_hidden_size,
                           num_layers=self.rnn_num_layers, bidirectional=self.rnn_bidirectional,
                           batch_first=True, dropout=dropout_rate)
 

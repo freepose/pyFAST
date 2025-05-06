@@ -14,7 +14,7 @@ import torch.optim as optim
 from fast import initial_seed, get_device, get_common_params
 from fast.data import MinMaxScale
 from fast.train import Trainer
-from fast.metric import Evaluator
+from fast.metric import Evaluator, MSE
 
 from fast.model.base import count_parameters, covert_parameters
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
@@ -67,22 +67,21 @@ def mts_fusion():
     model = covert_parameters(model, torch_float_type)
     print(model_name, count_parameters(model))
 
-    model_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = optim.Adam(model_params, lr=0.0005, weight_decay=0.)
+    model_weights = filter(lambda p: p.requires_grad, model.parameters())
+    optimizer = optim.Adam(model_weights, lr=0.0005, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
 
-    criterion = nn.MSELoss()
-    additive_criterion = getattr(model, 'loss', None)
+    criterion = MSE()
     evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
-                      criterion=criterion, additive_criterion=additive_criterion, evaluator=evaluator,
+                      criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=512, shuffle=True,
-                verbose=True, display_interval=50)
+                verbose=True)
 
     print('Good luck!')
 

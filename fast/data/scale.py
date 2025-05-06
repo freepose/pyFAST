@@ -1,48 +1,55 @@
 #!/usr/bin/env python
 # encoding: utf-8
+
 """
     Data normalization techniques.
-    Global scaler applies to the whole time series.
-    Instance scaler normalized batch input data.
+
+    (1) Scaler applies to the whole (trainable part of) time series.
+
+    (2) Instance scaler normalized batch input data of a model.
+
+    (3) The scalers work with mask tensor to ignore missing values or padding values of a real (target) tensor.
 """
+
 import copy
+from typing import Tuple, List
 
 import torch
 import torch.nn as nn
+
 from abc import abstractmethod, ABC
 
 
-class Scale(object):
-    """ Do nothing. """
-
-    def __init__(self):
-        pass
+class AbstractScale(ABC):
+    """
+        AbstractScale class.
+    """
 
     @abstractmethod
     def fit(self, x, x_mask=None):
         return self
 
     @abstractmethod
-    def transform(self, x, x_mask=None):
+    def transform(self, x, x_mask=None) -> torch.Tensor:
         return x
+
+    def fit_transform(self, x, x_mask=None) -> torch.Tensor:
+        self.fit(x, x_mask)
+        normalized_x = self.transform(x, x_mask)
+        return normalized_x
 
     @abstractmethod
-    def fit_transform(self, x, x_mask=None):
-        return x
-
-    @abstractmethod
-    def inverse_transform(self, x, x_mask=None):
+    def inverse_transform(self, x, x_mask=None) -> torch.Tensor:
         return x
 
 
-class MinMaxScale(Scale):
+class MinMaxScale(AbstractScale):
     """
         Min-Max normalization. Support high-dimensional data.
         :param feature_range: the range of normalized data. Default is ``[0, 1]``.
     """
 
     def __init__(self, feature_range: tuple or list = (0.0, 1.0)):
-        super(MinMaxScale, self).__init__()
         self.feature_range = feature_range
 
         self.min = None
@@ -64,22 +71,15 @@ class MinMaxScale(Scale):
         normalized_x = (x - self.min) / self.range * self.given_range + self.feature_range[0]
         return normalized_x
 
-    def fit_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
-        """ Fit and normalize. """
-        self.fit(x)
-        normalized_x = self.transform(x)
-        return normalized_x
-
     def inverse_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
         recovered_x = (x - self.feature_range[0]) * self.range / self.given_range + self.min
         return recovered_x
 
 
-class MaxScale(Scale):
+class MaxScale(AbstractScale):
     """ Max normalization (to be tested). sklearn: MaxAbsScale. NOTE: This seems no effects on input dataset. """
 
     def __init__(self):
-        super(MaxScale, self).__init__()
         self.max = None
 
     def fit(self, x: torch.tensor, x_mask: torch.tensor = None):
@@ -95,11 +95,12 @@ class MaxScale(Scale):
         return recovered_x
 
 
-class MeanScale(Scale):
-    """Mean normalization. Each value is divided by the mean value of each column. """
+class MeanScale(AbstractScale):
+    """
+        Mean normalization. Each value is divided by the mean value of each column.
+    """
 
     def __init__(self):
-        super(MeanScale, self).__init__()
         self.mean = None
 
     def fit(self, x: torch.tensor, x_mask: torch.tensor = None):
@@ -115,11 +116,10 @@ class MeanScale(Scale):
         return recovered_x
 
 
-class StandardScale(Scale):
+class StandardScale(AbstractScale):
     """Standard normalization (a.k.a, z-score)."""
 
     def __init__(self):
-        super(StandardScale, self).__init__()
         self.miu = None
         self.sigma = None
 
@@ -132,18 +132,15 @@ class StandardScale(Scale):
         normalized_x = (x - self.miu) / self.sigma
         return normalized_x
 
-    def fit_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
-        self.fit(x, x_mask)
-        normalized_x = self.transform(x, x_mask)
-        return normalized_x
-
     def inverse_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
         recovered_x = x * self.sigma + self.miu
         return recovered_x
 
 
-class LogScale(Scale):
-    """logarithmic normalization."""
+class LogScale(AbstractScale):
+    """
+        Logarithmic normalization.
+    """
 
     def fit(self, x: torch.tensor, x_mask: torch.tensor = None):
         return self
@@ -153,6 +150,7 @@ class LogScale(Scale):
 
     def inverse_transform(self, x: torch.tensor, x_mask: torch.tensor = None):
         return torch.exp(x) - 1
+
 
 """
     Instance normalization techniques.
@@ -164,22 +162,22 @@ class InstanceScale(nn.Module):
 
     def __init__(self):
         super(InstanceScale, self).__init__()
-        pass
 
     @abstractmethod
-    def fit(self, x):
+    def fit(self, x, mask=None):
         return self
 
     @abstractmethod
-    def transform(self, x):
+    def transform(self, x, mask=None):
         return x
 
-    @abstractmethod
-    def fit_transform(self, x):
-        return x
+    def fit_transform(self, x, mask=None):
+        self.fit(x)
+        normalized_x = self.transform(x)
+        return normalized_x
 
     @abstractmethod
-    def inverse_transform(self, x):
+    def inverse_transform(self, x, mask=None):
         return x
 
 
@@ -190,11 +188,6 @@ class InstanceStandardScale(InstanceScale):
         Kim T, Kim J, Tae Y, et al.
         Reversible instance normalization for accurate time-series forecasting against distribution shift
         ICLR 2021.
-
-        Nie Y, Nguyen N H, Sinthong P, et al.
-        A Time Series is Worth 64 Words: Long-term Forecasting with Transformers, ICLR 2023
-        Link: https://arxiv.org/abs/2211.14730
-        Official Code: https://github.com/yuqinie98/PatchTST
 
         :param num_features: if num_features > 0, then use affine parameters, else not.
         :param epsilon: the default value is 1e-5.
@@ -212,53 +205,54 @@ class InstanceStandardScale(InstanceScale):
             self.affine_weight = nn.Parameter(torch.ones(self.num_features))
             self.affine_bias = nn.Parameter(torch.zeros(self.num_features))
 
-    def fit(self, x):
+    def fit(self, x, mask=None):
         dim2reduce = tuple(range(1, x.ndim - 1))
         self.miu = x.mean(dim=dim2reduce, keepdim=True).detach()
         self.sigma = (x.var(dim=dim2reduce, keepdim=True, unbiased=False) + self.epsilon).sqrt().detach()
         return self
 
-    def transform(self, x):
+    def transform(self, x, mask=None):
         """ Normalization """
         t = (x - self.miu) / self.sigma  # -> [batch_size, input_window_size, num_features]
         if self.num_features > 0:
             t = (t * self.affine_weight) + self.affine_bias
         return t
 
-    def fit_transform(self, x):
-        """ Fit and normalize. """
-        self.fit(x)
-        t = self.transform(x)
-        return t
-
-    def inverse_transform(self, x):
+    def inverse_transform(self, x, mask=None):
         """ De-normalize.  """
         if self.num_features > 0:
             x = (x - self.affine_bias) / (self.affine_weight + self.epsilon ** 2)
         inv = x * self.sigma + self.miu  # -> [batch_size, output_window_size, num_features]
         return inv
 
+
 """
-    Mask normalization techniques.
+    Multiple time series normalization techniques.
 """
 
 
-def scale_several_time_series(ts: torch.Tensor or list[torch.Tensor] or tuple[torch.Tensor],
-                              scaler: Scale()) -> Scale:
+def scale_several_time_series(scaler: AbstractScale,
+                              ts: torch.Tensor or List[torch.Tensor] or Tuple[torch.Tensor],
+                              mask: torch.Tensor or List[torch.Tensor] or Tuple[torch.Tensor] = None) -> AbstractScale:
     """
-        Scale the datasets.
-        :param ts: the list of time series.
-        :param scaler: the scaler.
-        :return: the scaled time series.
+        Scale the datasets, and return the scaler.
+        :param scaler: the scaler to be used. A deep copy will apply to the scaler.
+        :param ts: time series tenor, or a list of time series tensors.
+        :param mask: mask tensor or a list of mask tensors.
+        :return: the fitted scaler.
     """
+    if mask is not None:
+        if isinstance(ts, torch.Tensor):
+            assert ts.shape == mask.shape, 'ts and mask must have the same shape.'
+        elif isinstance(ts, (List, Tuple)):
+            assert len(ts) == len(mask.shape), 'ts and mask must have the same number of data sources.'
 
-    # if type(scaler) == type(Scale()):
-    #     return Scale()
+    ts_tensor, mask_tensor = ts, mask
+    if isinstance(ts, (List, Tuple)):
+        ts_tensor = torch.cat(ts, dim=0)
+        if mask is not None:
+            mask_tensor = torch.cat(mask, dim=0)
 
-    scale_ts = ts
-    if isinstance(ts, list) or isinstance(ts, tuple):
-        scale_ts = torch.cat(ts, dim=0)
-    scaler = copy.deepcopy(scaler).fit(scale_ts)
-    del scale_ts
+    scaler = copy.deepcopy(scaler).fit(ts_tensor, mask_tensor)
 
     return scaler

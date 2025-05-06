@@ -12,7 +12,7 @@ import pandas as pd
 
 import torch
 
-from fast.data import Scale, scale_several_time_series
+from fast.data import AbstractScale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 
 from dataset.time_feature import TimeAsFeature
@@ -35,8 +35,8 @@ def load_industrial_power_load_sst(data_root: str,
                                    output_window_size: int = 24,
                                    horizon: int = 1,
                                    stride: int = 1,
-                                   scaler: Scale = None,
-                                   ex_scaler: Scale = None) -> tuple[tuple, tuple]:
+                                   scaler: AbstractScale = None,
+                                   ex_scaler: AbstractScale = None) -> tuple[tuple, tuple]:
     """
         Load the industrial electric power load dataset as ``SSTDataset``.
 
@@ -85,7 +85,7 @@ def load_industrial_power_load_sst(data_root: str,
     target_tensor = torch.tensor(target_array)
     sts_params['ts'] = target_tensor
 
-    if scaler is not None and type(scaler) != type(Scale()):
+    if scaler is not None and type(scaler) != type(AbstractScale()):
         scaler = scaler.fit(target_tensor)
 
     if use_time_features:
@@ -101,7 +101,7 @@ def load_industrial_power_load_sst(data_root: str,
         ex_tensor = torch.tensor(ex_array)
         sts_params['ex_ts'] = ex_tensor
 
-        if ex_scaler is not None and type(ex_scaler) != type(Scale()):
+        if ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
             ex_scaler = ex_scaler.fit(ex_tensor)
 
     if split_ratio == 1.0:
@@ -124,8 +124,8 @@ def load_industrial_power_load_smt(data_root: str,
                                    output_window_size: int = 24,
                                    horizon: int = 1,
                                    stride: int = 1,
-                                   scaler: Scale = None,
-                                   ex_scaler: Scale = None) -> tuple[tuple, tuple]:
+                                   scaler: AbstractScale = None,
+                                   ex_scaler: AbstractScale = None) -> tuple[tuple, tuple]:
     """
         Load the industrial electric power load dataset as ``SMTDataset``.
 
@@ -192,10 +192,10 @@ def load_industrial_power_load_smt(data_root: str,
             time_feature_tensor = torch.tensor(time_feature_array)
             ex_ts2_list.append(time_feature_tensor)
 
-    if scaler is not None and type(scaler) != type(Scale()):
+    if scaler is not None and type(scaler) != type(AbstractScale()):
         scaler = scale_several_time_series(ts_list, scaler)
 
-    if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
+    if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
         ex_scaler = scale_several_time_series(ex_ts_list, ex_scaler)
 
     stm_params['ts'] = ts_list

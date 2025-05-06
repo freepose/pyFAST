@@ -13,9 +13,9 @@ import torch.optim as optim
 from scipy.stats.tests.test_continuous_fit_censored import optimizer
 
 from fast import initial_seed, get_device, get_common_params
-from fast.data import Scale, MinMaxScale
+from fast.data import AbstractScale, MinMaxScale
 from fast.train import Trainer
-from fast.metric import Evaluator
+from fast.metric import Evaluator, MSE
 
 from fast.model.base import count_parameters, covert_parameters
 from experiment.modeler.ts import ts_modeler
@@ -51,18 +51,17 @@ def main():
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
 
-    criterion = nn.MSELoss()
-    additive_criterion = getattr(model, 'loss', None)
+    criterion = MSE()
     evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
-                      criterion=criterion, additive_criterion=additive_criterion, evaluator=evaluator,
+                      criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=False,
-                verbose=True, display_interval=20)
+                verbose=True)
 
     print('Good luck!')
 

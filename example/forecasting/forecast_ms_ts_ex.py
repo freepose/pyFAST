@@ -18,7 +18,7 @@ import torch.optim as optim
 
 from fast import initial_seed, get_common_params
 from fast.train import Trainer
-from fast.metric import Evaluator
+from fast.metric import Evaluator, MSE
 
 from fast.model.base import count_parameters, covert_parameters
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
@@ -73,17 +73,16 @@ def ms_ts_fusion():
     model = covert_parameters(model, torch_float_type)
     print(model_name, count_parameters(model))
 
-    criterion = nn.MSELoss()
-    additive_criterion = getattr(model, 'loss', None)
+    criterion = MSE()
     evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
-                      criterion=criterion, additive_criterion=additive_criterion, evaluator=evaluator,
+                      criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=True,
-                verbose=True, display_interval=0)
+                verbose=True)
 
     print('Good luck!')
 

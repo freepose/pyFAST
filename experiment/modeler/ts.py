@@ -7,7 +7,7 @@ from fast.model.mts import TemporalConvNet, CNNRNN, CNNRNNRes, LSTNet
 from fast.model.mts import DeepResidualNetwork
 from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
 from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TimeXer, TimeMixer
-from fast.model.mts import TimesFM, Timer
+from fast.model.mts import TimesFM, Timer, LSTD
 from fast.model.mts import STID, STNorm, MAGNet, GraphWaveNet, FourierGNN
 from fast.model.mts import COAT, GAIN
 
@@ -45,9 +45,9 @@ ts_modeler = {
     'transformer': [Transformer, {'label_window_size': 6, 'd_model': 128, 'num_heads': 8,
                                   'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                   'dim_ff': 512, 'dropout_rate': 0.}],
-    'informer': [Informer, {'label_window_size': 0, 'd_model': 128, 'num_heads': 8,
-                            'num_encoder_layers': 1, 'num_decoder_layers': 1,
-                            'dim_ff': 512, 'dropout_rate': 0.}],
+    'informer': [Informer, {'label_window_size': 48, 'd_model': 512, 'num_heads': 8,
+                            'num_encoder_layers': 2, 'num_decoder_layers': 1,
+                            'dim_ff': 2048, 'dropout_rate': 0.05}],
     'autoformer': [Autoformer, {'label_window_size': 0, 'd_model': 256, 'num_heads': 8,
                                 'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                 'dim_ff': 1024, 'dropout_rate': 0., 'moving_avg': 7}],
@@ -84,6 +84,7 @@ ts_modeler = {
                               'top_k': 5, 'channel_independence': True, 'decomposition_method': 'moving_avg',
                               'down_sampling_method': 'avg', 'down_sampling_window': 1, 'down_sampling_layers': 1,
                               'use_instance_scale': True}],
+    'lstd': [LSTD, {'label_window_size': 24, 'latent_dim_d': 1, 'latent_dim_s': 1, 'hidden_dim': 32}],
     'stid': [STID, {'node_dim': 32, 'embed_dim': 1024, 'input_dim': 1, 'num_layer': 1, 'if_node': True}],
     'stnorm': [STNorm, {'tnorm_bool': True, 'snorm_bool': True,
                         'channels': 16, 'kernel_size': 2, 'blocks': 1, 'layers': 2}],

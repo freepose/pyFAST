@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 # Dense target variable + dense exogenous variables
+
 from .narx import ARX, NARXMLP, NARXRNN
 from .dsar import DSAR
 from .dgr import DGR
@@ -20,3 +21,6 @@ from .sparse.tpatchgnn import TPatchGNN
 
 # Plugins
 from .fusion_plugin import DataFirstPlugin, LearningFirstPlugin, ExogenousDataDrivenPlugin
+
+# Spatio-temporal
+from .spatio.ship import ShipEx

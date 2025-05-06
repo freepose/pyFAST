@@ -1,291 +1,620 @@
 #!/usr/bin/env python
 # encoding: utf-8
+
+"""
+
+    Streaming aggregated metrics for large-scale dataset evaluation.
+    The global metric values are calculated by aggregating batchify mediate updates.
+
+    This also provides global evaluation with streaming aggregation.
+
+    Note: The assert statement checks are removed to avoid unnecessary overhead in the call method.
+
+"""
+
 import torch
+from abc import abstractmethod, ABC
 
 
-def mean_absolute_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
+class AbstractMetric(ABC):
     """
-        MAE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: MAE
+        Abstract class for streaming aggregated metrics.
     """
-    return (real - prediction).abs().mean()
+
+    @abstractmethod
+    def __call__(self, *args, **kwargs) -> torch.Tensor:
+        pass
+
+    @abstractmethod
+    def reset(self):
+        pass
+
+    @abstractmethod
+    def update(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def compute(self):
+        pass
 
 
-def mean_absolute_percentage_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
+class MSE(AbstractMetric):
     """
-        MAPE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: MAPE
+        Mean Squared Error (MSE). This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
     """
-    errors = real - prediction
-    mape = (errors / real).abs().mean()
 
-    return mape
+    def __init__(self):
+        self.sum_squared_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            MSE. Element-wise metrics.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+            :return             MSE value.
+        """
+
+        # The assert statement checks are removed to avoid unnecessary overhead in the call method.
+        # assert prediction.shape == real.shape, 'preds tensor and real tensor must have the same shape'
+
+        if mask is not None:
+            # The assert statement checks are removed to avoid unnecessary overhead in the call method.
+            # assert real.shape == mask.shape, 'real tensor and mask tensor must have the same shape'
+
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+        mse = squared_errors.mean()
+
+        return mse
+
+    def reset(self):
+        self.sum_squared_errors = 0.0
+        self.total_samples = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+
+        self.sum_squared_errors += squared_errors.sum().detach().item()
+        self.total_samples += real.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Mean Squared Error (MSE)
+        """
+        if self.total_samples == 0:
+            return 0.0
+        return self.sum_squared_errors / self.total_samples
 
 
-def median_absolute_percentage_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
+class MAE(AbstractMetric):
     """
-        MdAPE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: MdAPE
+        Mean Absolute Error (MAE). This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
     """
-    errors = real - prediction
-    # mdape = (errors / real).abs().median(dim=0).values.mean()
-    mdape = (errors / real).abs().median()
 
-    return mdape
+    def __init__(self):
+        self.sum_absolute_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            MAE. Element-wise metrics.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        absolute_errors = (prediction - real).abs()
+        mae = absolute_errors.mean()
+
+        return mae
+
+    def reset(self):
+        self.sum_absolute_errors = 0.0
+        self.total_samples = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        absolute_errors = torch.abs(prediction - real)
+
+        self.sum_absolute_errors += absolute_errors.sum().detach().item()
+        self.total_samples += prediction.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Mean Absolute Error (MAE)
+        """
+        if self.total_samples == 0:
+            return 0.0
+        return self.sum_absolute_errors / self.total_samples
 
 
-def standard_deviation_relative_errors(real: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+class RMSE(AbstractMetric):
+    """
+        Root Mean Squared Error (RMSE). This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_squared_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            RMSE. Element-wise metrics.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+            :return: RMSE value.
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+        rmse = squared_errors.mean().sqrt()
+
+        return rmse
+
+    def reset(self):
+        self.sum_squared_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+
+        self.sum_squared_errors += squared_errors.sum().detach().item()
+        self.total_samples += real.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Root Mean Squared Error (RMSE)
+        """
+        if self.total_samples == 0:
+            return 0.0
+        rmse = (self.sum_squared_errors / self.total_samples) ** 0.5
+
+        return rmse
+
+
+class MAPE(AbstractMetric):
+    """
+        Mean Absolute Percentage Error (MAPE). This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_absolute_percentage_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            MAPE. Element-wise metrics.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+            :return:            MAPE value.
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        absolute_percentage_errors = ((prediction - real) / real).abs()
+        mape = absolute_percentage_errors.mean()
+
+        return mape
+
+    def reset(self):
+        self.sum_absolute_percentage_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+        assert prediction.shape == real.shape, 'preds and real must have the same shape'
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        absolute_percentage_errors = ((prediction - real) / real).abs()
+
+        self.sum_absolute_percentage_errors += absolute_percentage_errors.sum().detach().item()
+        self.total_samples += prediction.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Mean Absolute Percentage Error (MAPE)
+        """
+
+        if self.total_samples == 0:
+            return 0.0
+        return self.sum_absolute_percentage_errors / self.total_samples
+
+
+class SMAPE(AbstractMetric):
+    """
+        Symmetric Mean Absolute Percentage Error (sMAPE). This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_ape: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            sMAPE. Element-wise metrics.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        symmetric_ape = ((real - prediction) / (real + prediction)).abs()
+        smape = symmetric_ape.mean()
+
+        return smape
+
+    def reset(self):
+        self.sum_ape = 0.0
+        self.total_samples = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        symmetric_ape = ((real - prediction) / (real + prediction)).abs()
+
+        self.sum_ape += symmetric_ape.sum().detach().item()
+        self.total_samples += prediction.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Symmetric Mean Absolute Percentage Error (SMAPE)
+        """
+        if self.total_samples == 0:
+            return 0.0
+        smape = (self.sum_ape / self.total_samples) * 2
+
+        return smape
+
+
+class CVRMSE(AbstractMetric):
+    """
+        Streaming aggregated coefficient of variation of RMSE (CV-RMSE).
+        This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_squared_errors: float = 0.0
+        self.sum_real_values: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            CV-RMSE value.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        rmse = ((prediction - real) ** 2).mean().sqrt()
+        cvrmse = rmse / real.mean()
+
+        return cvrmse
+
+    def reset(self):
+        self.sum_squared_errors = 0.0
+        self.sum_real_values = 0.0
+        self.total_samples = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+        assert prediction.shape == real.shape, 'preds and real must have the same shape'
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+
+        self.sum_squared_errors += squared_errors.sum().detach().item()
+        self.sum_real_values += real.sum().detach().item()
+        self.total_samples += real.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Coefficient of Variation of RMSE (CV-RMSE)
+        """
+        if self.total_samples == 0:
+            return 0.0
+        mean_real = self.sum_real_values / self.total_samples
+        rmse = (self.sum_squared_errors / self.total_samples) ** 0.5
+        cvrmse = rmse / mean_real
+
+        return cvrmse
+
+
+class RAE(AbstractMetric):
+    """
+        Relative Absolute Error (RAE). Computes the sum of absolute errors
+        relative to the sum of absolute deviations from the mean of the actual values.
+
+        Streaming aggregated coefficient of variation of RMSE (CV-RMSE).
+        This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_abs_errors: float = 0.0
+        self.sum_abs_deviation: float = 0.0
+        self.targets = []
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            RAE. Element-wise metrics.
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+            :return: RAE value.
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        abs_errors = (real - prediction).abs()
+        abs_deviation = (real - real.mean()).abs()
+        rae = abs_errors.sum() / abs_deviation.sum()
+        return rae
+
+    def reset(self):
+        self.sum_abs_errors = 0.0
+        self.sum_abs_deviation = 0.0
+        self.targets = []
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        abs_errors = (prediction - real).abs()
+        self.sum_abs_errors += abs_errors.sum().detach().item()
+
+        self.targets.append(real.detach())
+
+    def compute(self) -> float:
+        if not self.targets:
+            return 0.0
+
+        all_targets = torch.cat(self.targets)
+        mean_real = all_targets.mean()
+        abs_deviation = torch.abs(all_targets - mean_real)
+        self.sum_abs_deviation = abs_deviation.sum().item()
+
+        if self.sum_abs_deviation == 0:
+            return 0.0  # or float('inf') depending on how you want to handle perfect constancy
+
+        return self.sum_abs_errors / self.sum_abs_deviation
+
+
+class SDRE(AbstractMetric):
     """
         Standard Deviation of Relative Errors (SDRE).
-        "It is used to measure the fluctuation of errors between predicted values and actual values.
-        By calculating the relative error of all forecast errors and taking the standard deviation of these errors,
-        one can understand how widely the errors are distributed.
-        This metric is very useful for evaluating the stability and consistency of a forecasting model."
-        :param real:        Real values (1d, 2d, or 3d torch array)
-        :param prediction:  Predicted values (1d, 2d, or 3d torch array)
-        :return: SDRE.
+        Calculates standard deviation in a streaming fashion (no storage of intermediate values).
     """
 
-    # np.std(np.abs((y_true - y_pred) / y_true))
-    errors = real - prediction
-    relative_errors = errors / real
-    sdre = torch.std(relative_errors)
+    def __init__(self):
+        self.n: int = 0
+        self.mean: float = 0.0
+        self.M2: float = 0.0  # Sum of squares of differences from the current mean
 
-    return sdre
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            Element-wise SDRE (not aggregated).
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        epsilon = 1e-8
+        relative_errors = (prediction - real) / (real + epsilon)
+        return torch.std(relative_errors)
+
+    def reset(self):
+        self.n = 0
+        self.mean = 0.0
+        self.M2 = 0.0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Streaming update using Welford’s algorithm for standard deviation.
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        epsilon = 1e-8
+        relative_errors = ((prediction - real) / (real + epsilon)).detach().flatten()
+
+        for x in relative_errors:
+            self.n += 1
+            delta = x.item() - self.mean
+            self.mean += delta / self.n
+            delta2 = x.item() - self.mean
+            self.M2 += delta * delta2
+
+    def compute(self) -> float:
+        """
+            Final computation of streaming SDRE.
+        """
+        if self.n < 2:
+            return 0.0
+        variance = self.M2 / (self.n - 1)
+        return variance ** 0.5
 
 
-def cutoff_mean_absolute_percentage_error(prediction: torch.tensor, real: torch.tensor,
-                                          cutoff: float = 25000) -> torch.Tensor:
+class PCC(AbstractMetric):
     """
-        cutMAPE. Element-wise metrics. A special case for pinn-wpf.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :param cutoff:  Precision cutoff values.
-        :return: MAPE
+    Streaming Pearson Correlation Coefficient (PCC).
+    Supports minibatch updates and full-batch one-shot computation.
+
+    Maintains running sums to compute covariance and variances without
+    storing all samples.
     """
-    prediction = prediction[torch.abs(real) > cutoff]
-    real = real[torch.abs(real) > cutoff]
 
-    errors = real - prediction
-    mape = (errors / real).abs().mean()
+    def __init__(self):
+        self.total_samples = 0
+        self.sum_x = 0.0
+        self.sum_y = 0.0
+        self.sum_x2 = 0.0
+        self.sum_y2 = 0.0
+        self.sum_xy = 0.0
 
-    return mape
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            PCC. Element-wise metrics.
+            :param prediction:  Predicted values (1d, 2d, or 3d torch tensor)
+            :param real:        Real values (1d, 2d, or 3d torch tensor)
+            :param mask:        Mask indicator of real values (1d, 2d, or 3d torch tensor)
+            :return:           PCC value as torch.Tensor
+        """
+        # mask = ((real != 0) & (prediction != 0)) & mask   # remove zero values in real tensor
+        prediction = prediction[mask]
+        real = real[mask]
+        numerator = (prediction - prediction.mean()) * (real - real.mean())
+        denominator = (prediction - prediction.mean()).pow(2).sum().sqrt() * (real - real.mean()).pow(2).sum().sqrt()
 
+        return (numerator / denominator).sum() / mask.sum()
 
-def symmetric_mean_absolute_percentage_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        sMAPE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: sMAPE
-    """
-    errors = real - prediction
-    ape = (errors / (real + prediction)).abs()
-    smape = ape.mean() * 2
+    def reset(self):
+        """
+        Reset internal accumulators.
 
-    return smape
+        Initializes counts and sums for x, y, x^2, y^2, and xy.
+        """
+        self.total_samples = 0
+        self.sum_x = 0.0
+        self.sum_y = 0.0
+        self.sum_x2 = 0.0
+        self.sum_y2 = 0.0
+        self.sum_xy = 0.0
 
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+        Accumulate statistics from a new batch.
 
-def symmetric_median_absolute_percentage_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        sMdAPE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: sMdAPE
-    """
-    errors = real - prediction
-    ape = (errors / (real + prediction)).abs()
-    # smdape = ape.median(dim=0).values.mean() * 2
-    smdape = ape.median() * 2
+        :param prediction: Predicted values (1d, 2d, or 3d tensor)
+        :param real:       Real values (same shape as prediction)
+        :param mask:       Optional mask tensor (same shape) to select valid entries
+        """
+        # Apply mask if provided
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
 
-    return smdape
+        # Update counters and sums
+        self.sum_x += prediction.sum().detach()
+        self.sum_y += real.sum().detach()
+        self.sum_x2 += (prediction * prediction).sum().detach()
+        self.sum_y2 += (real * real).sum().detach()
+        self.sum_xy += (prediction * real).sum().detach()
+        self.total_samples += prediction.numel()
 
+    def compute(self) -> torch.Tensor:
+        """
+        Compute the Pearson Correlation Coefficient using accumulated sums.
 
-def mean_squared_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        MSE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: MSE
-    """
-    return ((real - prediction) ** 2).mean()
+        :return: PCC value as torch.Tensor
+        """
+        if self.total_samples == 0:
+            # No samples, return zero correlation
+            return torch.tensor(0.0)
 
+        # Compute covariance and variances
+        cov_xy = self.sum_xy - (self.sum_x * self.sum_y) / self.total_samples
+        var_x = self.sum_x2 - (self.sum_x ** 2) / self.total_samples
+        var_y = self.sum_y2 - (self.sum_y ** 2) / self.total_samples
 
-def root_mean_squared_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        RMSE, Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: RMSE
-    """
-    return ((real - prediction) ** 2).mean().sqrt()
+        denominator = (var_x * var_y).sqrt()
 
-
-def coefficient_of_variation_of_RMSE(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        CV-RMSE. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: coefficient of variation of RMSE
-    """
-    rmse = torch.sqrt(torch.mean((real - prediction) ** 2))
-    return rmse / real.mean()
-
-
-def r_square(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        R^2 value. Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: $R^2$
-    """
-    errors = real - prediction
-    squared_errors = errors ** 2
-
-    real_mean_difference = real - real.mean()
-    squared_real_mean_difference = real_mean_difference ** 2
-    ssr = squared_errors.sum()  # sum of residual errors
-    sse = squared_real_mean_difference.sum()  # sum of squared errors
-    r2 = - ssr / sse + 1.0
-
-    return r2
-
-
-def relative_absolute_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        Relative absolute error (RAE). Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: CORR
-    """
-    errors = real - prediction
-    real_mean_difference = real - real.mean()
-    rae = torch.sqrt(errors.abs().sum() / real_mean_difference.abs().sum())
-
-    return rae
-
-
-def relative_squared_error(prediction: torch.tensor, real: torch.tensor) -> torch.Tensor:
-    """
-        Relative squared errors (RSE). Element-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :return: CORR
-    """
-    squared_errors = (real - prediction) ** 2
-    squared_real_mean_difference = (real - real.mean()) ** 2
-    rse = torch.sqrt(squared_errors.sum() / squared_real_mean_difference.sum())
-
-    return rse
-
-
-def empirical_correlation_coefficient(prediction: torch.tensor, real: torch.tensor, bias: float = 0.01) -> torch.Tensor:
-    """
-        Mean PCC value of MTS PCC(r, p) values. feature-wise metrics.
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :param bias:        Bias value to avoid zero values.
-        :return: CORR
-    """
-    real_mean_difference = real - real.mean(dim=0)
-    squared_real_mean_difference = real_mean_difference ** 2
-
-    prediction_mean_difference = prediction - prediction.mean(dim=0)
-    squared_prediction_mean_difference = prediction_mean_difference ** 2
-
-    pcc_numerator = (real_mean_difference * prediction_mean_difference).sum(dim=0)
-    pcc_denominator = (squared_real_mean_difference.sum(dim=0) * squared_prediction_mean_difference.sum(dim=0)).sqrt()
-
-    # To avoid the pcc_denominator has zero values, we add a small bias, and its numerator is set to 0.
-    pcc_denominator[pcc_denominator == 0] += bias
-    pcc_numerator[pcc_denominator == 0] = 0.
-
-    pcc = (pcc_numerator / pcc_denominator).mean()
-
-    return pcc
-
-
-def root_mean_square_percentage_error(prediction: torch.Tensor, real: torch.Tensor) -> torch.Tensor:
-    """
-        Root Mean Square Percentage Error (RMSPE).
-        Element-wise metrics.
-        :param real:        Real values (1d, 2d, or 3d torch array), note that the real values should be non-negative.
-        :param prediction:  Predicted values (1d, 2d, or 3d torch array)
-        :return: RMSPE.
-    """
-    errors = real - prediction
-    rmspe = torch.sqrt(torch.mean((errors / real) ** 2))
-
-    return rmspe
-
-
-def root_median_square_percentage_error(prediction: torch.Tensor, real: torch.Tensor) -> torch.Tensor:
-    """
-        Root Median Square Percentage Error (RMdSPE).
-        Element-wise metrics.
-        :param real:        Real values (1d, 2d, or 3d torch array), note that the real values should be non-negative.
-        :param prediction:  Predicted values (1d, 2d, or 3d torch array)
-        :return: RMSPE.
-    """
-    errors = real - prediction
-    rdmspe = torch.sqrt(torch.median((errors / real) ** 2))
-
-    return rdmspe
-
-
-def mean_absolute_scaled_error(prediction: torch.Tensor, real: torch.Tensor, seasonality: int = 1) -> torch.Tensor:
-    """
-        Mean Absolute Scaled Error (MASE).
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :param seasonality: seasonality of the data (default 1 for non-seasonal data)
-        :return: MASE value.
-    """
-    assert seasonality > 0, 'The seasonality should be greater than 0.'
-
-    if real.ndim == 1:  # (seq_len,)
-        real = real.unsqueeze(1)  # -> (seq_len, 1)
-        prediction = prediction.unsqueeze(1)  # -> (seq_len, 1)
-    elif real.ndim == 3:  # (batch, seq_len, features)
-        real = real.flatten(0, 1)  # -> (seq_len, features)
-        prediction = prediction.flatten(0, 1)  # -> (seq_len, features)
-
-    model_errors = real - prediction  # -> (seq_len, features)
-    naive_errors = real[seasonality:] - real[:-seasonality]  # -> (seq_len - seasonality, features)
-
-    mae_model = model_errors.abs().mean(dim=0)  # -> (features,)
-    mae_naive = naive_errors.abs().mean(dim=0)  # -> (features,)
-
-    return (mae_model / mae_naive).mean()
-
-
-def median_absolute_scaled_error(prediction: torch.Tensor, real: torch.Tensor, seasonality: int = 1) -> torch.Tensor:
-    """
-        Median Absolute Scaled Error (MdASE).
-        :param prediction:  predicted values (1d, 2d, or 3d torch tensor)
-        :param real:        real values (1d, 2d, or 3d torch tensor)
-        :param seasonality: seasonality of the data (default 1 for non-seasonal data)
-        :return: MASE value.
-    """
-    assert seasonality > 0, 'The seasonality should be greater than 0.'
-
-    if real.ndim == 1:  # (seq_len,)
-        real = real.unsqueeze(1)  # -> (seq_len, 1)
-        prediction = prediction.unsqueeze(1)  # -> (seq_len, 1)
-    elif real.ndim == 3:  # (batch, seq_len, features)
-        real = real.flatten(0, 1)  # -> (seq_len, features)
-        prediction = prediction.flatten(0, 1)  # -> (seq_len, features)
-
-    model_errors = real - prediction  # -> (seq_len, features)
-    naive_errors = real[seasonality:] - real[:-seasonality]  # -> (seq_len - seasonality, features)
-
-    mae_model = model_errors.abs().median(dim=0).values  # -> (features,)
-    mae_naive = naive_errors.abs().median(dim=0).values  # -> (features,)
-
-    return (mae_model / mae_naive).mean()
+        return cov_xy / denominator

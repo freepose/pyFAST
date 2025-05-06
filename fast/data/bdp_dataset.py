@@ -12,7 +12,7 @@ import torch.utils.data as data
 
 class BDPDataset(data.Dataset):
     """
-        Single prediction object Multiple sources sequence dataset using Batch-wise Dynamic Padding (BDP).
+        Single prediction object Multiple sources sequential dataset using Batch-wise Dynamic Padding (BDP).
 
         ``BDPDataset`` pads zero values to **several** varying-length sequences in a batch.
 

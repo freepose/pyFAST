@@ -16,7 +16,7 @@ import torch.optim as optim
 
 from fast import initial_seed, get_device, get_common_params
 from fast.train import Trainer
-from fast.metric import Evaluator
+from fast.metric import Evaluator, MSE
 
 from fast.model.base import count_parameters, covert_parameters
 from experiment.modeler.ts import ts_modeler
@@ -65,18 +65,17 @@ def main():
     optimizer = optim.Adam(model_params, lr=0.0005, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
 
-    criterion = nn.MSELoss()
-    additive_criterion = getattr(model, 'loss', None)
+    criterion = MSE()
     evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
-                      criterion=criterion, additive_criterion=additive_criterion, evaluator=evaluator,
+                      criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=True,
-                verbose=True, display_interval=50)
+                verbose=True)
 
     print('Good luck!')
 

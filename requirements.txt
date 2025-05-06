@@ -1,6 +1,7 @@
+torch>=2.0.0
 numpy
 pandas
 matplotlib
 tqdm
-torch>=2.0.0
+fire
 scipy

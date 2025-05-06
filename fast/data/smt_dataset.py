@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
+
 from typing import Literal, Tuple, List
 
 import sys, bisect

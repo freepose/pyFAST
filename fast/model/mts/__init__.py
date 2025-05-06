@@ -24,6 +24,7 @@ from .transformer.timesfm import TimesFM
 from .transformer.timer import Timer
 from .transformer.timexer import TimeXer
 from .transformer.timemixer import TimeMixer
+from .transformer.lstd import LSTD
 
 from .gnn.stid import STID
 from .gnn.stnorm import STNorm
@@ -31,6 +32,9 @@ from .gnn.magnat import MAGNet
 from .gnn.gwn import GraphWaveNet
 from .gnn.fgnn import FourierGNN
 from .gnn.gain import GAIN
+from .gnn.agcrn import AGCRN
 
+from .msl import MSL
 from .coat import COAT, TCOAT, CoDR, CTRL
 from .dred import DRED
+from .uninet import UniNet

@@ -1,84 +1,133 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-"""
-    The Evaluator supports a set of metric functions.
-"""
-from typing import Literal, Tuple, List
-
 import torch
+from typing import List, Tuple, Dict, Union
+from abc import ABC, abstractmethod
 
-from .metric import mean_squared_error, root_mean_squared_error, coefficient_of_variation_of_RMSE
-from .metric import standard_deviation_relative_errors, root_mean_square_percentage_error
-from .metric import mean_absolute_error, mean_absolute_percentage_error, symmetric_mean_absolute_percentage_error
-from .metric import median_absolute_percentage_error, root_median_square_percentage_error
-from .metric import symmetric_median_absolute_percentage_error
-from .metric import r_square, relative_absolute_error, relative_squared_error, empirical_correlation_coefficient
-from .metric import cutoff_mean_absolute_percentage_error
-from .metric import mean_absolute_scaled_error, median_absolute_scaled_error
-
-from .mask_metric import mask_mean_absolute_error, mask_mean_squared_error, mask_root_mean_squared_error
-from .mask_metric import mask_mean_absolute_percentage_error, mask_symmetric_mean_absolute_percentage_error
-from .mask_metric import mask_pearson_correlation_coefficient
+from .metric import MSE, MAE, RMSE, MAPE, CVRMSE, SMAPE, PCC, RAE
 
 
-class Evaluator:
-    def __init__(self, metrics: List[str] or Tuple[str] = None, metric_params: dict = None):
-        """
-            Initialize the Evaluator with a list of metrics and their parameters.
-            The metrics support both complete and incomplete time series.
+class AbstractEvaluator(ABC):
+    """
+        Abstract class for streaming aggregated evaluating forecasting models on large-scale datasets.
+    """
 
-            :param metrics: List of metric names to use. If None, use all available metrics.
-            :param metric_params: Dictionary of metric names and their additional parameters.
-        """
+    def __init__(self):
+        self.metrics = {}  # format: {metric_name: metric_class, ...}, default is empty
+
+    @abstractmethod
+    def reset(self):
+        """ Reset the metrics to its initial state. """
+        pass
+
+    @abstractmethod
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """ Update the metrics with a new batch of <prediction tensor, real tensor, or mask tensor> pair. """
+        pass
+
+    @abstractmethod
+    def compute(self) -> Dict:
+        """ Compute the evaluation metrics. """
+        pass
+
+
+class EmptyEvaluator(AbstractEvaluator):
+    """
+        An evaluator that does nothing. Useful for debugging or disabling evaluation.
+
+        Do nothing.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def reset(self):
+        pass
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        pass
+
+    def compute(self) -> Dict:
+        return {}
+
+
+class Evaluator(AbstractEvaluator):
+    """
+        The metrics support both complete and incomplete time series.
+
+        :param metrics: List of **metric names** to use. If None, use all available metrics.
+        :param metric_params: Dictionary of metric names and their additional parameters, e.g., PCC bias.
+                              {'PCC': {'bias': 0.001}}.
+    """
+
+    def __init__(self, metrics: Union[List[str], Tuple[str]] = None, metric_params: dict = None):
+        super().__init__()
+
         self.available_metrics = {
-            'MAE': mean_absolute_error,
-            'MSE': mean_squared_error,
-            'RMSE': root_mean_squared_error,
-            'CV-RMSE': coefficient_of_variation_of_RMSE,
-            'RMSPE': root_mean_square_percentage_error,
-            'RMdSPE': root_median_square_percentage_error,
-            'MAPE': mean_absolute_percentage_error,
-            'sMAPE': symmetric_mean_absolute_percentage_error,
-            'MdAPE': median_absolute_percentage_error,
-            'sMdAPE': symmetric_median_absolute_percentage_error,
-            'SDRE': standard_deviation_relative_errors,
-            'cutMAPE': cutoff_mean_absolute_percentage_error,
-            'RAE': relative_absolute_error,
-            'RSE': relative_squared_error,
-            'PCC': empirical_correlation_coefficient,
-            'R2': r_square,
-            'MASE': mean_absolute_scaled_error,
-            'MdASE': median_absolute_scaled_error,
-            'maskMAE': mask_mean_absolute_error,
-            'maskMSE': mask_mean_squared_error,
-            'maskRMSE': mask_root_mean_squared_error,
-            'maskMAPE': mask_mean_absolute_percentage_error,
-            'masksMAPE': mask_symmetric_mean_absolute_percentage_error,
-            'maskPCC': mask_pearson_correlation_coefficient
+            'MSE': MSE,
+            'MAE': MAE,
+            'RMSE': RMSE,
+            'MAPE': MAPE,
+            'sMAPE': SMAPE,
+            'CV-RMSE': CVRMSE,
+            'PCC': PCC,
+            'RAE': RAE,
+            # TODO: Add more metrics here as needed
         }
 
         if metrics is None:
-            self.metric_dict = self.available_metrics
+            self.metrics = self.available_metrics
         else:
+            # Ensure all specified metrics are valid
             assert all(metric in self.available_metrics for metric in metrics), \
                 f'Metrics should be in {list(self.available_metrics.keys())}'
 
-            self.metric_dict = {metric: self.available_metrics[metric] for metric in metrics if
-                                metric in self.available_metrics}
+            # Filter the available metrics based on the provided list
+            self.metrics = {metric: self.available_metrics[metric] for metric in metrics if
+                            metric in self.available_metrics}
 
-        self.metric_params = metric_params if metric_params is not None else {}
+        self.metric_params = metric_params if metric_params else {}
 
-    def evaluate(self, *tensors: Tuple[torch.Tensor] or List[torch.Tensor]) -> dict:
+        self.metric_instances = {name: metric_class(**self.metric_params.get(name, {}))
+                                 for name, metric_class in self.metrics.items()}
+
+    def reset(self):
+        """ Reset all metrics to their initial state. """
+        for name, metric_inst in self.metric_instances.items():
+            metric_inst.reset()
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metrics with a new batch of <prediction tensor, real tensor, or mask tensor> pair.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+        for name, metric_inst in self.metric_instances.items():
+            metric_inst.update(prediction, real, mask)
+
+    def compute(self) -> Dict:
+        """
+            Evaluate the prediction performance of error metrics.
+            :return: Dictionary of metric names and their calculated values.
+        """
+        results = {}
+        for name, metric_inst in self.metric_instances.items():
+            ret = metric_inst.compute()
+            results[name] = float(ret)
+        return results
+
+    def evaluate(self, *tensors: Union[Tuple[torch.Tensor], List[torch.Tensor]]) -> Dict:
         """
             Evaluate the prediction performance using the error / accuracy metrics.
 
-            :param tensors: prediction values, real values, (maybe) mask tensor (1d, 2d, or 3d numpy array)
+            :param tensors: prediction tensor, real value tensor, (maybe) mask tensor (1d, 2d, or 3d tensor)
             :return: dictionary of metric names and their calculated values.
         """
         results = {}
-        for name, func in self.metric_dict.items():
+        for name, metric_inst in self.metric_instances.items():
             params = self.metric_params.get(name, {})
-            ret = func(*tensors, **params)
+            ret = metric_inst(*tensors, **params)
             results[name] = float(ret)
         return results

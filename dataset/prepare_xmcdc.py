@@ -12,7 +12,7 @@ import pandas as pd
 
 import torch
 
-from fast.data import Scale, scale_several_time_series
+from fast.data import AbstractScale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 
 from dataset.time_feature import TimeAsFeature
@@ -52,8 +52,8 @@ def load_xmcdc_sst(freq: Literal['1day', '1week'] = '1day',
                    output_window_size: int = 1,
                    horizon: int = 1,
                    stride: int = 1,
-                   scaler: Scale = None,
-                   ex_scaler: Scale = None) -> tuple[tuple, tuple]:
+                   scaler: AbstractScale = None,
+                   ex_scaler: AbstractScale = None) -> tuple[tuple, tuple]:
     """
         Load XMCDC disease outpatient count as ``SSTDataset`` for mts forecasting (or using exogenous data).
 
@@ -81,11 +81,9 @@ def load_xmcdc_sst(freq: Literal['1day', '1week'] = '1day',
         'ts': None,
         'ex_ts': None,
         'ex_ts2': None,
-        'split_ratio': split_ratio,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-        'stride': stride,
     }
 
     if vars is None:
@@ -99,7 +97,7 @@ def load_xmcdc_sst(freq: Literal['1day', '1week'] = '1day',
     target_tensor = torch.tensor(target_array)
     sst_params['ts'] = target_tensor
 
-    if scaler is not None and type(scaler) != type(Scale()):
+    if scaler is not None and type(scaler) != type(AbstractScale()):
         scaler = scaler.fit(target_tensor)
 
     if use_time_features:
@@ -146,16 +144,15 @@ def load_xmcdc_sst(freq: Literal['1day', '1week'] = '1day',
         ex_tensor = torch.tensor(ex_array)
         sst_params['ex_ts'] = ex_tensor
 
-        if ex_scaler is not None and type(ex_scaler) != type(Scale()):
+        if ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
             ex_scaler = ex_scaler.fit(ex_tensor)
 
     if split_ratio == 1.0:
-        train_ds = SSTDataset(**sst_params, split='train')
+        train_ds = SSTDataset(**sst_params, stride=stride)
         return (train_ds, None), (scaler, ex_scaler)
 
-    train_ds = SSTDataset(**sst_params, split='train')
-    del sst_params['stride']
-    val_ds = SSTDataset(**sst_params, stride=sst_params['output_window_size'], split='val')
+    train_ds = SSTDataset(**sst_params, stride=stride).split(split_ratio, 'train', 'train')
+    val_ds = SSTDataset(**sst_params, stride=sst_params['output_window_size']).split(split_ratio, 'val', 'val')
 
     return (train_ds, val_ds), (scaler, ex_scaler)
 
@@ -169,8 +166,8 @@ def load_xmcdc_smt(freq: Literal['1day', '1week'] = '1day',
                    output_window_size: int = 1,
                    horizon: int = 1,
                    stride: int = 1,
-                   scaler: Scale = None,
-                   ex_scaler: Scale = None) -> tuple[tuple, tuple]:
+                   scaler: AbstractScale = None,
+                   ex_scaler: AbstractScale = None) -> tuple[tuple, tuple]:
     """
         Load XMCDC disease outpatient count as ``SMTDataset`` for multi-source time series forecasting (using
         exogenous data).
@@ -261,10 +258,10 @@ def load_xmcdc_smt(freq: Literal['1day', '1week'] = '1day',
                 time_feature_tensor = torch.tensor(weekofyear)
                 ex_ts2_list.append(time_feature_tensor)
 
-    if scaler is not None and type(scaler) != type(Scale()):
+    if scaler is not None and type(scaler) != type(AbstractScale()):
         scaler = scale_several_time_series(ts_list, scaler)
 
-    if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(Scale()):
+    if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
         ex_scaler = scale_several_time_series(ex_ts_list, ex_scaler)
 
     stm_params['ts'] = ts_list

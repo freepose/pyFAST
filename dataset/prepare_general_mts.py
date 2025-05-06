@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from fast.data import Scale, StandardScale, MinMaxScale, scale_several_time_series
+from fast.data import AbstractScale, StandardScale, MinMaxScale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 from dataset.time_feature import TimeAsFeature
 
@@ -168,7 +168,7 @@ def load_dataset_sst(mts_data_root: str, ds_name: str,
                      use_ex_vars: bool = False, time_as_feature: TimeAsFeature = None,
                      input_window_size: int = 96, output_window_size: int = 24, horizon: int = 1, stride: int = 1,
                      train_ratio: float = 0.8, val_ratio: float = None,
-                     scaler: Scale = None, ex_scaler: Scale = None):
+                     scaler: AbstractScale = None, ex_scaler: AbstractScale = None):
     """
     Unified function to load datasets based on configuration.
 
@@ -229,7 +229,7 @@ def load_dataset_sst(mts_data_root: str, ds_name: str,
     target_tensor = torch.tensor(target_array)
     sst_params['ts'] = target_tensor
 
-    if scaler is not None and type(scaler) != type(Scale()):
+    if scaler is not None and type(scaler) != type(AbstractScale()):
         scaler = scaler.fit(target_tensor)
 
     if use_ex_vars:
@@ -239,7 +239,7 @@ def load_dataset_sst(mts_data_root: str, ds_name: str,
         ex_tensor = torch.tensor(ex_array)
         sst_params['ex_ts'] = ex_tensor
 
-        if ex_scaler is not None and type(ex_scaler) != type(Scale()):
+        if ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
             ex_scaler = ex_scaler.fit(ex_tensor)
 
     if time_as_feature is not None:
