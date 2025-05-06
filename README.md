@@ -52,12 +52,11 @@ Jumpstart your time series projects with pyFAST using this basic example:
 
 ```python
 import torch
-import torch.utils.data as data
 
 from fast import initial_seed, get_device
 from fast.data import SSTDataset
-from fast.train import Trainer, Trainer
-from fast.metric import Evaluator, Evaluator
+from fast.train import Trainer
+from fast.metric import Evaluator
 from fast.model.mts.ar import ANN  # Example: Using a simple ANN model
 
 # Initialize components for reproducibility and evaluation
@@ -82,16 +81,12 @@ device = get_device('cpu')  # Use 'cuda', 'cpu', or 'mps'
 evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 trainer = Trainer(device, model, evaluator=evaluator)
 
-## You can also use ``StreamTrainer`` for streaming data
-# evaluator = StreamEvaluator(['MAE', 'RMSE'])  # Streaming aggregated evaluation metrics
-# trainer = StreamTrainer(device, model, evaluator=evaluator) # Streaming trainer 
-
 # Train model using prepared datasets
 trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
 
 # After training, evaluate on a test dataset (if available)
-(val_loss, *val_metrics), _ = trainer.evaluate(torch.utils.data.DataLoader(val_ds), 'evaluate test ')
-print(val_loss, *val_metrics)
+val_results = trainer.evaluate(val_ds)
+print(val_results)
 ```
 
 ### Data Structures Overview
