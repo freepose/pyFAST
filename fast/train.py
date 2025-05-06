@@ -273,6 +273,6 @@ class Trainer:
             params['ex_scaler'] = type(self.ex_scaler).__name__
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
-        params_str = 'Trainer({})'.format(params_str)
+        params_str = '({})'.format(params_str)
 
         return params_str
