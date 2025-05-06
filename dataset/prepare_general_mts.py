@@ -229,7 +229,7 @@ def load_dataset_sst(mts_data_root: str, ds_name: str,
     target_tensor = torch.tensor(target_array)
     sst_params['ts'] = target_tensor
 
-    if scaler is not None and type(scaler) != type(AbstractScale()):
+    if scaler is not None:
         scaler = scaler.fit(target_tensor)
 
     if use_ex_vars:
@@ -239,7 +239,7 @@ def load_dataset_sst(mts_data_root: str, ds_name: str,
         ex_tensor = torch.tensor(ex_array)
         sst_params['ex_ts'] = ex_tensor
 
-        if ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
+        if ex_scaler:
             ex_scaler = ex_scaler.fit(ex_tensor)
 
     if time_as_feature is not None:

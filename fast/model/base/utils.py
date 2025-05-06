@@ -5,9 +5,11 @@
     Utility functions supporting the models.
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
+
+from typing import Dict, Literal, Union
 
 
 def rolling_forecasting(model, given_x: torch.Tensor, steps: int = 30) -> torch.Tensor:
@@ -25,7 +27,7 @@ def rolling_forecasting(model, given_x: torch.Tensor, steps: int = 30) -> torch.
     return predictions
 
 
-def count_parameters(model: nn.Module, unit: str = 'm') -> str:
+def count_parameters(model: nn.Module, unit: Literal['m', 'k'] = 'm') -> Dict[str, Union[int, float, str]]:
     """
         Count parameter numbers of a given torch module.
         :param model: the model to count parameters.
@@ -44,8 +46,40 @@ def count_parameters(model: nn.Module, unit: str = 'm') -> str:
         total_params /= (1024 * 1024)
         trainable_params /= (1024 * 1024)
 
-    # return total_params, unit, total_trainable_params, unit
-    return 'trainable/total: {:.2f}{}B/{:.2f}{}'.format(trainable_params, unit, total_params, unit)
+    return {'trainable': trainable_params, 'total': total_params, 'unit': unit}
+
+
+def get_constants(model: nn.Module) -> dict:
+    """
+        :param model: model instance.
+        :return: a dictionary of model constants.
+    """
+
+    constant_dict = {key: value for key, value in vars(model).items() if
+                     not callable(value) and not key.startswith('_') and not key == 'training'}
+
+    return constant_dict
+
+
+def get_model_info(model: nn.Module, count_unit: Literal['m', 'k'] = 'm') -> str:
+    """
+        Get the model information in string format.
+        :param model: model instance.
+        :param count_unit: unit of the parameter number.
+        :return: the string of model information.
+    """
+
+    name = model.__class__.__name__
+    constants = get_constants(model)
+    params_counts = count_parameters(model, count_unit)
+
+    count_str = '{:.2f}/{:.2f}{}B'.format(params_counts['trainable'], params_counts['total'], str.upper(count_unit))
+    params_dict = {**constants, 'trainable/total': count_str}
+
+    params_str = ', '.join([f'{key}={value}' for key, value in params_dict.items()])
+    params_str = '{}({})'.format(name, params_str)
+
+    return params_str
 
 
 def freeze_parameters(model: nn.Module) -> nn.Module:

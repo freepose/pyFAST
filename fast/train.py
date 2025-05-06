@@ -209,7 +209,7 @@ class Trainer:
                 if self.stopper is not None:
                     self.stopper(val_results['loss'])
                     if self.stopper.stop:
-                        print('Early stopping at epoch {}.'.format(epoch))
+                        print('Early stopping at epoch {}, best loss {:.6f}'.format(epoch, self.stopper.best_score))
                         break
 
             performance_history_list.append(message)
@@ -273,6 +273,6 @@ class Trainer:
             params['ex_scaler'] = type(self.ex_scaler).__name__
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
-        params_str = '({})'.format(params_str)
+        params_str = 'Trainer({})'.format(params_str)
 
         return params_str

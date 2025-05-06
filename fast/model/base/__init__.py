@@ -10,4 +10,4 @@ from .mlp import MLP
 from .dr import DirectionalRepresentation
 from .attention import SelfAttention, SymmetricAttention, MultiHeadSymmetricAttention
 from .utils import rolling_forecasting
-from .utils import count_parameters, freeze_parameters, covert_parameters, init_weights, to_string
+from .utils import freeze_parameters, covert_parameters, init_weights, to_string, get_model_info
