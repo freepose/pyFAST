@@ -77,7 +77,6 @@ model = ANN(
 
 # Set up the Trainer for model training and evaluation
 device = get_device('cpu')  # Use 'cuda', 'cpu', or 'mps'
-
 evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 trainer = Trainer(device, model, evaluator=evaluator)
 

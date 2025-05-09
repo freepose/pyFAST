@@ -25,6 +25,7 @@ class GAR(nn.Module):
         super(GAR, self).__init__()
         self.input_window_size = input_window_size
         self.output_window_size = output_window_size
+        self.activation = activation
 
         self.l1 = nn.Linear(self.input_window_size, self.output_window_size, bias)
         self.activate = get_activation_cls(activation)()
@@ -65,6 +66,7 @@ class AR(nn.Module):
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
+        self.activation = activation
 
         self.weight = nn.Parameter(torch.randn(self.input_window_size,
                                                self.input_vars,
@@ -112,6 +114,7 @@ class VAR(nn.Module):
         self.input_vars = input_vars
         self.output_window_size = output_window_size
         self.output_vars = output_vars
+        self.activation = activation
 
         self.l1 = nn.Linear(self.input_window_size * self.input_vars, self.output_window_size * self.output_vars, bias)
 

@@ -5,11 +5,10 @@
     The package is implemented based on pandas (i.e., datetime).
 """
 
-from typing import Literal
-
 import numpy as np
 import pandas as pd
 
+from typing import Literal
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
@@ -170,7 +169,7 @@ class TimeAsFeature:
             if isinstance(offset, offset_type):
                 self.feature_func = feature_classes
 
-    def __call__(self, dates: pd.Series):
+    def __call__(self, dates: pd.Series) -> np.ndarray:
         """
             :param dates: input datetime index.
             :return: the features extracted from the datetime index.

@@ -22,5 +22,3 @@ from .sparse.tpatchgnn import TPatchGNN
 # Plugins
 from .fusion_plugin import DataFirstPlugin, LearningFirstPlugin, ExogenousDataDrivenPlugin
 
-# Spatio-temporal
-from .spatio.ship import ShipEx

@@ -7,7 +7,7 @@
 """
 
 import os, sys, platform
-from typing import Literal, Tuple, List
+from typing import Literal, Tuple, List, Union, Dict
 
 import torch
 import torch.nn as nn
@@ -18,7 +18,7 @@ from tqdm import tqdm
 from .model.base import to_string, init_weights
 from .metric import AbstractMetric, MSE
 from .metric import AbstractEvaluator, EmptyEvaluator
-from .data import AbstractScale
+from .data import AbstractScale, SSTDataset, SMTDataset
 
 
 class Trainer:
@@ -101,55 +101,58 @@ class Trainer:
 
     def run_epoch(self, dataloader: data.DataLoader,
                   mode: Literal['train', 'val', 'online'] = 'train',
-                  tqdm_desc: str = None):
+                  progress_status: str = None):
 
         self.model.train() if mode in ['train', 'online'] else self.model.eval()
 
-        with tqdm(total=len(dataloader), leave=False, file=sys.stdout) as pbar:
-            pbar.set_description(tqdm_desc)
+        pbar = None
+        if progress_status is not None:
+            pbar = tqdm(total=len(dataloader), leave=False, file=sys.stdout)
+            pbar.set_description(progress_status)
 
-            self.criterion.reset()
-            self.evaluator.reset()
-            for batch_inputs, batch_outputs in dataloader:
-                num_x = len(batch_outputs)
-                num_ex = len(batch_inputs) - num_x
+        self.criterion.reset()
+        self.evaluator.reset()
+        for batch_inputs, batch_outputs in dataloader:
+            num_x = len(batch_outputs)
+            num_ex = len(batch_inputs) - num_x
 
-                if self.scaler is not None:
-                    batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_x])
-                    batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_x])
+            if self.scaler is not None:
+                batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_x])
+                batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_x])
 
-                if num_ex > 0 and (self.ex_scaler is not None):
-                    batch_inputs[num_x] = self.ex_scaler.transform(batch_inputs[num_x])
+            if num_ex > 0 and (self.ex_scaler is not None):
+                batch_inputs[num_x] = self.ex_scaler.transform(batch_inputs[num_x])
 
+            if self.device.type != dataloader.dataset.device:
+                # Prepare for target model device
+                batch_inputs = [x.to(self.device) for x in batch_inputs]
+                batch_outputs = [y.to(self.device) for y in batch_outputs]
+
+            batch_y_hat = self.model(*batch_inputs)
+            batch_loss = self.criterion(batch_y_hat, *batch_outputs)
+
+            if getattr(self.model, 'additional_loss', None) is not None:
+                batch_loss += self.model.additional_loss    # KL-Divergence loss or other regularization loss
+
+            if mode in ['train', 'online']:
+                self.optimizer.zero_grad()  # clear gradients for next train
+                batch_loss.backward()
+                self.optimizer.step()
+
+            self.criterion.update(batch_y_hat, *batch_outputs)
+
+            if self.scaler is not None:
                 if self.device.type != dataloader.dataset.device:
-                    # Prepare for target model device
-                    batch_inputs = [x.to(self.device) for x in batch_inputs]
-                    batch_outputs = [y.to(self.device) for y in batch_outputs]
+                    # Prepare for dataset device
+                    batch_outputs = [y.to(dataloader.dataset.device) for y in batch_outputs]
+                    batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
 
-                batch_y_hat = self.model(*batch_inputs)
-                batch_loss = self.criterion(batch_y_hat, *batch_outputs)
+                batch_y_hat = self.scaler.inverse_transform(batch_y_hat)  # NOTE
+                batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_x])
 
-                if getattr(self.model, 'additional_loss', None) is not None:
-                    batch_loss += self.model.additional_loss    # KL-Divergence loss or other regularization loss
+            self.evaluator.update(batch_y_hat, *batch_outputs)
 
-                if mode in ['train', 'online']:
-                    self.optimizer.zero_grad()  # clear gradients for next train
-                    batch_loss.backward()
-                    self.optimizer.step()
-
-                self.criterion.update(batch_y_hat, *batch_outputs)
-
-                if self.scaler is not None:
-                    if self.device.type != dataloader.dataset.device:
-                        # Prepare for dataset device
-                        batch_outputs = [y.to(dataloader.dataset.device) for y in batch_outputs]
-                        batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
-
-                    batch_y_hat = self.scaler.inverse_transform(batch_y_hat)  # NOTE
-                    batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_x])
-
-                self.evaluator.update(batch_y_hat, *batch_outputs)
-
+            if progress_status is not None:
                 pbar.set_postfix(batch_loss='{:.6f}'.format(batch_loss.detach().item()))
                 pbar.update(1)
 
@@ -176,19 +179,27 @@ class Trainer:
             batch_size: int = 32, shuffle: bool = False,
             checkpoint_interval: int = 0,
             collate_fn=None,
-            verbose: bool = True) -> List:
+            verbose: Literal[0, 1, 2] = 2) -> List[List[Union[str, float]]]:
+
+        """
+            ``verbose``: 0 is silent. Mostly used for model training only.
+                     1 is epoch level, including loss and metrics. Mostly used for command lines to collect outputs;
+                     2 is batch level in an epoch, including time. Mostly used for development.
+         """
 
         train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
 
-        if verbose:
-            print(self.message_header(bool(val_dataset)))
+        message_header = self.message_header(val_dataset is not None)
+        if verbose > 0:
+            print(message_header)
 
-        performance_history_list = []
+        performance_history_list = [message_header.split('\t')]
         for epoch in range(epoch_range[0], epoch_range[1] + 1):
-            prefix = '{}/{}'.format(epoch, epoch_range[1])
-            message = [prefix, self.optimizer.param_groups[0]['lr']]
+            epoch_status = '{}/{}'.format(epoch, epoch_range[1])
+            message = [epoch_status, self.optimizer.param_groups[0]['lr']]
 
-            train_results = self.run_epoch(train_dataloader, 'train', 'training ' + prefix)
+            progress_status = ('training ' + epoch_status) if verbose == 2 else None
+            train_results = self.run_epoch(train_dataloader, 'train', progress_status)
             message.extend([*train_results.values()])
 
             if self.lr_scheduler is not None:
@@ -203,7 +214,9 @@ class Trainer:
                 }, os.path.expanduser('~') + '/pretrained_checkpoint/model_{}.check'.format(epoch))
 
             if val_dataset is not None:
-                val_results = self.evaluate(val_dataset, batch_size, collate_fn, prefix, False)
+                progress_status = ('validating ' + epoch_status) if verbose == 2 else None
+                val_dataloader = data.DataLoader(val_dataset, batch_size, collate_fn=collate_fn)
+                val_results = self.run_epoch(val_dataloader, 'val', progress_status)
                 message.extend([*val_results.values()])
 
                 if self.stopper is not None:
@@ -214,13 +227,13 @@ class Trainer:
 
             performance_history_list.append(message)
 
-            if verbose:
+            if verbose > 0:
                 print(to_string(*message))
 
         return performance_history_list
 
     def evaluate(self, val_dataset: data.Dataset, batch_size: int = 32, collate_fn=None,
-                 tqdm_desc_prefix: str = None, is_online: bool = False):
+                 show_progress: bool = True, is_online: bool = False) -> Dict[str, float]:
         """
             Evaluate the model using ``val_dataset``. Design for evaluation, not for common prediction.
 
@@ -229,28 +242,22 @@ class Trainer:
             :param val_dataset: the data loader of the prediction data.
             :param batch_size: the batch size of a mini-batch.
             :param collate_fn: the function to collate the data.
-            :param tqdm_desc_prefix: the tqdm desc.
+            :param show_progress: the tqdm desc. If ``None``, not display.
             :param is_online: whether to use online evaluation.
             :return: loss value and metric values.
         """
-        if tqdm_desc_prefix is None:
-            tqdm_desc_prefix = ''
-
         if is_online:
-            tqdm_desc = 'online ' + tqdm_desc_prefix
-            val_mode = 'online'
+            val_mode: Literal['online', 'val'] = 'online'
             val_dataloader = data.DataLoader(val_dataset, 1, collate_fn=collate_fn)
         else:
-            tqdm_desc = 'validating ' + tqdm_desc_prefix
-            val_mode = 'val'
+            val_mode: Literal['online', 'val'] = 'val'
             val_dataloader = data.DataLoader(val_dataset, batch_size, collate_fn=collate_fn)
 
-        results = self.run_epoch(val_dataloader, val_mode, tqdm_desc)
-        # results = {f"{val_mode}_{k}": v for k, v in results.items()}
+        results = self.run_epoch(val_dataloader, val_mode, val_mode if show_progress else None)
 
         return results
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
             Print the information of this class instance.
         """

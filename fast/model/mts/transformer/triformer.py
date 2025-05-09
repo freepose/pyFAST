@@ -41,6 +41,7 @@ class Triformer(nn.Module):
         self.factorized = True
 
         self.channels = channels
+
         self.start_fc = nn.Linear(in_features=self.input_dim, out_features=self.channels)
         self.layers = nn.ModuleList()
         self.skip_generators = nn.ModuleList()

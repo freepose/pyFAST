@@ -968,6 +968,7 @@ class FEDformer(nn.Module):
         self.activation = activation
         self.moving_avg = moving_avg
         self.dropout_rate = dropout_rate
+
         self.decompose_series = DecomposeSeries(moving_avg)
 
         # encoder embedding

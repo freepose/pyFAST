@@ -59,6 +59,7 @@ class LSTNet(nn.Module):
         self.skip_gru_hidden_size = skip_gru_hidden_size
 
         self.highway_window_size = highway_window_size
+        self.dropout_rate = dropout_rate
 
         self.cnn = nn.Conv1d(self.input_vars, self.cnn_out_channels,
                              self.cnn_kernel_size, padding=self.cnn_kernel_size // 2)

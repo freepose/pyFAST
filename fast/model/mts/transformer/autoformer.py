@@ -363,10 +363,11 @@ class Autoformer(nn.Module):
         self.num_encoder_layers = num_encoder_layers
         self.num_decoder_layers = num_decoder_layers
         self.dim_ff = dim_ff
-        self.dropout_rate = dropout_rate
         self.activation = activation
-        self.factor = factor
         self.moving_avg = moving_avg
+        self.factor = factor
+        self.dropout_rate = dropout_rate
+
         self.decompose_series = DecomposeSeries(self.moving_avg)
 
         # encoder_embedding

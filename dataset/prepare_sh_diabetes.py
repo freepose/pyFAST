@@ -13,9 +13,9 @@ import numpy as np
 import pandas as pd
 import torch
 
-from fast.data import AbstractScale, StandardScale, MinMaxScale, scale_several_time_series
+from fast.data import AbstractScale, scale_several_time_series
 from fast.data import SMTDataset
-from dataset.time_feature import TimeAsFeature
+from experiment.time_feature import TimeAsFeature
 
 
 def get_column_names(return_ex_vars: bool = True) -> List:

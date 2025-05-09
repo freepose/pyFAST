@@ -72,6 +72,10 @@ class TemporalConvNet(nn.Module):
                  num_channels: List[int] = [16], kernel_size: int = 2, dropout_rate: float = 0.2):
         super(TemporalConvNet, self).__init__()
 
+        self.num_channels = num_channels
+        self.kernel_size = kernel_size
+        self.dropout_rate = dropout_rate
+
         num_channels.append(output_window_size)
         layers = []
         for i in range(len(num_channels)):

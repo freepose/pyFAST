@@ -15,7 +15,7 @@ import torch
 from fast.data import AbstractScale, scale_several_time_series
 from fast.data import SSTDataset, SMTDataset
 
-from dataset.time_feature import TimeAsFeature
+from experiment.time_feature import TimeAsFeature
 
 """
     The data fields are as follows:

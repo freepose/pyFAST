@@ -31,6 +31,7 @@ class DLinear(nn.Module):
         self.input_vars = input_vars
         self.output_window_size = output_window_size
         self.individual = individual
+
         self.decomposition = DecomposeSeries(kernel_size)
 
         if self.individual:

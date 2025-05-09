@@ -162,6 +162,8 @@ class TimesNet(nn.Module):
         self.num_kernels = num_kernels
         self.top_k = top_k
 
+        self.use_instance_scale = use_instance_scale
+
         self.encoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
         self.encoder_pe = PositionalEncoding(self.d_model)
         self.encoder_dropout = nn.Dropout(dropout_rate)

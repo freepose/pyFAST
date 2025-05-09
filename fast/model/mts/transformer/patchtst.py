@@ -208,6 +208,8 @@ class PatchTST(nn.Module):
         self.patch_stride = patch_stride
         self.patch_padding = patch_padding
 
+        self.use_instance_scale = use_instance_scale
+
         self.patch_maker = PatchMaker(self.input_window_size, self.patch_len, self.patch_stride, self.patch_padding)
         self.value_embedding = nn.Linear(self.patch_len, self.d_model, bias=False)
         self.pe = PositionalEncoding(self.d_model)

@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""
+    The ``Evaluator()`` class manages the metrics for both the loss function and evaluation metrics.
+"""
+
 import torch
 from typing import List, Tuple, Dict, Union
 from abc import ABC, abstractmethod
@@ -53,6 +57,9 @@ class EmptyEvaluator(AbstractEvaluator):
 
 class Evaluator(AbstractEvaluator):
     """
+
+        The ``Evaluator()`` class manages the metrics for both the loss function and evaluation metrics.
+
         The metrics support both complete and incomplete time series.
 
         :param metrics: List of **metric names** to use. If None, use all available metrics.

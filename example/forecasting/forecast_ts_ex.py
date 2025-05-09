@@ -16,7 +16,7 @@ from fast.data import MinMaxScale
 from fast.train import Trainer
 from fast.metric import Evaluator, MSE
 
-from fast.model.base import count_parameters, covert_parameters
+from fast.model.base import get_model_info, covert_parameters
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
 from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE, TSPT
 
@@ -61,11 +61,10 @@ def mts_fusion():
     model_settings = {**common_ds_params, **user_settings}
     model = model_cls(**model_settings)
 
-    print('{}\n{}\n{}'.format(train_ds, val_ds, model))
+    print('{}\n{}'.format(train_ds, val_ds))
 
-    model_name = type(model).__name__
     model = covert_parameters(model, torch_float_type)
-    print(model_name, count_parameters(model))
+    print(get_model_info(model))
 
     model_weights = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_weights, lr=0.0005, weight_decay=0.)
@@ -81,7 +80,7 @@ def mts_fusion():
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=512, shuffle=True,
-                verbose=True)
+                verbose=2)
 
     print('Good luck!')
 

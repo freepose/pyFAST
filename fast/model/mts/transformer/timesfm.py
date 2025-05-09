@@ -151,6 +151,10 @@ class TimesFM(nn.Module):
         super(TimesFM, self).__init__()
         self.input_size = input_vars
         self.output_window_size = output_window_size
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.dim_ff = dim_ff
+        self.dropout_rate = dropout_rate
 
         self.embedding = nn.Linear(input_vars, d_model)
         self.pos_embedding = nn.Parameter(torch.zeros(1, 5000, d_model))

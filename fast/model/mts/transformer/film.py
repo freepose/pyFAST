@@ -116,6 +116,7 @@ class FiLM(nn.Module):
 
         self.multiscale = [1, 2, 4]
         self.window_size = [256]
+
         self.legts = nn.ModuleList([HiPPO_LegT(n, 1. / output_window_size / i)
                                     for n in self.window_size
                                     for i in self.multiscale])

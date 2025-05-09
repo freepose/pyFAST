@@ -94,17 +94,17 @@ class SMTDataset(data.Dataset):
         with tqdm(total=len(ts), leave=False, file=sys.stdout) as pbar:
             pbar.set_description('Indexing')
 
-            for i, ts in enumerate(ts):
-                ts_len = ts.shape[0]
+        for i, ts in enumerate(ts):
+            ts_len = ts.shape[0]
 
-                sample_num = ts_len - self.input_window_size - self.output_window_size - self.horizon + 1
-                sample_num = sample_num // self.stride + 1
-                assert sample_num > 0, "No samples can be generated at time series {}.".format(i)
+            sample_num = ts_len - self.input_window_size - self.output_window_size - self.horizon + 1
+            sample_num = sample_num // self.stride + 1
+            assert sample_num > 0, "No samples can be generated at time series {}.".format(i)
 
-                self.window_num_list.append(sample_num)
+            self.window_num_list.append(sample_num)
 
-                pbar.set_postfix(window_num='{}'.format(sample_num))
-                pbar.update(1)
+            pbar.set_postfix(window_num='{}'.format(sample_num))
+            pbar.update(1)
 
         # Calculate the cumulative sum of window numbers.
         self.cum_window_num_array = np.cumsum(self.window_num_list)
