@@ -15,7 +15,7 @@ import os
 import torch
 import torch.optim as optim
 
-from fast import initial_seed, get_device, get_common_params
+from fast import initial_seed, get_device, get_common_kwargs
 from fast.data import bdp_collate_fn
 from fast.train import Trainer
 from fast.metric import Evaluator, MSE
@@ -49,7 +49,7 @@ def mask_mts_fusion():
 
     plugin, user_settings = modeler['exddm-lstm']
 
-    common_ds_params = get_common_params(plugin.__init__, train_ds.__dict__)
+    common_ds_params = get_common_kwargs(plugin.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
     model = plugin(**model_settings)
 

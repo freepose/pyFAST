@@ -95,7 +95,7 @@ def freeze_parameters(model: nn.Module) -> nn.Module:
     return model
 
 
-def covert_parameters(model: nn.Module, *args, **kwargs):
+def covert_parameters(model: nn.Module, *args, **kwargs) -> nn.Module:
     """ covert float parameters to target types (dtype). """
     device, dtype, non_blocking, convert_to_format = torch._C._nn._parse_to(*args, **kwargs)
 
@@ -184,7 +184,7 @@ def init_weights(module: nn.Module):
     #     print(f"{module_name} has not been initialized weights.")
 
 
-def to_string(*kwargs):
+def to_string(*kwargs) -> str:
     """Several numbers to string."""
     _list = [str(kwargs[0])] + ['{:.6f}'.format(_t) for _t in kwargs[1:]]  # parameters to strings
     total = '\t'.join(_list)  # join these strings to another string

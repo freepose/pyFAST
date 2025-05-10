@@ -119,13 +119,13 @@ etth1_univariate_modeler = {
                     'dropout_rate': 0.2}],
 }
 
-etth2_univariate_modeler = etth1_univariate_modeler
+etth2_univariate_modeler = etth1_univariate_modeler.copy()
 
 ettm1_univariate_modeler = {
 
 }
 
-ettm2_univariate_modeler = ettm1_univariate_modeler
+ettm2_univariate_modeler = ettm1_univariate_modeler.copy()
 
 """
     Multivariate Time Series Modeling
@@ -135,10 +135,10 @@ etth1_multivariate_modeler = {
 
 }
 
-etth2_multivariate_modeler = etth1_multivariate_modeler
+etth2_multivariate_modeler = etth1_multivariate_modeler.copy()
 
 ettm1_multivariate_modeler = {
 
 }
 
-ettm2_multivariate_modeler = ettm1_multivariate_modeler
+ettm2_multivariate_modeler = ettm1_multivariate_modeler.copy()

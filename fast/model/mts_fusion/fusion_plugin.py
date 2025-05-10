@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 
-from fast import get_common_params
+from fast import get_common_kwargs
 from fast.model.mts import GAR
 
 
@@ -41,7 +41,7 @@ class DataFirstPlugin(nn.Module):
         ds_dict = {'input_window_size': input_window_size, 'input_vars': input_vars + ex_vars,
                    'output_window_size': output_window_size, 'output_vars': output_vars}
 
-        common_ds_params = get_common_params(model_cls.__init__, ds_dict)
+        common_ds_params = get_common_kwargs(model_cls.__init__, ds_dict)
         model_settings = {**common_ds_params, **params}
 
         self.model_inst = model_cls(**model_settings)
@@ -93,13 +93,13 @@ class LearningFirstPlugin(nn.Module):
 
         ds_dict = {'input_window_size': input_window_size, 'input_vars': input_vars,
                    'output_window_size': output_window_size, 'output_vars': input_vars}
-        common_ds_params = get_common_params(model_cls.__init__, ds_dict)
+        common_ds_params = get_common_kwargs(model_cls.__init__, ds_dict)
         model_settings = {**common_ds_params, **params}
         self.model_inst = model_cls(**model_settings)
 
         ex_ds_dict = {'input_window_size': input_window_size, 'input_vars': ex_vars,
                       'output_window_size': output_window_size, 'output_vars': ex_vars}
-        ex_common_ds_params = get_common_params(model_cls.__init__, ex_ds_dict)
+        ex_common_ds_params = get_common_kwargs(model_cls.__init__, ex_ds_dict)
         ex_model_settings = {**ex_common_ds_params, **params}
         self.ex_model_inst = model_cls(**ex_model_settings)
 
@@ -134,7 +134,7 @@ class ExogenousDataDrivenPlugin(nn.Module):
 
         ex_ds_dict = {'input_window_size': input_window_size, 'input_vars': ex_vars,
                       'output_window_size': output_window_size, 'output_vars': output_vars}
-        ex_ds_params = get_common_params(ex_model_cls.__init__, ex_ds_dict)
+        ex_ds_params = get_common_kwargs(ex_model_cls.__init__, ex_ds_dict)
         model_settings = {**ex_ds_params, **params}
         self.ex_model_inst = ex_model_cls(**model_settings)
 

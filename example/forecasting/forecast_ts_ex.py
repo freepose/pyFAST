@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from fast import initial_seed, get_device, get_common_params
+from fast import initial_seed, get_device, get_common_kwargs
 from fast.data import MinMaxScale
 from fast.train import Trainer
 from fast.metric import Evaluator, MSE
@@ -27,7 +27,7 @@ from dataset.prepare_industrial_power_load import load_industrial_power_load_sst
 def mts_fusion():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
-    device = get_device('cpu')
+    device = get_device('mps')
 
     # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sst('1week', None, ['weather'], **ds_params)
@@ -57,7 +57,7 @@ def mts_fusion():
 
     model_cls, user_settings = modeler['tspt']
 
-    common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
+    common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
     model = model_cls(**model_settings)
 

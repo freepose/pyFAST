@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 
-import os
-import random
+import os, random, inspect
 import numpy as np
 import torch
 
-from typing import Literal
+from typing import Any, Dict, List, Tuple, Union, Callable
 
 
 def initial_seed(seed: int = 10):
@@ -38,26 +37,47 @@ def get_device(preferred_device: str = 'cpu'):
             os.environ['CUDA_VISIBLE_DEVICES'] = preferred_device.split(':')[1]
         preferred_device = 'cuda'
 
-    device_dict = {
-        'cpu': torch.device('cpu'),
-        'cuda': torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-        'mps': torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
-    }
+    if 'cuda' in preferred_device and not torch.cuda.is_available():
+        print("Warning: CUDA is not available. Falling back to CPU.")
+        return torch.device('cpu')
 
-    device = device_dict.get(preferred_device, torch.device('cpu'))
+    if preferred_device == 'mps' and not torch.backends.mps.is_available():
+        print("Warning: MPS is not available. Falling back to CPU.")
+        return torch.device('cpu')
+
+    device = torch.device(preferred_device)
 
     return device
 
 
-def get_common_params(func, params: dict) -> dict:
+def get_kwargs(func: Callable, **given_kwargs) -> Dict[str, Any]:
     """
-        Get common parameters from the function signature.
-        :param func: function object.
-        :param params: dictionary of parameters.
-        :return: dictionary of common parameters.
-    """
-    import inspect
+        Get the default arguments from the function signature, and **update** them with the given keyword arguments.
 
+        :param func: function object.
+        :param given_kwargs: given keyword arguments, which will **override** the default arguments.
+        :return : dictionary of arguments.
+    """
     signature = inspect.signature(func)
-    common_params = {k: v for k, v in params.items() if k in signature.parameters}
-    return common_params
+
+    new_kwargs = {
+        param.name: param.default
+        for param in signature.parameters.values()
+        if param.default is not inspect.Parameter.empty
+    }
+    new_kwargs.update(given_kwargs)
+
+    return new_kwargs
+
+
+def get_common_kwargs(func: Callable, given_kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    """
+        Get common parameters between the function signature and .
+        :param func: function object.
+        :param given_kwargs: dictionary of given keyword arguments.
+        :return: dictionary of common arguments.
+    """
+    signature = inspect.signature(func)
+    common_arguments = {k: v for k, v in given_kwargs.items() if k in signature.parameters}
+
+    return common_arguments

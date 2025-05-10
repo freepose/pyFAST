@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from typing import Literal, Dict, Union, List, Tuple, Any
 
-from fast import get_common_params, get_device
+from fast import get_common_kwargs, get_device
 from fast.data import StandardScale, scale_several_time_series, SSTDataset, SMTDataset
 from fast.train import Trainer
 from fast.stop import EarlyStop
@@ -58,7 +58,7 @@ def supervised_learning(model_and_params: Union[Tuple[nn.Module, dict], List[Tup
         ex_scaler = scale_several_time_series(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask)
 
     model_class, model_params = model_and_params
-    common_ds_params = get_common_params(model_class.__init__, train_ds.__dict__)  # Adapt dataset parameters
+    common_ds_params = get_common_kwargs(model_class.__init__, train_ds.__dict__)  # Adapt dataset parameters
     model_settings = {**common_ds_params, **model_params}
     model = model_class(**model_settings)
 
