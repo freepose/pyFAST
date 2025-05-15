@@ -30,7 +30,7 @@
             "epoch_range": [1, 10],
             "batch_size": 32,
             "shuffle": true,
-            "verbose": 0
+            "verbose": 1
           },
           "models": [
             ["ar", {"activation": "linear"}],
