@@ -5,7 +5,7 @@
     This package supports training all models, which includes sparse data and mask models in terms of uts and mts.
     Single computer/server version.
 """
-
+import logging
 import os, sys, platform
 from typing import Literal, Tuple, List, Union, Dict
 
@@ -94,8 +94,10 @@ class Trainer:
             elif platform.machine() == 'arm64':
                 torch.set_num_threads(os.cpu_count())
         elif self.device.type == 'cuda':
-            if torch.cuda.device_count() > 1:
-                self.model = nn.DataParallel(self.model)
+            cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', '')
+            visible_gpus = [int(d.strip()) for d in cuda_visible_devices.split(',') if d.strip()]
+            if len(visible_gpus) > 1 and torch.cuda.device_count() > 1:
+                self.model = nn.DataParallel(self.model, device_ids=visible_gpus)
         elif self.device.type == 'mps':
             pass
 
@@ -188,10 +190,11 @@ class Trainer:
          """
 
         train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
+        logger = logging.getLogger()
 
         message_header = self.message_header(val_dataset is not None)
         if verbose > 0:
-            print(message_header)
+            logger.info(message_header)
 
         performance_history_list = [message_header.split('\t')]
         for epoch in range(epoch_range[0], epoch_range[1] + 1):
@@ -222,13 +225,13 @@ class Trainer:
                 if self.stopper is not None:
                     self.stopper(val_results['loss'])
                     if self.stopper.stop:
-                        print('Early stopping at epoch {}, best loss {:.6f}'.format(epoch, self.stopper.best_score))
+                        logger.info('Early stopping at epoch {}, best loss {:.6f}'.format(epoch, self.stopper.best_score))
                         break
 
             performance_history_list.append(message)
 
             if verbose > 0:
-                print(to_string(*message))
+                logger.info(to_string(*message))
 
         return performance_history_list
 
@@ -278,6 +281,9 @@ class Trainer:
 
         if self.ex_scaler is not None:
             params['ex_scaler'] = type(self.ex_scaler).__name__
+
+        if self.stopper is not None:
+            params['stopper'] = str(self.stopper)
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
         params_str = 'Trainer({})'.format(params_str)

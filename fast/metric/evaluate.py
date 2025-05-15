@@ -9,7 +9,7 @@ import torch
 from typing import List, Tuple, Dict, Union
 from abc import ABC, abstractmethod
 
-from .metric import MSE, MAE, RMSE, MAPE, CVRMSE, SMAPE, PCC, RAE
+from .metric import MSE, MAE, RMSE, MAPE, CVRMSE, SMAPE, PCC, RAE, RSE, R2
 
 
 class AbstractEvaluator(ABC):
@@ -79,6 +79,8 @@ class Evaluator(AbstractEvaluator):
             'CV-RMSE': CVRMSE,
             'PCC': PCC,
             'RAE': RAE,
+            'RSE': RSE,
+            'R2': R2,
             # TODO: Add more metrics here as needed
         }
 

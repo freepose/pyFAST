@@ -1,0 +1,42 @@
+{
+  "global": {
+    "seed": 2025,
+    "device": "cuda",
+    "gpu_ids": null,
+    "loss": "MSE",
+    "metrics": ["MSE", "MAE"],
+    "scale": null,
+    "log_root": "{root}"
+  },
+
+  "ExchangeRate": {
+      "meta": {
+        "frequency": "1 day",
+        "start": "1990-01-01",
+        "end": "2010-10-10",
+        "length": 7588,
+        "time": "Date",
+        "univariate": ["Singapore"],
+        "multivariate": ["Australia", "British", "Canada", "Switzerland", "China", "Japan", "New Zealand", "Singapore"],
+        "path": "{root}/Github_exchange_rate/exchange_rate.csv"
+      },
+      "experiments": {
+        "U_L7_H1": {
+          "targets": "univariate",
+          "split": {"input_window_size": 7, "output_window_size": 1, "horizon": 1, "stride": 1, "train_ratio": 0.8},
+          "trainer": {
+            "optimizer": {"lr": 0.0002, "weight_decay": 0.0},
+            "lr_scheduler": {"step_size": 10, "gamma": 0.996},
+            "epoch_range": [1, 10],
+            "batch_size": 32,
+            "shuffle": true,
+            "verbose": 0
+          },
+          "models": [
+            ["ar", {"activation": "linear"}],
+            ["cnn1d", {"out_channels": 1, "kernel_size": 1}]
+          ]
+        }
+      }
+  }
+}

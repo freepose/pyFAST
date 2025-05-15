@@ -174,8 +174,7 @@ def load_general_mts_sst(mts_data_root: str,
         The default **device** is ``cpu``, you can change it to ``cuda`` if needed in ``load_sst_dataset()``.
 
         Example:
-            >>> data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
-            >>> mts_data_root = os.path.join(data_root, 'time_series/general_mts')
+            >>> mts_data_root = os.path.join(os.path.expanduser('~/data'), 'time_series/general_mts')
             >>> ds = load_general_mts_sst(mts_data_root, 'ETTh1', 'univariate', train_ratio=0.7, val_ratio=0.1)
 
         :param mts_data_root: the general time series dataset root path.

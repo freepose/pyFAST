@@ -27,26 +27,39 @@ def rolling_forecasting(model, given_x: torch.Tensor, steps: int = 30) -> torch.
     return predictions
 
 
-def count_parameters(model: nn.Module, unit: Literal['m', 'k'] = 'm') -> Dict[str, Union[int, float, str]]:
+def count_parameters(model: nn.Module, unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> Dict[
+    str, Union[int, float, str]]:
     """
-        Count parameter numbers of a given torch module.
-        :param model: the model to count parameters.
-        :param unit: the unit of parameters, 'k' for KB, 'm' for MB.
-        :return: a string of total parameters and trainable parameters.
+    Count parameter numbers of a given torch module.
+
+    :param model: the model to count parameters.
+    :param unit: the unit of parameters.
+           'k' for KB, 'm' for MB, 'g' for GB, 'auto' for automatic selection.
+    :return: a dictionary containing trainable params, total params and unit.
     """
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    unit = str.upper(unit)
+    # Automatic unit selection based on parameter count
+    if unit == 'auto':
+        if total_params >= 1024 * 1024 * 1024:  # More than 1 billion parameters
+            unit = 'G'
+        elif total_params >= 1024 * 1024:  # More than 1 million parameters
+            unit = 'M'
+        else:  # Less than 1 million parameters
+            unit = 'K'
+    else:
+        unit = str.upper(unit)
 
+    divisor = 1
     if unit == 'K':  # a kilo
-        total_params /= 1024
-        trainable_params /= 1024
+        divisor = 1024
     elif unit == 'M':  # a million
-        total_params /= (1024 * 1024)
-        trainable_params /= (1024 * 1024)
+        divisor = 1024 * 1024
+    elif unit == 'G':  # a billion
+        divisor = 1024 * 1024 * 1024
 
-    return {'trainable': trainable_params, 'total': total_params, 'unit': unit}
+    return {'trainable': trainable_params / divisor, 'total': total_params / divisor, 'unit': unit}
 
 
 def get_constants(model: nn.Module) -> dict:
@@ -54,18 +67,18 @@ def get_constants(model: nn.Module) -> dict:
         :param model: model instance.
         :return: a dictionary of model constants.
     """
-
-    constant_dict = {key: value for key, value in vars(model).items() if
-                     not callable(value) and not key.startswith('_') and not key == 'training'}
+    constant_dict = {key: value for key, value in vars(model).items() if isinstance(value, (int, float, str, bool))
+                     and not key.startswith('_') and not key == 'training'}
 
     return constant_dict
 
 
-def get_model_info(model: nn.Module, count_unit: Literal['m', 'k'] = 'm') -> str:
+def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> str:
     """
         Get the model information in string format.
         :param model: model instance.
-        :param count_unit: unit of the parameter number.
+        :param count_unit: the unit of parameters.
+           'k' for KB, 'm' for MB, 'g' for GB, 'auto' for automatic selection.
         :return: the string of model information.
     """
 
@@ -73,7 +86,7 @@ def get_model_info(model: nn.Module, count_unit: Literal['m', 'k'] = 'm') -> str
     constants = get_constants(model)
     params_counts = count_parameters(model, count_unit)
 
-    count_str = '{:.2f}/{:.2f}{}B'.format(params_counts['trainable'], params_counts['total'], str.upper(count_unit))
+    count_str = '{:.2f}/{:.2f}{}'.format(params_counts['trainable'], params_counts['total'], params_counts['unit'])
     params_dict = {**constants, 'trainable/total': count_str}
 
     params_str = ', '.join([f'{key}={value}' for key, value in params_dict.items()])

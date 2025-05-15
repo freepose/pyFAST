@@ -7,19 +7,20 @@
     The time series length varies among the sources.
     In most occasions, the time series variables of all the sources is 1.
 """
-
+import logging
 import os
+import sys
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from fast import initial_seed, get_device, get_common_kwargs
+from fast import initial_seed, initial_logger, get_device, get_common_kwargs
 from fast.train import Trainer
 from fast.metric import Evaluator, MSE
 
 from fast.model.base import get_model_info, covert_parameters
-from experiment.modeler.ts import ts_modeler
+from fast.model import AR
 
 from dataset.prepare_xmcdc import load_xmcdc_smt
 from dataset.prepare_kdd2018_glucose import load_kdd2018_glucose_smt
@@ -33,6 +34,7 @@ def main():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
     device = get_device('cpu')
+    logger = initial_logger('stdout')
 
     stm_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_smt('1week', **stm_params)
@@ -49,14 +51,14 @@ def main():
     # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_sdwpf_smt(data_root, '1day', None, False, 'inter', **ds_params, factor=0.001)
 
-    model_cls, user_settings = ts_modeler['coat']
+    model_cls, user_settings = AR, {}
 
     model_settings = {**get_common_kwargs(model_cls.__init__, train_ds.__dict__), **user_settings}
     model = model_cls(**model_settings)
-    print('{}\n{}'.format(train_ds, val_ds))
+    logger.info('{}\n{}'.format(train_ds, val_ds))
 
     model = covert_parameters(model, torch_float_type)
-    print(get_model_info(model))
+    logger.info(get_model_info(model))
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_params, lr=0.0005, weight_decay=0.)
@@ -69,6 +71,7 @@ def main():
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
+    logger.info(f'{trainer}')
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=True,

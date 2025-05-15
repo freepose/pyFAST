@@ -13,6 +13,7 @@
 
 import copy
 from typing import Tuple, List
+from zoneinfo import available_timezones
 
 import torch
 import torch.nn as nn
@@ -183,7 +184,7 @@ class InstanceScale(nn.Module):
 
 class InstanceStandardScale(InstanceScale):
     """
-        Standard normalization on batch instances in forward feedback. A.k.a. ReVIN.
+        Standard normalization on batch instances in forward feedback. A.k.a. **ReVIN**.
 
         Kim T, Kim J, Tae Y, et al.
         Reversible instance normalization for accurate time-series forecasting against distribution shift
@@ -256,3 +257,21 @@ def scale_several_time_series(scaler: AbstractScale,
     scaler = copy.deepcopy(scaler).fit(ts_tensor, mask_tensor)
 
     return scaler
+
+
+"""
+    Scale name to class. 
+"""
+
+available_scales = {
+    'abstract': AbstractScale,
+    'minmax': MinMaxScale,
+    'max': MaxScale,
+    'mean': MeanScale,
+    'standard': StandardScale,
+    'log': LogScale,
+    'instance': InstanceScale,
+    'instance_standard': InstanceStandardScale, # a.k.a., ReVIN
+}
+
+

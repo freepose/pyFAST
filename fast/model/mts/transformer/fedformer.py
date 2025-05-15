@@ -394,7 +394,7 @@ class FourierCrossAttentionW(nn.Module):
                  activation: str,
                  mode_select_method: str):
         super(FourierCrossAttentionW, self).__init__()
-        print('corss fourier correlation used!')
+        # print('corss fourier correlation used!')
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.modes1 = modes

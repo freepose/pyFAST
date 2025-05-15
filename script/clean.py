@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    Clean up script for removing __pycache__ directories and .DS_Store files, recursively.
+    Clean up script for removing __pycache__, .git directories and .DS_Store files, recursively.
 """
 
 import os
@@ -15,7 +15,7 @@ def remove_pycache():
             if dir_name == '__pycache__':
                 dir_path = os.path.join(root, dir_name)
                 shutil.rmtree(dir_path)
-                print(f'Removed: {dir_path}')
+                print(f'\tRemoved: {dir_path}')
 
 
 def remove_git():
@@ -24,7 +24,7 @@ def remove_git():
             if dir_name == '.git':
                 dir_path = os.path.join(root, dir_name)
                 shutil.rmtree(dir_path)
-                print(f'Removed: {dir_path}')
+                print(f'\tRemoved: {dir_path}')
 
 
 def remove_ds_store():
@@ -33,7 +33,7 @@ def remove_ds_store():
             if file_name == '.DS_Store':
                 file_path = os.path.join(root, file_name)
                 os.remove(file_path)
-                print(f'Removed: {file_path}')
+                print(f'\tRemoved: {file_path}')
 
 
 if __name__ == '__main__':

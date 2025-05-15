@@ -49,7 +49,7 @@ class Triformer(nn.Module):
         cuts = self.lag
         for patch_size in patch_sizes:
             if cuts % patch_size != 0:
-                raise Exception('Lag not divisible by patch size')
+                raise Exception('Input window size not divisible by patch len, {} // {}'.format(cuts, patch_size))
 
             cuts = int(cuts / patch_size)
             self.layers.append(Layer(input_dim=channels, num_nodes=self.num_nodes, cuts=cuts,
