@@ -152,8 +152,7 @@ class TPatchGNN(nn.Module):
         filter_input_dim = self.time_embedding_dim + 1
         self.ttcn_dim = self.hidden_dim - 1
 
-        self.filter_generators = MLP(filter_input_dim, [self.ttcn_dim, self.ttcn_dim],
-                                     filter_input_dim * self.ttcn_dim, False, 'relu')
+        self.filter_generators = MLP(filter_input_dim, [self.ttcn_dim, self.ttcn_dim], filter_input_dim * self.ttcn_dim, None, 'relu')
         self.T_bias = nn.Parameter(torch.randn(1, self.ttcn_dim), requires_grad=True)
 
         """

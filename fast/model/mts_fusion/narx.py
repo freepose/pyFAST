@@ -73,7 +73,7 @@ class NARXMLP(nn.Module):
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
                  ex_retain_window_size: int = None, ex_vars: int = 1,
-                 hidden_units: list[int] = [32], use_layer_norm: bool = False, activation: str = 'linear'):
+                 hidden_units: list[int] = [32], activation: str = 'linear'):
         super(NARXMLP, self).__init__()
 
         self.input_window_size = input_window_size
@@ -86,7 +86,7 @@ class NARXMLP(nn.Module):
         assert input_window_size >= ex_retain_window_size, 'input_window_size >= ex_input_window'
 
         input_dim = input_window_size * input_vars + ex_retain_window_size * ex_vars
-        self.mlp = MLP(input_dim, hidden_units, output_window_size * input_vars, use_layer_norm, activation, 0)
+        self.mlp = MLP(input_dim, hidden_units, output_window_size * input_vars, None, activation, 0)
 
     def forward(self, x: torch.Tensor, ex: torch.Tensor):
         """
