@@ -418,7 +418,7 @@ class RAE(AbstractMetric):
         Relative Absolute Error (RAE). Computes the sum of absolute errors
         relative to the sum of absolute deviations from the mean of the actual values.
 
-        Streaming aggregated coefficient of variation of RMSE (CV-RMSE).
+        Streaming aggregated RAE.
         This class supports both element-wise evaluation,
         and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
     """
@@ -475,6 +475,134 @@ class RAE(AbstractMetric):
             return 0.0  # or float('inf') depending on how you want to handle perfect constancy
 
         return self.sum_abs_errors / self.sum_abs_deviation
+
+
+class RSE(AbstractMetric):
+    """
+        Relative Squared Error (RSE). Computes the sum of squared errors
+        relative to the sum of squared deviations from the mean of the actual values.
+        Streaming aggregated RSE.
+
+        This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_squared_errors: float = 0.0
+        self.sum_squared_deviation: float = 0.0
+        self.targets = []
+        self.mean: float = 0.0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            RSE. Element-wise metrics.
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+            :return: RSE value.
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (real - prediction) ** 2
+        squared_deviation = (real - real.mean()) ** 2
+        rse = squared_errors.sum() / squared_deviation.sum()
+        return rse
+
+    def reset(self):
+        self.sum_squared_errors = 0.0
+        self.sum_squared_deviation = 0.0
+        self.targets = []
+        self.mean: float = 0.0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+        self.sum_squared_errors += squared_errors.sum().detach().item()
+
+        self.targets.append(real.detach())
+
+    def compute(self) -> float:
+        if not self.targets:
+            return 0.0
+
+        all_targets = torch.cat(self.targets)
+        mean_real = all_targets.mean()
+        squared_deviation = (all_targets - mean_real) ** 2
+        self.sum_squared_deviation = squared_deviation.sum().item()
+
+        if self.sum_squared_deviation == 0:
+            return 0.0  # or float('inf') depending on how you want to handle perfect constancy
+
+        return self.sum_squared_errors / self.sum_squared_deviation
+
+
+class R2(AbstractMetric):
+    """
+    R-squared (coefficient of determination).
+    Measures the proportion of variance in the target variable that is predictable from the independent variables.
+
+    Supports element-wise calculation and streaming/batch-wise aggregation.
+    """
+
+    def __init__(self):
+        self.sum_squared_errors: float = 0.0
+        self.sum_squared_deviation: float = 0.0
+        self.targets = []
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+        R^2. Element-wise metric.
+        :param prediction: predicted values.
+        :param real:       actual values.
+        :param mask:       optional mask tensor.
+        :return: R^2 score (scalar tensor).
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (real - prediction) ** 2
+        squared_deviation = (real - real.mean()) ** 2
+
+        if squared_deviation.sum() == 0:
+            return torch.tensor(0.0)  # or float('nan') for undefined
+
+        r2 = 1 - squared_errors.sum() / squared_deviation.sum()
+        return r2
+
+    def reset(self):
+        self.sum_squared_errors = 0.0
+        self.sum_squared_deviation = 0.0
+        self.targets = []
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        squared_errors = (prediction - real) ** 2
+        self.sum_squared_errors += squared_errors.sum().detach().item()
+        self.targets.append(real.detach())
+
+    def compute(self) -> float:
+        if not self.targets:
+            return 0.0
+
+        all_targets = torch.cat(self.targets)
+        mean_real = all_targets.mean()
+        squared_deviation = (all_targets - mean_real) ** 2
+        self.sum_squared_deviation = squared_deviation.sum().item()
+
+        if self.sum_squared_deviation == 0:
+            return 0.0  # or float('nan') if variance is zero
+
+        return 1 - self.sum_squared_errors / self.sum_squared_deviation
 
 
 class SDRE(AbstractMetric):

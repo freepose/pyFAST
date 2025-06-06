@@ -12,7 +12,7 @@
 """
 
 # Metrics
-from .metric import AbstractMetric, MSE, MAE, RMSE, MAPE, SMAPE, CVRMSE
+from .metric import AbstractMetric, MSE, MAE, RMSE, MAPE, SMAPE, CVRMSE, RAE, RSE, R2, PCC
 
 # Evaluator
 from .evaluate import AbstractEvaluator, EmptyEvaluator, Evaluator

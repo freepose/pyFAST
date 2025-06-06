@@ -4,8 +4,9 @@
 import torch
 import torch.nn as nn
 
+from typing import Literal
 from .activation import get_activation_cls
-
+from .norm import DynamicTanh
 
 class MLP(nn.Module):
     """
@@ -13,17 +14,17 @@ class MLP(nn.Module):
         :param input_dim: input feature dimension.
         :param hidden_units: list of positive integer, the layer number and units in each layer.
         :param output_dim: output feature dimension.
-        :param use_layer_norm: bool. Whether you use LayerNormalization before activation or not.
+        :param layer_norm: layer normalization in ('DyT' or 'LN'). If None, no layer normalization is applied.
         :param activation: the activation function to use.
         :param dropout_rate: float in [0, 1). Fraction of the units to dropout.
     """
     def __init__(self, input_dim: int, hidden_units: list, output_dim: int = 1,
-                 use_layer_norm: bool = False, activation: str = None, dropout_rate: float = 0.):
+                 layer_norm: Literal['DyT', 'LN']  = None, activation: str = None, dropout_rate: float = 0.):
         super(MLP, self).__init__()
         self.input_dim = input_dim  # input feature dimension
         self.hidden_units = hidden_units  # hidden units for each layer
         self.output_dim = output_dim  # output feature dimension
-        self.use_layer_norm = use_layer_norm
+        self.layer_norm = layer_norm
         self.activation = activation  # name of the activation function
         self.dropout_rate = dropout_rate
 
@@ -34,8 +35,11 @@ class MLP(nn.Module):
             self.mlp.add_module(f'layer_{i}', nn.Linear(units[i], units[i + 1]))
 
             if i < len(units) - 2:
-                if self.use_layer_norm:
-                    self.mlp.add_module(f'layer_norm_{i}', nn.LayerNorm(units[i + 1]))
+                if self.layer_norm is not None:
+                    if self.layer_norm == 'DyT':
+                        self.mlp.add_module(f'dynamic_tanh_{i}', DynamicTanh(units[i + 1]))
+                    elif self.layer_norm == 'LN':
+                        self.mlp.add_module(f'layer_norm_{i}', nn.LayerNorm(units[i + 1]))
                 if self.activation is not None or self.activation != 'linear':
                     self.mlp.add_module(f'activation_{i}', get_activation_cls(self.activation)())
                 if self.dropout_rate > 0:

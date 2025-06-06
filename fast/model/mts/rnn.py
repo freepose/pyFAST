@@ -189,6 +189,7 @@ class TimeSeriesRNN(nn.Module):
         self.input_vars = input_vars
         self.output_window_size = output_window_size
         self.output_vars = output_vars
+        self.rnn_cls = rnn_cls
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bidirectional = bidirectional
@@ -199,7 +200,7 @@ class TimeSeriesRNN(nn.Module):
 
         self.l0 = nn.Linear(self.input_vars, self.input_vars, bias=False)
 
-        model_cls = rnn_cls_dict.get(rnn_cls)
+        model_cls = rnn_cls_dict.get(self.rnn_cls)
         self.rnn = model_cls(self.input_vars, self.hidden_size, self.num_layers, batch_first=True,
                              bidirectional=self.bidirectional, dropout=self.dropout_rate)
 

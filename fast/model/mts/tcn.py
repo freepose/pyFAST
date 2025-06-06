@@ -5,7 +5,7 @@ from typing import List
 
 import torch
 import torch.nn as nn
-from torch.nn.utils import weight_norm
+from torch.nn.utils.parametrizations import weight_norm
 
 
 class Chomp1d(nn.Module):
@@ -71,6 +71,10 @@ class TemporalConvNet(nn.Module):
     def __init__(self, input_window_size: int = 1, output_window_size: int = 1,
                  num_channels: List[int] = [16], kernel_size: int = 2, dropout_rate: float = 0.2):
         super(TemporalConvNet, self).__init__()
+
+        self.num_channels = num_channels
+        self.kernel_size = kernel_size
+        self.dropout_rate = dropout_rate
 
         num_channels.append(output_window_size)
         layers = []

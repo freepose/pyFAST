@@ -162,6 +162,8 @@ class TimesNet(nn.Module):
         self.num_kernels = num_kernels
         self.top_k = top_k
 
+        self.use_instance_scale = use_instance_scale
+
         self.encoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
         self.encoder_pe = PositionalEncoding(self.d_model)
         self.encoder_dropout = nn.Dropout(dropout_rate)
@@ -177,7 +179,7 @@ class TimesNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x: shape is (batch_size, input_window_size, input_vars).
         """
 
         norm_x = self.inst_scale.fit_transform(x)
@@ -198,4 +200,3 @@ class TimesNet(nn.Module):
         out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, input_vars)
 
         return out
-

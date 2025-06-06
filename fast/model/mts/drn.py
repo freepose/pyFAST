@@ -116,6 +116,10 @@ class DeepResidualNetwork(nn.Module):
         self.input_window_size = input_window_size
         self.output_window_size = output_window_size
         self.output_vars = output_vars
+        self.hidden_size = hidden_size
+        self.number_stacks = number_stacks
+        self.number_blocks_per_stack = number_blocks_per_stack
+        self.use_rnn = use_rnn
 
         self.stacks = nn.ModuleList([
             Stack(input_window_size, input_vars, output_window_size, output_vars,

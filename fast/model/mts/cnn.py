@@ -95,14 +95,17 @@ class CNNRNN(nn.Module):
         self.rnn_num_layers = rnn_num_layers
         self.rnn_bidirectional = rnn_bidirectional
 
+        self.dropout_rate = dropout_rate
+        self.decoder_way = decoder_way
+
         self.conv1d = nn.Conv1d(in_channels=self.input_vars, out_channels=self.cnn_out_channels,
                                 kernel_size=self.cnn_kernel_size, padding=self.cnn_kernel_size // 2)
 
         self.gru = TimeSeriesRNN(self.cnn_out_channels, self.output_window_size, self.output_vars, rnn_cls,
                                  self.rnn_hidden_size, self.rnn_num_layers, self.rnn_bidirectional,
-                                 dropout_rate, decoder_way)
+                                 self.dropout_rate, self.decoder_way)
 
-        self.d1 = nn.Dropout(dropout_rate)
+        self.d1 = nn.Dropout(self.dropout_rate)
 
     def forward(self, x: torch.Tensor):
         """ x -> [batch_size, window_size, input_size] """
@@ -168,13 +171,16 @@ class CNNRNNRes(nn.Module):
         self.residual_window_size = residual_window_size
         self.residual_ratio = residual_ratio
 
+        self.dropout_rate = dropout_rate
+        self.decoder_way = decoder_way
+
         self.cnn = nn.Conv1d(in_channels=self.input_vars, out_channels=self.cnn_out_channels,
                              kernel_size=self.cnn_kernel_size, padding=self.cnn_padding)
-        self.dropout = nn.Dropout(dropout_rate)
+        self.dropout = nn.Dropout(self.dropout_rate)
 
         self.rnn = TimeSeriesRNN(self.cnn_out_channels, self.output_window_size, self.output_vars, rnn_cls,
                                  self.rnn_hidden_size, self.rnn_num_layers, self.rnn_bidirectional,
-                                 dropout_rate, decoder_way)
+                                 self.dropout_rate, self.decoder_way)
 
         if self.residual_window_size > 0:
             self.residual_window_size = self.residual_window_size

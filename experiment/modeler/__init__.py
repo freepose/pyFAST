@@ -2,9 +2,8 @@
 # encoding: utf-8
 
 """
-    Model selection.
-    (1) ``ts.py``: univariate / multivariate time series forecasting
+    Model selection. Model constants are defined in the modeler module.
 
-    (2)
+    Note: the dataset-related parameters are left empty hereby, and are dynamically set while running the experiment.
 
 """

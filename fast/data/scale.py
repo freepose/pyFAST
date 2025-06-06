@@ -13,6 +13,7 @@
 
 import copy
 from typing import Tuple, List
+from zoneinfo import available_timezones
 
 import torch
 import torch.nn as nn
@@ -61,10 +62,12 @@ class MinMaxScale(AbstractScale):
         """ x shape is [..., num_features]. """
         assert x.ndim > 1, "The input tensor must be at least 2D."
 
-        self.min = x.min(dim=0).values
-        self.max = x.max(dim=0).values
+        nan_mask = torch.isnan(x) if x_mask is None else ~x_mask    # -> [seq_len, num_features]
 
+        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [seq_len, num_features]
+        self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values   # -> [seq_len, num_features]
         self.range = self.max - self.min
+
         return self
 
     def transform(self, x: torch.tensor, x_mask: torch.tensor = None):
@@ -83,7 +86,12 @@ class MaxScale(AbstractScale):
         self.max = None
 
     def fit(self, x: torch.tensor, x_mask: torch.tensor = None):
-        self.max = x.max(dim=0).values
+        """ x shape is [..., num_features]. """
+        assert x.ndim > 1, "The input tensor must be at least 2D."
+
+        nan_mask = torch.isnan(x) if x_mask is None else ~x_mask    # -> [seq_len, num_features]
+        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [seq_len, num_features]
+
         return self
 
     def transform(self, x: torch.tensor, x_mask: torch.tensor = None):
@@ -104,6 +112,17 @@ class MeanScale(AbstractScale):
         self.mean = None
 
     def fit(self, x: torch.tensor, x_mask: torch.tensor = None):
+        """ x shape is [..., num_features]. """
+        assert x.ndim > 1, "The input tensor must be at least 2D."
+
+        if x_mask is not None:
+            nan_mask = ~x_mask
+            valid_counts = (~nan_mask).sum(dim=0).float()
+            x_copy = x.clone()
+            x_copy[nan_mask] = 0
+            self.mean = x_copy.sum(dim=0) / valid_counts
+            return self
+
         self.mean = x.mean(dim=0)
         return self
 
@@ -124,6 +143,19 @@ class StandardScale(AbstractScale):
         self.sigma = None
 
     def fit(self, x: torch.tensor, x_mask: torch.tensor = None):
+        """ x shape is [..., num_features]. """
+
+        assert x.ndim > 1, "The input tensor must be at least 2D."
+
+        if x_mask is not None:
+            nan_mask = ~x_mask
+            valid_counts = (~nan_mask).sum(dim=0).float()
+            x_copy = x.clone()
+            x_copy[nan_mask] = 0
+            self.miu = x_copy.sum(dim=0) / valid_counts
+            self.sigma = (x_copy.var(dim=0, unbiased=False) + 1e-5).sqrt()
+            return self
+
         self.miu = x.mean(dim=0)
         self.sigma = x.var(dim=0).sqrt()
         return self
@@ -183,7 +215,7 @@ class InstanceScale(nn.Module):
 
 class InstanceStandardScale(InstanceScale):
     """
-        Standard normalization on batch instances in forward feedback. A.k.a. ReVIN.
+        Standard normalization on batch instances in forward feedback. A.k.a. **ReVIN**.
 
         Kim T, Kim J, Tae Y, et al.
         Reversible instance normalization for accurate time-series forecasting against distribution shift
@@ -206,6 +238,28 @@ class InstanceStandardScale(InstanceScale):
             self.affine_bias = nn.Parameter(torch.zeros(self.num_features))
 
     def fit(self, x, mask=None):
+        """
+            Fit the instance normalization parameters.
+            :param x: the input tensor, shape is [..., num_features].
+            :param mask: the mask tensor, shape is [..., num_features].
+            :return: self, the fitted scaler.
+        """
+
+        assert x.ndim > 1, "The input tensor must be at least 3D."
+
+        if mask is not None:
+            assert x.shape == mask.shape, 'x and mask must have the same shape.'
+            nan_mask = ~mask
+            valid_counts = (~nan_mask).sum(dim=tuple(range(1, x.ndim - 1))).float()
+            x_copy = x.clone()
+            x_copy[nan_mask] = 0
+            self.miu = x_copy.mean(dim=tuple(range(1, x.ndim - 1)), keepdim=True) / valid_counts
+            self.sigma = (x_copy.var(dim=tuple(range(1, x.ndim - 1)), unbiased=False, keepdim=True) + self.epsilon).sqrt()
+            if self.num_features > 0:
+                self.affine_weight.data.fill_(1.0)
+                self.affine_bias.data.fill_(0.0)
+            return self
+
         dim2reduce = tuple(range(1, x.ndim - 1))
         self.miu = x.mean(dim=dim2reduce, keepdim=True).detach()
         self.sigma = (x.var(dim=dim2reduce, keepdim=True, unbiased=False) + self.epsilon).sqrt().detach()
@@ -213,7 +267,7 @@ class InstanceStandardScale(InstanceScale):
 
     def transform(self, x, mask=None):
         """ Normalization """
-        t = (x - self.miu) / self.sigma  # -> [batch_size, input_window_size, num_features]
+        t = (x - self.miu) / self.sigma  # -> [..., num_features]
         if self.num_features > 0:
             t = (t * self.affine_weight) + self.affine_bias
         return t
@@ -222,7 +276,7 @@ class InstanceStandardScale(InstanceScale):
         """ De-normalize.  """
         if self.num_features > 0:
             x = (x - self.affine_bias) / (self.affine_weight + self.epsilon ** 2)
-        inv = x * self.sigma + self.miu  # -> [batch_size, output_window_size, num_features]
+        inv = x * self.sigma + self.miu  # -> [..., num_features]
         return inv
 
 
@@ -256,3 +310,21 @@ def scale_several_time_series(scaler: AbstractScale,
     scaler = copy.deepcopy(scaler).fit(ts_tensor, mask_tensor)
 
     return scaler
+
+
+"""
+    Scale name to class. 
+"""
+
+available_scales = {
+    'abstract': AbstractScale,
+    'minmax': MinMaxScale,
+    'max': MaxScale,
+    'mean': MeanScale,
+    'standard': StandardScale,
+    'log': LogScale,
+    'instance': InstanceScale,
+    'instance_standard': InstanceStandardScale, # a.k.a., ReVIN
+}
+
+

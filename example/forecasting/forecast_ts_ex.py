@@ -11,12 +11,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from fast import initial_seed, get_device, get_common_params
+from fast import initial_seed, get_device, get_common_kwargs
 from fast.data import MinMaxScale
 from fast.train import Trainer
 from fast.metric import Evaluator, MSE
 
-from fast.model.base import count_parameters, covert_parameters
+from fast.model.base import get_model_info, covert_parameters
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
 from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE, TSPT
 
@@ -27,7 +27,7 @@ from dataset.prepare_industrial_power_load import load_industrial_power_load_sst
 def mts_fusion():
     data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
     torch_float_type = torch.float32
-    device = get_device('cpu')
+    device = 'cuda:0'
 
     # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sst('1week', None, ['weather'], **ds_params)
@@ -57,15 +57,14 @@ def mts_fusion():
 
     model_cls, user_settings = modeler['tspt']
 
-    common_ds_params = get_common_params(model_cls.__init__, train_ds.__dict__)
+    common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
     model = model_cls(**model_settings)
 
-    print('{}\n{}\n{}'.format(train_ds, val_ds, model))
+    print('{}\n{}'.format(train_ds, val_ds))
 
-    model_name = type(model).__name__
     model = covert_parameters(model, torch_float_type)
-    print(model_name, count_parameters(model))
+    print(get_model_info(model))
 
     model_weights = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_weights, lr=0.0005, weight_decay=0.)
@@ -74,14 +73,14 @@ def mts_fusion():
     criterion = MSE()
     evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
 
-    trainer = Trainer(device, model, is_initial_weights=True,
+    trainer = Trainer(get_device(device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=512, shuffle=True,
-                verbose=True)
+                verbose=2)
 
     print('Good luck!')
 

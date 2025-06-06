@@ -67,7 +67,7 @@ class COAT(nn.Module):
         self.ar = GAR(self.input_window_size, self.output_window_size)
 
         self.fc = MLP(self.combination_size, [self.combination_size, self.combination_size // 2], output_vars,
-                      False, activation, dropout_rate)
+                      None, activation, dropout_rate)
 
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
@@ -321,7 +321,7 @@ class CTRL(nn.Module):
         self.ar = GAR(self.input_window_size, self.output_window_size)
 
         self.fc = MLP(self.combination_size, [self.combination_size, self.combination_size // 2], output_vars,
-                      False, activation, dropout_rate)
+                      None, activation, dropout_rate)
 
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)

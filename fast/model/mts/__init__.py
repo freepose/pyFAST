@@ -7,8 +7,9 @@ from .tcn import TemporalConvNet
 from .cnn import CNN1D, CNNRNN, CNNRNNRes
 from .lstnet import LSTNet
 from .nhits import NHiTS
-from .dlinear import DLinear, NLinear
 from .drn import DeepResidualNetwork
+from .dlinear import NLinear, DLinear
+
 from .transformer.transformer import Transformer
 from .transformer.informer import Informer
 from .transformer.autoformer import Autoformer
@@ -24,17 +25,16 @@ from .transformer.timesfm import TimesFM
 from .transformer.timer import Timer
 from .transformer.timexer import TimeXer
 from .transformer.timemixer import TimeMixer
-from .transformer.lstd import LSTD
 
 from .gnn.stid import STID
 from .gnn.stnorm import STNorm
 from .gnn.magnat import MAGNet
 from .gnn.gwn import GraphWaveNet
 from .gnn.fgnn import FourierGNN
-from .gnn.gain import GAIN
 from .gnn.agcrn import AGCRN
+from .gnn.gain import GAIN
 
 from .msl import MSL
 from .coat import COAT, TCOAT, CoDR, CTRL
 from .dred import DRED
-from .uninet import UniNet
+from .afts import AFTS

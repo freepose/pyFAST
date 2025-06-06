@@ -81,8 +81,8 @@ def load_kdd2018_glucose_smt(data_root: str,
             'horizon': horizon,
         }
 
-        if scaler is not None and type(scaler) != type(AbstractScale()):
-            scaler = scale_several_time_series(cgm_uts_list, scaler)
+        if scaler is not None:
+            scaler = scale_several_time_series(scaler, cgm_uts_list)
 
         train_ds = SMTDataset(**smt_params, stride=stride)
         return (train_ds, None), (scaler, None)
@@ -111,8 +111,8 @@ def load_kdd2018_glucose_smt(data_root: str,
         'horizon': horizon,
     }
 
-    if scaler is not None and type(scaler) != type(AbstractScale()):
-        scaler = scale_several_time_series(train_data, scaler)
+    if scaler is not None:
+        scaler = scale_several_time_series(scaler, train_data)
 
     train_ds = SMTDataset(**train_smt_params, stride=stride)
     val_ds = SMTDataset(**val_smt_params, stride=output_window_size)

@@ -51,11 +51,13 @@ class EarlyStop:
             'patience': self.patience,
             'delta': self.delta,
             'mode': self.mode,
-            'verbose': self.verbose,
-            'counter': self.counter,
-            'stop': self.stop,
-            'best_score': self.best_score,
-            'threshold': self._get_threshold(self.best_score),
+
+            ## The below parameters are used for debugging / testing.
+            # 'verbose': self.verbose,
+            # 'counter': self.counter,
+            # 'stop': self.stop,
+            # 'best_score': self.best_score,
+            # 'threshold': self._get_threshold(self.best_score),
         }
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])

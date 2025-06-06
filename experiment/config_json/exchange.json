@@ -1,0 +1,65 @@
+{
+  "global": {
+    "seed": 2025,
+    "device": "cuda",
+    "gpu_ids": null,
+    "loss": "MSE",
+    "metrics": ["MSE", "MAE"],
+    "scale": null,
+    "log_root": "{root}"
+  },
+
+  "ExchangeRate": {
+      "meta": {
+        "frequency": "1 day",
+        "start": "1990-01-01",
+        "end": "2010-10-10",
+        "length": 7588,
+        "time": "Date",
+        "univariate": ["Singapore"],
+        "multivariate": ["Australia", "British", "Canada", "Switzerland", "China", "Japan", "New Zealand", "Singapore"],
+        "path": "{root}/Github_exchange_rate/exchange_rate.csv"
+      },
+      "experiments": {
+        "U_L7_H1": {
+          "targets": "univariate",
+          "split": {"input_window_size": 7, "output_window_size": 1, "horizon": 1, "stride": 1, "train_ratio": 0.8},
+          "trainer": {
+            "optimizer": {"lr": 0.0002, "weight_decay": 0.0},
+            "lr_scheduler": {"step_size": 10, "gamma": 0.996},
+            "epoch_range": [1, 10],
+            "batch_size": 32,
+            "shuffle": true,
+            "verbose": 1
+          },
+          "models": [
+            ["ar", {"activation": "linear"}],
+            ["cnn1d", {"out_channels": 1, "kernel_size": 1}]
+          ],
+          "others": [
+            ["ar", {"activation": "linear"}],
+            ["rnn", {"rnn_cls": "rnn", "hidden_size": 128, "num_layers": 1, "bidirectional": true, "dropout_rate": 0.0, "decoder_way": "mapping"}],
+            ["rnn", {"rnn_cls": "lstm", "hidden_size": 128, "num_layers": 1, "bidirectional": true, "dropout_rate": 0.0, "decoder_way": "mapping"}],
+            ["rnn", {"rnn_cls": "gru", "hidden_size": 256, "num_layers": 1, "bidirectional": true, "dropout_rate": 0.0, "decoder_way": "mapping"}],
+
+            ["drn", {"hidden_size": 4, "number_stacks": 8, "number_blocks_per_stack": 1, "use_rnn": false}],
+            ["cnnrnnres", {"cnn_out_channels": 50, "cnn_kernel_size": 7, "rnn_cls": "gru", "rnn_hidden_size": 32, "rnn_num_layers": 1, "rnn_bidirectional": false, "dropout_rate": 0.0, "decoder_way": "mapping", "residual_window_size": 5, "residual_ratio": 0.1}],
+            ["dlinear", {"individual": false, "kernel_size": 7}],
+            ["nlinear", {"individual": false}],
+            ["tcn", {"num_channels": [8], "kernel_size": 2, "dropout_rate": 0.2}],
+            ["cnn1d", {"out_channels": 1, "kernel_size": 7}],
+            ["autoformer", {"label_window_size": 48, "d_model": 512, "num_heads": 8, "num_encoder_layers": 2, "num_decoder_layers": 1, "dim_ff": 2048, "dropout_rate": 0.0, "moving_avg": 7}],
+            ["fedformer", {"label_window_size": 48, "d_model": 512, "num_heads": 8, "num_encoder_layers": 2, "num_decoder_layers": 1, "dim_ff": 2048, "activation": "relu", "moving_avg": 7, "dropout_rate": 0.05, "version": "fourier", "mode_select": "random", "modes": 32}],
+            ["patchtst", {"d_model": 512, "num_heads": 8, "num_encoder_layers": 1, "dim_ff": 2048, "patch_len": 7, "patch_stride": 1, "patch_padding": 0, "use_instance_scale": true}],
+            ["itransformer", {"d_model": 512, "num_heads": 8, "num_encoder_layers": 2, "dim_ff": 2048, "activation": "relu", "dropout_rate": 0.05, "use_instance_scale": true}],
+
+            ["timer", {"patch_len": 7, "d_model": 64, "num_heads": 4, "e_layers": 2, "dim_ff": 512, "activation": "relu", "dropout_rate": 0.1}],
+            ["timexer", {"d_model": 512, "num_heads": 8, "num_encoder_layers": 1, "dim_ff": 2048, "dropout_rate": 0.05, "activation": "relu", "patch_len": 16, "use_instance_scale": true}],
+            ["timemixer", {"d_model": 512, "num_heads": 8, "num_encoder_layers": 1, "dim_ff": 2048, "dropout_rate": 0.05, "moving_avg": 25, "top_k": 5, "channel_independence": true, "decomposition_method": "moving_avg", "down_sampling_method": "avg", "down_sampling_window": 1, "down_sampling_layers": 1, "use_instance_scale": true}],
+            ["coat", {"mode": "dr", "activation": "linear", "use_instance_scale": true, "dropout_rate": 0.05}],
+            ["codr", {"horizon": 1, "hidden_size": 64, "use_window_fluctuation_extraction": true, "dropout_rate": 0.2}]
+          ]
+        }
+      }
+  }
+}

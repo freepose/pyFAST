@@ -6,6 +6,7 @@
 """
 
 from .activation import get_activation_cls
+from .norm import DynamicTanh
 from .mlp import MLP
 from .dr import DirectionalRepresentation
 from .attention import SelfAttention, SymmetricAttention, MultiHeadSymmetricAttention

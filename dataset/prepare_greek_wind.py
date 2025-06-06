@@ -13,9 +13,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from fast.data import AbstractScale, StandardScale, MinMaxScale, scale_several_time_series
-from fast.data import SSTDataset, SMTDataset
-from dataset.time_feature import TimeAsFeature
+from fast.data import AbstractScale, scale_several_time_series
+from fast.data import SMTDataset
+from experiment.time_feature import TimeAsFeature
 
 
 def get_gwpf_column_names(return_ex_vars: bool = True) -> List:
@@ -163,11 +163,11 @@ def load_greece_wpf_smt(data_root: str,
             'horizon': horizon,
         }
 
-        if scaler is not None and type(scaler) != type(AbstractScale()):
-            scaler = scale_several_time_series(data[0], scaler)
+        if scaler is not None:
+            scaler = scale_several_time_series(scaler, data[0])
 
-        if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
-            ex_scaler = scale_several_time_series(data[1], ex_scaler)
+        if ex_vars is not None and ex_scaler is not None:
+            ex_scaler = scale_several_time_series(ex_scaler, data[1])
 
         if split_ratio == 1.0:
             train_ds = SMTDataset(**smt_params, stride=stride)
@@ -193,11 +193,11 @@ def load_greece_wpf_smt(data_root: str,
                 'horizon': horizon,
             }
 
-            if scaler is not None and type(scaler) != type(AbstractScale()):
-                scaler = scale_several_time_series(data[0], scaler)
+            if scaler is not None:
+                scaler = scale_several_time_series(scaler, data[0])
 
-            if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
-                ex_scaler = scale_several_time_series(data[1], ex_scaler)
+            if ex_vars is not None and ex_scaler is not None:
+                ex_scaler = scale_several_time_series(ex_scaler, data[1])
 
             train_ds = SMTDataset(**smt_params, stride=stride)
             return (train_ds, None), (scaler, ex_scaler)
@@ -229,11 +229,11 @@ def load_greece_wpf_smt(data_root: str,
             'horizon': horizon,
         }
 
-        if scaler is not None and type(scaler) != type(AbstractScale()):
-            scaler = scale_several_time_series(train_data[0], scaler)
+        if scaler is not None:
+            scaler = scale_several_time_series(scaler, train_data[0])
 
-        if ex_vars is not None and ex_scaler is not None and type(ex_scaler) != type(AbstractScale()):
-            ex_scaler = scale_several_time_series(train_data[1], ex_scaler)
+        if ex_vars is not None and ex_scaler is not None:
+            ex_scaler = scale_several_time_series(ex_scaler, train_data[1])
 
         train_ds = SMTDataset(**train_smt_params, stride=stride, mark='train')
         val_ds = SMTDataset(**val_smt_params, stride=output_window_size, mark='val')
