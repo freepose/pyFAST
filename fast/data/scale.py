@@ -247,20 +247,21 @@ class InstanceStandardScale(InstanceScale):
 
         assert x.ndim > 1, "The input tensor must be at least 3D."
 
+        dim2reduce = tuple(range(1, x.ndim - 1))
+
         if mask is not None:
             assert x.shape == mask.shape, 'x and mask must have the same shape.'
             nan_mask = ~mask
-            valid_counts = (~nan_mask).sum(dim=tuple(range(1, x.ndim - 1))).float()
+            valid_counts = (~nan_mask).sum(dim=dim2reduce).float()
             x_copy = x.clone()
             x_copy[nan_mask] = 0
-            self.miu = x_copy.mean(dim=tuple(range(1, x.ndim - 1)), keepdim=True) / valid_counts
-            self.sigma = (x_copy.var(dim=tuple(range(1, x.ndim - 1)), unbiased=False, keepdim=True) + self.epsilon).sqrt()
+            self.miu = x_copy.mean(dim=dim2reduce, keepdim=True) / valid_counts
+            self.sigma = (x_copy.var(dim=dim2reduce, unbiased=False, keepdim=True) + self.epsilon).sqrt()
             if self.num_features > 0:
                 self.affine_weight.data.fill_(1.0)
                 self.affine_bias.data.fill_(0.0)
             return self
 
-        dim2reduce = tuple(range(1, x.ndim - 1))
         self.miu = x.mean(dim=dim2reduce, keepdim=True).detach()
         self.sigma = (x.var(dim=dim2reduce, keepdim=True, unbiased=False) + self.epsilon).sqrt().detach()
         return self
@@ -326,5 +327,3 @@ available_scales = {
     'instance': InstanceScale,
     'instance_standard': InstanceStandardScale, # a.k.a., ReVIN
 }
-
-

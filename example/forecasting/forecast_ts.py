@@ -17,7 +17,6 @@ from fast.train import Trainer
 from fast.metric import Evaluator, MSE
 
 from fast.model.base import get_model_info, covert_parameters
-from experiment.modeler.ts import ts_modeler
 
 from dataset.prepare_xmcdc import load_xmcdc_sst
 from dataset.prepare_industrial_power_load import load_industrial_power_load_sst as load_ipl_sst
@@ -33,6 +32,10 @@ def main():
 
     # ds_params = {'input_window_size': 8 * 24, 'output_window_size': 24, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_ipl_sst(data_root, interpolate_type='li', **ds_params)
+
+    ts_modeler = {
+        'ar': [nn.Linear, {'in_features': train_ds.input_window_size, 'out_features': train_ds.output_window_size}]
+    }
 
     model_cls, user_settings = ts_modeler['ar']
 

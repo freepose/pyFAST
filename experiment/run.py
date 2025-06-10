@@ -34,6 +34,7 @@ def supervised_learning(model_and_params: Union[Tuple[nn.Module, dict], List[Tup
                         scale_on: Literal['ts', 'ex_ts', 'both'] = None):
     """
         Supervised learning training function.
+
         :param model_and_params: model class, and it's (user-given) parameters, e.g., (MyModel, {'param1': 1, 'param2': 2})
         :param datasets: datasets, e.g., (train_ds,) or (train_ds, val_ds) or (train_ds, val_ds, test_ds)
         :param device: the device for model training.

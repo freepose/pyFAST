@@ -24,4 +24,3 @@ class GLU(nn.Module):
         right = torch.sigmoid(self.linear_right(x))  # => [..., output_channel]
 
         return left * right  # => [..., output_channels]
-

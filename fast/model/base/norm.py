@@ -22,6 +22,9 @@ class DynamicTanh(nn.Module):
         self.beta = nn.Parameter(torch.zeros(dim), requires_grad=True)
 
     def forward(self, x: torch.Tensor):
+        """
+            :param x: torch.Tensor, input tensor of shape (batch_size, seq_len, dim).
+        """
+
         x = torch.tanh(self.alpha * x)
         return self.gamma * x + self.beta
-

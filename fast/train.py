@@ -133,8 +133,8 @@ class Trainer:
             batch_y_hat = self.model(*batch_inputs)
             batch_loss = self.criterion(batch_y_hat, *batch_outputs)
 
-            if getattr(self.model, 'additive_loss', None) is not None:
-                batch_loss += self.model.additive_loss    # KL-Divergence loss or other regularization loss
+            if getattr(self.model, 'additional_loss', None) is not None:
+                batch_loss += self.model.additional_loss    # KL-Divergence loss or other regularization loss
 
             if mode in ['train', 'online']:
                 self.optimizer.zero_grad()  # clear gradients for next train
