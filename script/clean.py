@@ -39,7 +39,9 @@ if __name__ == '__main__':
     os.chdir('..')
     print('Removing __pycache__ directories...')
     remove_pycache()
+
     print('Removing .git directories...')
     remove_git()
+
     print('Removing .DS_Store files...')
     remove_ds_store()

@@ -5,4 +5,5 @@ script/
 log/
 .DS_Store
 .bashrc
-async_scheduler.py
+
+
