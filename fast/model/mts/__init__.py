@@ -9,6 +9,11 @@ from .lstnet import LSTNet
 from .nhits import NHiTS
 from .drn import DeepResidualNetwork
 from .dlinear import NLinear, DLinear
+from .rlinear import RLinear, STD
+from .amplifier import Amplifier
+from .tsmixer import TSMixer
+from .patchmlp import PatchMLP
+from .kan import KAN
 
 from .transformer.transformer import Transformer
 from .transformer.informer import Informer
@@ -25,6 +30,7 @@ from .transformer.timesfm import TimesFM
 from .transformer.timer import Timer
 from .transformer.timexer import TimeXer
 from .transformer.timemixer import TimeMixer
+from .transformer.tslanet import TSLANet
 
 from .gnn.stid import STID
 from .gnn.stnorm import STNorm

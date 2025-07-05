@@ -15,7 +15,7 @@ import os
 import torch
 import torch.optim as optim
 
-from fast import initial_seed, get_device, get_common_kwargs
+from fast import initial_seed, initial_logger, get_device, get_common_kwargs
 from fast.data import bdp_collate_fn
 from fast.train import Trainer
 from fast.metric import Evaluator, MSE
@@ -79,4 +79,5 @@ def mask_mts_fusion():
 
 if __name__ == '__main__':
     initial_seed(2025)
+    initial_logger()
     mask_mts_fusion()

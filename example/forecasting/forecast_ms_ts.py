@@ -36,8 +36,8 @@ def main():
     device = get_device('cpu')
     logger = initial_logger('stdout')
 
-    stm_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_smt('1week', **stm_params)
+    # stm_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
+    # (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_smt('1week', **stm_params)
 
     # (train_ds, val_ds), (scaler, ex_scaler) = load_kdd2018_glucose_smt(data_root, 0.8, 5 * 12, 6, 1, 1)
     # (train_ds, val_ds), (scaler, ex_scaler) = load_sh_diabetes_smt(data_root, 'all', None, False, 0.8, 6 * 4, 2, 1, 1)
@@ -45,8 +45,8 @@ def main():
     # ds_params = {'input_window_size': 6 * 24, 'output_window_size': 24, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_ipl_smt(data_root, interpolate_type='mice', **ds_params)
 
-    # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    # (train_ds, val_ds), (scaler, ex_scaler) = load_gwpf_smt(data_root, '1day', None, False, 'inter', **ds_params, factor=0.001)
+    ds_params = {'input_window_size': 10 * 24, 'output_window_size': 1 * 24, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
+    (train_ds, val_ds), (scaler, ex_scaler) = load_gwpf_smt(data_root, '1hour', None, False, 'intra', **ds_params, factor=1)
 
     # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
     # (train_ds, val_ds), (scaler, ex_scaler) = load_sdwpf_smt(data_root, '1day', None, False, 'inter', **ds_params, factor=0.001)
@@ -65,7 +65,7 @@ def main():
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
 
     criterion = MSE()
-    evaluator = Evaluator(['MAE', 'RMSE', 'PCC'])
+    evaluator = Evaluator(['MAE', 'RMSE', 'CV-RMSE', 'R2'])
 
     trainer = Trainer(device, model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler,
@@ -82,4 +82,5 @@ def main():
 
 if __name__ == '__main__':
     initial_seed(2025)
+    initial_logger()
     main()

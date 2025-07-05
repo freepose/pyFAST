@@ -66,9 +66,9 @@ def load_pka(data_root: str, ds_params: dict,
     pka_data_root = data_root + 'time_series/protein_pKa/{}/'.format(ds_name)
     dirs = {'train': pka_data_root + 'train', 'val': pka_data_root + 'test'}
 
-    ds_cls_dict = {'stm': SMTDataset, 'bdp': BDPDataset}
+    ds_cls_dict = {'smt': SMTDataset, 'bdp': BDPDataset}
     ds_cls = ds_cls_dict.get(load_as, BDPDataset)
-    if load_as == 'stm':
+    if load_as == 'smt':
         ds_params.update({'split_ratio': 1, 'split': 'train'})
 
     train_csv_files = [os.path.join(dirs['train'], f) for f in sorted(os.listdir(dirs['train'])) if f.endswith('.csv')]

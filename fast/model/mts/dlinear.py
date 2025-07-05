@@ -4,114 +4,101 @@
 import torch
 import torch.nn as nn
 
+from typing import Literal
 from ..base.decomposition import DecomposeSeries
+from .ar import GAR, AR
 
 
 class DLinear(nn.Module):
     """
-        Decomposition-Linear
-        Ailing Zeng, Muxi Chen, Lei Zhang, Qiang Xu
+        **Decomposition-Linear**
+
         Are Transformers Effective for Time Series Forecasting?
-        AAAI 2022, DOI: 10.1609/aaai.v37i9.26317
+        Ailing Zeng, Muxi Chen, Lei Zhang, Qiang Xu.
+        AAAI 2022, DOI: 10.1609/aaai.v37i9.26317.
         url: https://arxiv.org/pdf/2205.13504.pdf
 
-        Official Code: https://github.com/cure-lab/LTSF-Linear
+        Author provided code: https://github.com/cure-lab/LTSF-Linear
 
         :param input_window_size: input window size.
         :param input_vars: input variable number.
         :param output_window_size: output window size.
-        :param individual: whether shared model among different variates.
-        :param kernel_size: the kernel size of series decomposition function。
+        :param kernel_size: the kernel size of series decomposition function.
+        :param mapping: the mapping type, 'gar' for Global AR, 'ar' for Autoregressive.
     """
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
-                 individual: bool = False, kernel_size: int = 25):
+                 kernel_size: int = 25, mapping: Literal['gar', 'ar'] = 'gar'):
         super(DLinear, self).__init__()
+        assert mapping in ['gar', 'ar'], f"Mapping should be 'gar' or 'ar', but got {mapping}."
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
-        self.individual = individual
+        self.kernel_size = kernel_size
+        self.mapping = mapping
 
         self.decomposition = DecomposeSeries(kernel_size)
 
-        if self.individual:
-            self.linear_seasonal = nn.ModuleList()
-            self.linear_trend = nn.ModuleList()
-            for i in range(self.input_vars):
-                self.linear_seasonal.append(nn.Linear(self.input_window_size, self.output_window_size))
-                self.linear_trend.append(nn.Linear(self.input_window_size, self.output_window_size))
+        if mapping == 'ar':
+            self.trend_l1 = AR(self.input_window_size, self.input_vars, self.output_window_size)
+            self.seasonal_l1 = AR(self.input_window_size, self.input_vars, self.output_window_size)
         else:
-            self.linear_seasonal = nn.Linear(self.input_window_size, self.output_window_size)
-            self.linear_trend = nn.Linear(self.input_window_size, self.output_window_size)
+            self.trend_l1 = GAR(self.input_window_size, self.output_window_size)
+            self.seasonal_l1 = GAR(self.input_window_size, self.output_window_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x: shape is (batch_size, input_window_size, input_vars).
         """
-        seasonal_init, trend_init = self.decomposition(x)
-        seasonal_init, trend_init = seasonal_init.transpose(1, 2), trend_init.transpose(1, 2)
+        trend_init, seasonal_init = self.decomposition(x)
 
-        if self.individual:
-            seasonal_output = torch.zeros([seasonal_init.size(0), seasonal_init.size(1), self.output_window_size],
-                                          dtype=seasonal_init.dtype, device=seasonal_init.device)
-            trend_output = torch.zeros([trend_init.size(0), trend_init.size(1), self.output_window_size],
-                                       dtype=trend_init.dtype, device=trend_init.device)
-            for i in range(self.input_vars):
-                seasonal_output[:, i, :] = self.linear_seasonal[i](seasonal_init[:, i, :])
-                trend_output[:, i, :] = self.linear_trend[i](trend_init[:, i, :])
-        else:
-            seasonal_output = self.linear_seasonal(seasonal_init)
-            trend_output = self.linear_trend(trend_init)
+        trend_output = self.trend_l1(trend_init)
+        seasonal_output = self.seasonal_l1(seasonal_init)
 
         out = seasonal_output + trend_output
-        out = out.transpose(1, 2)
 
         return out
 
 
 class NLinear(nn.Module):
     """
-        Normalization-Linear
-        Ailing Zeng, Muxi Chen, Lei Zhang, Qiang Xu
+        **Normalization-Linear**
+
         Are Transformers Effective for Time Series Forecasting?
+        Ailing Zeng, Muxi Chen, Lei Zhang, Qiang Xu
         url: https://arxiv.org/pdf/2205.13504.pdf
 
-        Official Code: https://github.com/cure-lab/LTSF-Linear
+        Author provided code: https://github.com/cure-lab/LTSF-Linear
 
         :param input_window_size: input window size.
         :param input_vars: input variable number.
         :param output_window_size: output window size.
-        :param individual: whether shared model among different variates.
+        :param mapping: the mapping type, 'gar' for Global AR, 'ar' for Autoregressive.
     """
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
-                 individual: bool = False):
+                 mapping: Literal['gar', 'ar'] = 'gar'):
         super(NLinear, self).__init__()
+        assert mapping in ['gar', 'ar'], f"Mapping should be 'gar' or 'ar', but got {mapping}."
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
-        self.individual = individual
+        self.mapping = mapping
 
-        if self.individual:
-            self.linear = nn.ModuleList()
-            for i in range(self.input_vars):
-                self.linear.append(nn.Linear(self.input_window_size, self.output_window_size))
+        if self.mapping == 'ar':
+            self.l1 = AR(self.input_window_size, self.input_vars, self.output_window_size)
         else:
-            self.linear = nn.Linear(self.input_window_size, self.output_window_size)
+            self.l1 = GAR(self.input_window_size, self.output_window_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x: shape is (batch_size, input_window_size, input_vars).
         """
         seq_last = x[:, -1:, :].detach()
         x = x - seq_last
-        if self.individual:
-            output = torch.zeros([x.size(0), self.output_window_size, x.size(2)], dtype=x.dtype, device=x.device)
-            for i in range(self.input_vars):
-                output[:, :, i] = self.linear[i](x[:, :, i])
-            x = output
-        else:
-            x = self.linear(x.transpose(1, 2)).transpose(1, 2)
+
+        x = self.l1(x)    # -> (batch_size, output_window_size, input_vars)
+
         out = x + seq_last
 
         return out

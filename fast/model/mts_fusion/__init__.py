@@ -9,6 +9,7 @@ from .dgr import DGR
 from .mvt import MvT
 from .dgdr import DGDR
 from .gainge import GAINGE
+from .cabin import Cabin
 from .tspt import TSPT
 
 from .temporalcausalnet import TemporalCausalNet

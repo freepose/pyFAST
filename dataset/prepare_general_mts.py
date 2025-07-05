@@ -16,12 +16,13 @@ from fast.data import SSTDataset
 from experiment.load import load_sst_dataset
 
 metadata = {
+    # General time series datasets
     "ETTh1": {
         "path": "{root}/Github_ETT_small/ETTh1.csv",
         "columns": {
             "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
         }
     },
     "ETTh2": {
@@ -29,7 +30,7 @@ metadata = {
         "columns": {
             "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
         }
     },
     "ETTm1": {
@@ -37,7 +38,7 @@ metadata = {
         "columns": {
             "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
         }
     },
     "ETTm2": {
@@ -45,16 +46,16 @@ metadata = {
         "columns": {
             "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
         }
     },
     "ExchangeRate": {
-        "path": "{root}/Github_exchange_rate/exchange_rate.csv",
+        "path": "{root}/Github_exchange_rate/exchange_rate_x1000.csv",
         "columns": {
             "time": "Date",
             "univariate": ["Singapore"],
-            "multivariate": ["Australia", "British", "Canada", "Switzerland", "China", "Japan", "New Zealand",
-                             "Singapore"]
+            "multivariate": ["Australia", "British", "Canada", "Switzerland", "China",
+                             "Japan", "New Zealand", "Singapore"]
         }
     },
     "JenaClimate": {
@@ -151,6 +152,10 @@ metadata = {
                              "BNOTDETERMINED", "INF_B", "INF_ALL", "INF_NEGATIVE", "ILI_ACTIVITY"]
         }
     }
+
+    # [Energy] Wind turbine active power datasets, these datasets may include exogenous variables.
+
+
 }
 
 
@@ -163,7 +168,8 @@ def load_general_mts_sst(mts_data_root: str,
                          horizon: int = 1,
                          stride: int = 1,
                          train_ratio: float = 0.8,
-                         val_ratio: float = None) -> Union[SSTDataset, Tuple[SSTDataset, ...]]:
+                         val_ratio: float = None,
+                         factor: float = 1.0) -> Union[SSTDataset, Tuple[SSTDataset, ...]]:
     """
         Load general time series dataset from a CSV file, transform time series data into supervised data,
         and split the dataset into training, validation, and test sets.
@@ -187,6 +193,7 @@ def load_general_mts_sst(mts_data_root: str,
         :param stride: the distance between two consecutive samples.
         :param train_ratio: the ratio of training set. Default is 0.8.
         :param val_ratio: the ratio of validation set. Default is None.
+        :param factor: a factor to scale the time series data. Default is 1.0.
         :return: (train_ds, val_ds, test_ds): the datasets split into training, validation, and testing sets.
     """
     assert dataset_name in metadata, \
@@ -202,15 +209,16 @@ def load_general_mts_sst(mts_data_root: str,
     is_time_normalized = True
 
     print('Loading {}'.format(filename))
-    sst_params = {
+    load_sst_params = {
         'filename': filename,
         'variables': variables, 'mask_variables': False,
         'ex_variables': None, 'mask_ex_variables': False,
-        'time_variable': time_variable, 'frequency': frequency, 'is_time_normalized': is_time_normalized,
+        'time_variable': time_variable, 'time_feature_freq': frequency, 'is_time_normalized': is_time_normalized,
         'input_window_size': input_window_size, 'output_window_size': output_window_size,
         'horizon': horizon, 'stride': stride,
-        'train_ratio': train_ratio, 'val_ratio': val_ratio
+        'train_ratio': train_ratio, 'val_ratio': val_ratio,
+        'factor': factor,
     }
-    sst_datasets = load_sst_dataset(**sst_params)
+    sst_datasets = load_sst_dataset(**load_sst_params)
 
     return sst_datasets

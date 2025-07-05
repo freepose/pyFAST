@@ -26,6 +26,7 @@
       "ID_bsi": ["BSI_厦门腹泻_all", "BSI_厦门腹泻_pc", "BSI_厦门腹泻_wise"],
       "HV_bsi": ["BSI_厦门肝炎_all", "BSI_厦门肝炎_pc", "BSI_厦门肝炎_wise"]
     },
+
     "experiments": {
       "HFMD_L10_H1": {
         "targets": "HFMD",

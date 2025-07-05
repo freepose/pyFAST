@@ -22,16 +22,17 @@ def load_sst_dataset(filename: str,
                      ex_variables: List[str] = None,
                      mask_ex_variables: bool = False,
                      time_variable: str = None,
-                     frequency: Literal['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'] = 'd',
+                     time_feature_freq: Literal['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'] = 'd',
                      is_time_normalized: bool = False,
                      input_window_size: int = 96,
                      output_window_size: int = 24,
                      horizon: int = 1,
                      stride: int = 1,
                      train_ratio: float = 0.8,
-                     val_ratio: float = None) -> Union[SSTDataset, Tuple[SSTDataset, ...]]:
+                     val_ratio: float = None,
+                     factor: float = 1.0) -> Union[SSTDataset, Tuple[SSTDataset, ...]]:
     """
-        Load time series dataset from a CSV file,
+        Load time series dataset from a **CSV** file,
         transform time series data into supervised data,
         and split the dataset into training, validation, and test sets.
 
@@ -49,7 +50,7 @@ def load_sst_dataset(filename: str,
         :param ex_variables: names of the exogenous variables.
         :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
         :param time_variable: name of the time variable.
-        :param frequency: frequency of the time variable.
+        :param time_feature_freq: frequency of the time variable.
                           The frequency should be in: ['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'].
         :param is_time_normalized: whether to normalize the time features into [-.5, 0.5].
         :param input_window_size: input window size of the transformed supervised data. A.k.a., lookback window size.
@@ -58,6 +59,7 @@ def load_sst_dataset(filename: str,
         :param stride: the distance between two consecutive samples.
         :param train_ratio: the ratio of training set.
         :param val_ratio: the ratio of validation set.
+        :param factor: a factor to scale the **target** variables, default is 1.0.
         :return: (train_ds, val_ds, test_ds): the datasets split into training, validation, and testing sets.
     """
     if not os.path.exists(filename):
@@ -72,6 +74,8 @@ def load_sst_dataset(filename: str,
         assert 0 < val_ratio < 1, f'Invalid val_ratio: {val_ratio}. It must be in the range (0, 1).'
         assert 0 < train_ratio + val_ratio < 1, \
             f'Invalid test_ratio: {train_ratio} + {val_ratio}. It must be in the range (0, 1).'
+
+    assert isinstance(factor, (int, float)), f'Invalid factor: {factor}. It must be an int or float.'
 
     float_type = np.float32  # the default float type is ``float32``, you can change it to ``float64`` if needed
     device = torch.device('cpu') # the default device is ``cpu``, you can change it to ``cuda`` if needed
@@ -93,7 +97,7 @@ def load_sst_dataset(filename: str,
     target_df = df.loc[:, variables]
     target_array = target_df.values.astype(float_type)
     target_tensor = torch.tensor(target_array, device=device)
-    sst_params['ts'] = target_tensor
+    sst_params['ts'] = target_tensor * factor
 
     if mask_variables:
         mask_target_array = ~np.isnan(target_array)
@@ -117,7 +121,7 @@ def load_sst_dataset(filename: str,
 
     if time_variable is not None:
         df[time_variable] = pd.to_datetime(df[time_variable])
-        time_features = TimeAsFeature(freq=frequency, is_normalized=is_time_normalized)(df[time_variable].dt)
+        time_features = TimeAsFeature(freq=time_feature_freq, is_normalized=is_time_normalized)(df[time_variable].dt)
         time_feature_tensor = torch.tensor(time_features, device=device)
         sst_params["ex_ts2"] = time_feature_tensor
 

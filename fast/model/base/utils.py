@@ -67,7 +67,8 @@ def get_constants(model: nn.Module) -> dict:
         :param model: model instance.
         :return: a dictionary of model constants.
     """
-    constant_dict = {key: value for key, value in vars(model).items() if isinstance(value, (int, float, str, bool))
+    constant_dict = {key: value for key, value in vars(model).items() if
+                     isinstance(value, (int, float, str, bool, list, tuple))
                      and not key.startswith('_') and not key == 'training'}
 
     return constant_dict

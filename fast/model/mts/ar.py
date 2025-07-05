@@ -149,22 +149,20 @@ class ANN(nn.Module):
         url: https://doi.org/10.1016/j.enconman.2022.116163
 
         :param input_window_size:  input window size.
-        :param input_vars: number of input variables.
         :param output_window_size: output window size.
         :param hidden_size: hidden size.
     """
 
-    def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1,
+    def __init__(self, input_window_size: int, output_window_size: int = 1,
                  hidden_size: int = 64):
         super(ANN, self).__init__()
         self.input_window_size = input_window_size
-        self.input_vars = input_vars
         self.output_window_size = output_window_size
         self.hidden_size = hidden_size
 
-        self.fc = torch.nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(self.input_window_size, self.hidden_size),
-            torch.nn.ReLU(True),
+            nn.ReLU(True),
             nn.Linear(self.hidden_size, self.output_window_size)
         )
 

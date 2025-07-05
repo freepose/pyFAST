@@ -53,7 +53,7 @@ Jumpstart your time series projects with pyFAST using this basic example:
 ```python
 import torch
 
-from fast import initial_seed, get_device
+from fast import initial_seed, initial_logger, get_device
 from fast.data import SSTDataset
 from fast.train import Trainer
 from fast.metric import Evaluator
@@ -61,6 +61,9 @@ from fast.model.mts.ar import ANN  # Example: Using a simple ANN model
 
 # Initialize components for reproducibility and evaluation
 initial_seed(2025)
+
+# Initialize logger for tracking training progress
+initial_logger()
 
 # Prepare your time series data: replace with actual data loading.
 ts = torch.sin(torch.arange(0, 100, 0.1)).unsqueeze(1)  # Shape: (1000, 1)
@@ -70,7 +73,6 @@ val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, '
 # Initialize the model (e.g., ANN)
 model = ANN(
     input_window_size=train_ds.input_window_size,  # Adapt input window size from dataset
-    input_vars=train_ds.input_vars,  # Adapt input variable number from dataset
     output_window_size=train_ds.output_window_size,  # Adapt output window size from dataset, a.k.a. prediction steps
     hidden_size=32  # Hidden layer size
 )
@@ -81,7 +83,8 @@ evaluator = Evaluator(['MAE', 'RMSE'])  # Evaluation metrics
 trainer = Trainer(device, model, evaluator=evaluator)
 
 # Train model using prepared datasets
-trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
+history = trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
+print(history)
 
 # After training, evaluate on a test dataset (if available)
 val_results = trainer.evaluate(val_ds)
