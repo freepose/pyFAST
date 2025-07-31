@@ -234,5 +234,5 @@ def main():
 if __name__ == '__main__':
     initial_seed(2025)
     initial_logger()
-    main()
-    # verify_sst_datasets()
+    # main()
+    verify_sst_datasets()

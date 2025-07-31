@@ -25,9 +25,7 @@ def load_sst_dataset(filename: str,
                      mask_variables: bool = False,
                      ex_variables: List[str] = None,
                      mask_ex_variables: bool = False,
-                     time_variable: str = None,
-                     time_feature_freq: Literal['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'] = 'd',
-                     is_time_normalized: bool = False,
+                     ex2_variables: str = None,
                      input_window_size: int = 96,
                      output_window_size: int = 24,
                      horizon: int = 1,
@@ -47,10 +45,8 @@ def load_sst_dataset(filename: str,
         :param mask_variables: whether to mask the target variables. This uses for sparse time series.
         :param ex_variables: names of the exogenous variables.
         :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
-        :param time_variable: name of the time variable.
-        :param time_feature_freq: frequency of the time variable.
-                          The frequency should be in: ['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'].
-        :param is_time_normalized: whether to normalize the time features into [-.5, 0.5].
+        :param ex2_variables: names of the second exogenous variables. This is used for pre-known features,
+                                such as time features, forecasted weather factors, etc.
         :param input_window_size: input window size of the transformed supervised data. A.k.a., lookback window size.
         :param output_window_size: output window size of the transformed supervised data. A.k.a., prediction length.
         :param horizon: the distance between input and output windows of a sample.
@@ -104,12 +100,11 @@ def load_sst_dataset(filename: str,
             mask_ex_tensor = torch.tensor(mask_ex_array, dtype=torch.bool, device=device)
             sst_args['ex_ts_mask'] = mask_ex_tensor
 
-    if time_variable is not None:
-        df[time_variable] = pd.to_datetime(df[time_variable])
-        feature_extractor = TimeAsFeature(freq=time_feature_freq, is_normalized=is_time_normalized)
-        time_features = feature_extractor(df[time_variable].dt)
-        time_feature_tensor = torch.tensor(time_features, device=device)
-        sst_args["ex_ts2"] = time_feature_tensor
+    if ex2_variables is not None:
+        ex_df = df.loc[:, ex2_variables]
+        ex_array = ex_df.values.astype(float_type)
+        ex_tensor = torch.tensor(ex_array, device=device)
+        sst_args['ex_ts2'] = ex_tensor
 
     sst_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                      'horizon': horizon, 'stride': stride})
@@ -131,9 +126,7 @@ def load_sst_dataset(filename: str,
 def get_smt_args(filenames: List[str],
                  variables: List[str], mask_variables: bool = False,
                  ex_variables: List[str] = None, mask_ex_variables: bool = False,
-                 time_variable: str = None,
-                 time_feature_freq: Literal['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'] = 'd',
-                 is_time_normalized: bool = False,
+                 ex2_variables: List[str] = None,
                  float_type: np.dtype = np.float32,
                  device: torch.device = torch.device('cpu'),
                  show_progress: bool = True) -> Dict[str, Any]:
@@ -145,9 +138,7 @@ def get_smt_args(filenames: List[str],
         :param mask_variables: whether to mask the target variables. This uses for sparse time series
         :param ex_variables: names of the exogenous variables.
         :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
-        :param time_variable: name of the time variable.
-        :param time_feature_freq: frequency of the time variable.
-        :param is_time_normalized: whether to normalize the time features into [-.5, 0.5].
+        :param ex2_variables: names of the exogenous variables.
         :param float_type: the data type of the time series data, default is ``np.float32``.
         :param device: the device to load the data, default is 'cpu'.
                        This dataset device can be one of ['cpu', 'cuda', 'mps'].
@@ -161,7 +152,7 @@ def get_smt_args(filenames: List[str],
     smt_args['ts_mask'] = [] if mask_variables else None
     smt_args['ex_ts'] = [] if ex_variables is not None else None
     smt_args['ex_ts_mask'] = [] if mask_ex_variables else None
-    smt_args['ex_ts2'] = [] if time_variable is not None else None
+    smt_args['ex_ts2'] = [] if ex2_variables is not None else None
 
     pbar = tqdm(total=len(filenames), leave=False, file=sys.stdout) if show_progress else None
     for filename in filenames:
@@ -192,12 +183,11 @@ def get_smt_args(filenames: List[str],
                 mask_ex_tensor = torch.tensor(mask_ex_array, dtype=torch.bool, device=device)
                 smt_args['ex_ts_mask'].append(mask_ex_tensor)
 
-        if time_variable is not None:
-            df[time_variable] = pd.to_datetime(df[time_variable])
-            feature_extractor = TimeAsFeature(freq=time_feature_freq, is_normalized=is_time_normalized)
-            time_features = feature_extractor(df[time_variable].dt)
-            time_feature_tensor = torch.tensor(time_features, device=device)
-            smt_args["ex_ts2"].append(time_feature_tensor)
+        if ex2_variables is not None:
+            ex_df = df.loc[:, ex_variables]
+            ex_array = ex_df.values.astype(float_type)
+            ex_tensor = torch.tensor(ex_array, device=device)
+            smt_args['ex_ts2'].append(ex_tensor)
 
         if pbar is not None:
             pbar.update(1)
@@ -213,9 +203,7 @@ def load_smt_datasets(filenames: List[str],
                       mask_variables: bool = False,
                       ex_variables: List[str] = None,
                       mask_ex_variables: bool = False,
-                      time_variable: str = None,
-                      time_feature_freq: Literal['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'] = 'd',
-                      is_time_normalized: bool = False,
+                      ex2_variables: List[str] = None,
                       input_window_size: int = 96,
                       output_window_size: int = 24,
                       horizon: int = 1,
@@ -232,10 +220,8 @@ def load_smt_datasets(filenames: List[str],
         :param ex_variables: names of the exogenous variables.
         :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse
             exogenous time series.
-        :param time_variable: name of the time variable.
-        :param time_feature_freq: frequency of the time variable.
-                            The frequency should be in: ['Y', 'ME', 'W', 'd', 'B', 'h', 'min', 's'].
-        :param is_time_normalized: whether to normalize the time features into [-.5, 0.5].
+        :param ex2_variables: names of the second exogenous variables.
+                            This is used for pre-known features, such as time features, forecasted weather factors, etc.
         :param input_window_size: input window size of the transformed supervised data
                             A.k.a., lookback window size.
         :param output_window_size: output window size of the transformed supervised data
@@ -274,8 +260,7 @@ def load_smt_datasets(filenames: List[str],
     show_pregress = True
 
     if split_ratios is None:
-        smt_args = get_smt_args(filenames, variables, mask_variables, ex_variables, mask_ex_variables,
-                                time_variable, time_feature_freq, is_time_normalized,
+        smt_args = get_smt_args(filenames, variables, mask_variables, ex_variables, mask_ex_variables, ex2_variables,
                                 float_type=float_type, device=device, show_progress=show_pregress)
         smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                          'horizon': horizon, 'stride': stride})
@@ -285,8 +270,7 @@ def load_smt_datasets(filenames: List[str],
     cum_split_ratios = np.cumsum([0, *split_ratios])
 
     if split_strategy == 'intra':
-        smt_args = get_smt_args(filenames, variables, mask_variables, ex_variables, mask_ex_variables,
-                                time_variable, time_feature_freq, is_time_normalized,
+        smt_args = get_smt_args(filenames, variables, mask_variables, ex_variables, mask_ex_variables, ex2_variables,
                                 float_type=float_type, device=device, show_progress=show_pregress)
         smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                          'horizon': horizon, 'stride': stride})
@@ -302,8 +286,7 @@ def load_smt_datasets(filenames: List[str],
             start, end = int(filename_num * s), int(filename_num * e)
             split_filenames = filenames[start:end]
             smt_args = get_smt_args(split_filenames, variables, mask_variables, ex_variables, mask_ex_variables,
-                                    time_variable, time_feature_freq, is_time_normalized,
-                                    float_type=float_type, device=device, show_progress=show_pregress)
+                                    ex2_variables, float_type=float_type, device=device, show_progress=show_pregress)
             smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                              'horizon': horizon, 'stride': stride})
             if i > 0:

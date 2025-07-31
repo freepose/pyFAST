@@ -123,6 +123,21 @@ smt_metadata = {
             "multivariate": ["Power"],
         }
     },
+
+    # [Spatio-temporal] Human activity recognition datasets, the "time" feature is normalized.
+    # The original data is from: https://archive.ics.uci.edu/dataset/196/localization+data+for+person+activity
+    "HumanActivity": {
+        "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source/"],
+        "columns": {
+            "univariate": ["010-000-024-033_x", "010-000-024-033_y", "010-000-024-033_z"],
+            "multivariate": ["010-000-024-033_x", "010-000-024-033_y", "010-000-024-033_z",
+                             "010-000-030-096_x", "010-000-030-096_y", "010-000-030-096_z",
+                             "020-000-032-221_x", "020-000-032-221_y", "020-000-032-221_z",
+                             "020-000-033-111_x", "020-000-033-111_y", "020-000-033-111_z"
+                             ],
+            "exogenous2": ["normalized_time"],
+        }
+    },
 }
 
 
@@ -163,7 +178,7 @@ def prepare_smt_datasets(data_root: str,
                             ``ts_mask``: bool, whether to mask the time series variables, default is False.
                             ``use_ex``: bool, whether to use exogenous variables, default is None.
                             ``ex_ts_mask``: bool, whether to mask the exogenous variables, default is False.
-                            ``use_time_feature``: bool, whether to use time features, default is False.
+                            ``use_ex2``: bool, whether to use time features, default is False.
         :return: the (split) datasets as SSTDataset objects.
     """
     assert dataset_name in smt_metadata, \
@@ -178,16 +193,14 @@ def prepare_smt_datasets(data_root: str,
     task_ts_mask = task_kwargs.get('ts_mask', False)
     task_use_ex = task_kwargs.get('use_ex', False)
     task_ex_mask = task_kwargs.get('ex_mask', False)
-    task_use_time_feature = task_kwargs.get('use_time_feature', False)
+    task_ex2 = task_kwargs.get('use_ex2', False)
 
     variables = given_metadata['columns'].get(task_ts, None)
     if variables is None:
         raise ValueError(f"Task type '{task_ts}' not found in dataset '{dataset_name}' metadata.")
-    ex_variables = given_metadata['columns'].get('exogenous', None) if task_use_ex else None
 
-    time_variable = given_metadata['columns'].get('time', None) if task_use_time_feature else None
-    tf_freq = given_metadata.get('time_feature_freq', 'D')
-    is_time_normalized = given_metadata.get('is_time_normalized', True)
+    ex_variables = given_metadata['columns'].get('exogenous', None) if task_use_ex else None
+    ex2_variables = given_metadata['columns'].get('exogenous2', None) if task_ex2 else None
 
     filenames = []
     for path in paths:
@@ -212,7 +225,7 @@ def prepare_smt_datasets(data_root: str,
         'filenames': filenames,
         'variables': variables, 'mask_variables': task_ts_mask,
         'ex_variables': ex_variables, 'mask_ex_variables': task_ex_mask,
-        'time_variable': time_variable, 'time_feature_freq': tf_freq, 'is_time_normalized': is_time_normalized,
+        'ex2_variables': ex2_variables,
         'input_window_size': input_window_size, 'output_window_size': output_window_size,
         'horizon': horizon, 'stride': stride,
         'split_ratios': split_ratios,
