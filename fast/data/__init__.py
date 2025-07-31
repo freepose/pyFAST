@@ -15,7 +15,7 @@
 
 from .scale import AbstractScale, MinMaxScale, MeanScale, MaxScale, StandardScale, LogScale
 from .scale import InstanceScale, InstanceStandardScale
-from .scale import scale_several_time_series
+from .scale import scaler_fit, scaler_transform
 
 from .patch import PatchMaker
 

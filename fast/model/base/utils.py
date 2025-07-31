@@ -87,7 +87,8 @@ def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', 'auto'] 
     constants = get_constants(model)
     params_counts = count_parameters(model, count_unit)
 
-    count_str = '{:.2f}/{:.2f}{}'.format(params_counts['trainable'], params_counts['total'], params_counts['unit'])
+    count_str = '{:.2f}{}/{:.2f}{}'.format(params_counts['trainable'], params_counts['unit'],
+                                         params_counts['total'], params_counts['unit'])
     params_dict = {**constants, 'trainable/total': count_str}
 
     params_str = ', '.join([f'{key}={value}' for key, value in params_dict.items()])

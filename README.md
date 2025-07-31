@@ -29,7 +29,7 @@
 
 As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` library is structured into five core modules, ensuring a cohesive and versatile framework:
 
-*   **`data/` Module:**  Handles data loading, preprocessing, and dataset creation for SST, SMT, MTM, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
+*   **`data/` Module:**  Handles data loading, preprocessing, and dataset creation for SST, SMT, MMT, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
 *   **`model/` Module:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
 *   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
 *   **`metric/` Module:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
@@ -67,8 +67,8 @@ initial_logger()
 
 # Prepare your time series data: replace with actual data loading.
 ts = torch.sin(torch.arange(0, 100, 0.1)).unsqueeze(1)  # Shape: (1000, 1)
-train_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 'train')
-val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 'val')
+train_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0, 0.8, mark='train')
+val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 1., mark='val')
 
 # Initialize the model (e.g., ANN)
 model = ANN(
@@ -114,33 +114,25 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 
 **Benchmarking Highlights:**
 
-*   **Datasets:** Evaluated on ETT-small (long-term forecasting), Electricity Load, and XMC-DC (real-world outpatient) datasets.
+*   **Datasets:** Evaluated on ETT-small (long-term forecasting), Electricity Load, and Traffic (real-world outpatient) datasets.
 *   **Baselines:** Compared against strong baselines including Informer, PatchTST, and GluonTS (DeepAR, Transformer).
 *   **Metrics:** Performance assessed using MSE, MAE, RMSE, and MAPE.
 *   **Results:**  pyFAST models, especially Transformer-based architectures, demonstrate **competitive or superior performance** in forecasting accuracy while maintaining **computational efficiency** due to optimized implementations and modular design.
 
+### Univariate Time Series Forecasting
 
-### Benchmarking on Univariate/Multivariate Time Series Datasets
-**Example Benchmarking Results (Table 1 from Paper):**
+<!-- **Example Benchmarking Results (Table 1 from Paper):** -->
 
-| Model                     | Dataset          |    MSE |   MAE |  RMSE |  MAPE |
-|---------------------------|------------------|-------:|------:|------:|------:|
-| pyFAST (Transformer)      | ETT-small        |  0.123 | 0.087 | 0.351 | 0.054 |
-| Informer                  | ETT-small        |  0.135 | 0.092 | 0.367 | 0.058 |
-| PatchTST                  | ETT-small        |  0.128 | 0.090 | 0.358 | 0.056 |
-| GluonTS (Transformer)     | ETT-small        |  0.140 | 0.095 | 0.374 | 0.060 |
-| pyFAST (Transformer)      | Electricity Load |  0.085 | 0.063 | 0.292 | 0.041 |
-| GluonTS (DeepAR)          | Electricity Load |  0.092 | 0.068 | 0.303 | 0.045 |
-| pyFAST (GNN)              | XMC-DC           |  0.057 | 0.042 | 0.239 | 0.032 |
-| LSTM                      | XMC-DC           |  0.065 | 0.048 | 0.255 | 0.036 |
+### Multivariate Time Series Forecasting
 
-### Benchmarking on Sparse Time Series Datasets
+
+### Sparse Time Series Forecasting (using Exogenous Variables)
 
 Protein dataset
 
-### Benchmarking on Fusible Time Series Datasets
+### Fusible Time Series Datasets
 
-
+Example Benchmarking Results (Table 1 from TCOAT/GAIN paper):
 
 ## License
 

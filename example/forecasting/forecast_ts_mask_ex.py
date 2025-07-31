@@ -29,7 +29,7 @@ from dataset.prepare_pka import load_pka
 
 
 def mask_mts_fusion():
-    data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
+    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
     torch_float_type = torch.float32
     device = get_device('mps')
 
@@ -57,6 +57,7 @@ def mask_mts_fusion():
 
     model = covert_parameters(model, torch_float_type)
     print(get_model_info(model))
+    print(model)
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)

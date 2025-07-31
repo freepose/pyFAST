@@ -2,7 +2,31 @@
 # encoding: utf-8
 
 """
-    Examples on single source univariate / multivariate time series forecasting.
+    Examples on single-source / multi-source univariate / multivariate time series forecasting.
+
+    (1) Single-source univariate time series forecasting, such as ETTh1, ETTh2, ETTm1, ETTm2, etc.
+
+    (2) Single-source multivariate time series forecasting, such as ETTh1, Traffic, Electricity, etc.
+
+    (3) Multi-source univariate time series forecasting, such as SH_diabetes, SDWPF, GreeceWPF, etc.
+
+        This supports for multi-resolution time series forecasting.
+        Multi-resolution means that several time series with several frequencies (i.e., time intervals).
+
+        Infinite time granularity is supported, such as 1 minute, 5 minutes, 15 minutes, 30 minutes, 1 hour, etc.
+
+    (4) Multi-source multivariate time series forecasting. None examples are provided yet.
+
+    Some tips:
+
+    (1) Device: the dataset device and model device can be the same or different, and they work well together.
+        If they are different, the dataset will be moved to the model device before training.
+        If the dataset is large, it is recommended to set the dataset device to 'cpu' and
+            the model device to 'cuda' or 'mps'.
+
+    (2) Normalization: the scaler and ex_scaler are fitted on the training set,
+        and then applied to transform the validation and test sets.
+
 """
 
 import os
@@ -12,7 +36,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
-from fast.data import StandardScale, MinMaxScale, MaxScale, LogScale, MeanScale, scale_several_time_series
+from fast.data import StandardScale, MinMaxScale, scaler_fit, scaler_transform
 from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
@@ -29,35 +53,42 @@ from fast.model.mts import STID, STNorm, MAGNet, GraphWaveNet, FourierGNN
 from fast.model.mts import COAT, GAIN
 
 from dataset.prepare_xmcdc import load_xmcdc_sst
-from dataset.prepare_general_mts import load_general_mts_sst
-from dataset.prepare_industrial_power_load import load_industrial_power_load_sst as load_ipl_sst
+from dataset.manage_sst_datasets import prepare_sst_datasets, verify_sst_datasets
+from dataset.manage_smt_datasets import prepare_smt_datasets
 
 
 def main():
-    data_root = os.path.expanduser('~/data/') if os.name == 'posix' else 'D:/data/'
+    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
     torch_float_type = torch.float32
-    device = get_device('mps')
+    ds_device, model_device = 'cpu', 'mps'
 
-    # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    # (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sst(freq='1day', **ds_params)
+    task_config = {'ts': 'univariate'}
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    mts_data_root = os.path.join(data_root, 'time_series/general_mts')
-    train_ds, val_ds, test_ds = load_general_mts_sst(mts_data_root, 'Electricity', 'multivariate', False, 96, 96, 1, 1, 0.7, 0.1)
-    # train_ds, val_ds = load_general_mts_sst(mts_data_root, 'ExchangeRate', 'multivariate', False, 96, 96, 1, 1, 0.8)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate_x1000', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # ds_params = {'input_window_size': 8 * 24, 'output_window_size': 24, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    # (train_ds, val_ds), (scaler, ex_scaler) = load_ipl_sst(data_root, interpolate_type='li', **ds_params)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    print('{}\n{}'.format(train_ds, val_ds))
-
-    # Normalization the input time series (train, val or test)
-    scaler = scale_several_time_series(StandardScale(), train_ds.ts, train_ds.ts_mask)
-    train_ds.ts = scaler.transform(train_ds.ts)
-    if val_ds is not None:
-        val_ds.ts = scaler.transform(val_ds.ts)
-    if test_ds is not None:
-        test_ds.ts = scaler.transform(test_ds.ts)
+    # scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
+    # ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask) if train_ds.ex_ts is not None else None
+    # train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
+    # if val_ds is not None:
+    #     val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
+    #     val_ds.ex_ts = scaler_transform(ex_scaler, val_ds.ex_ts, val_ds.ex_ts_mask) if val_ds.ex_ts is not None else None
+    # if test_ds is not None:
+    #     test_ds.ts = scaler_transform(scaler, test_ds.ts, test_ds.ts_mask)
+    #     test_ds.ex_ts = scaler_transform(ex_scaler, test_ds.ex_ts, test_ds.ex_ts_mask) if test_ds.ex_ts is not None else None
     scaler, ex_scaler = None, None
+    # ex_scaler = None
+
+    print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
     ts_modeler = {
         'gar': [GAR, {'activation': 'linear'}],
@@ -141,15 +172,15 @@ def main():
                                   'top_k': 5, 'channel_independence': True, 'decomposition_method': 'moving_avg',
                                   'down_sampling_method': 'avg', 'down_sampling_window': 1, 'down_sampling_layers': 1,
                                   'use_instance_scale': True}],
-        'tslanet': [TSLANet, {'patch_len': 32, 'patch_stride': None, 'embedding_dim': 32, 'mlp_hidden_size': None,
-                              'num_blocks': 1, 'block_type': 'asb_icb',
-                              'dropout_rate': 0., 'use_instance_scale': True}],  # ICML 2024
+        'tslanet': [TSLANet, {'patch_len': train_ds.input_window_size // 4, 'patch_stride': None, 'embedding_dim': 64,
+                              'mlp_hidden_size': None, 'num_blocks': 3, 'block_type': 'asb_icb',
+                              'dropout_rate': 0.5, 'use_instance_scale': True}],  # ICML 2024
         'stid': [STID, {'node_dim': 32, 'embed_dim': 1024, 'input_dim': 1, 'num_layer': 1, 'if_node': True}],
         'stnorm': [STNorm, {'tnorm_bool': True, 'snorm_bool': True,
                             'channels': 16, 'kernel_size': 2, 'blocks': 1, 'layers': 2}],
-        'magnet': [MAGNet, {'label_window_size': 48, 'conv2d_in_channels': 1, 'residual_channels': 32,
-                            'conv_channels': 32, 'skip_channels': 4, 'end_channels': 128, 'node_dim': 40,
-                            'tanhalpha': 3.0, 'static_feat': None, 'dilation_exponential': 1,
+        'magnet': [MAGNet, {'label_window_size': train_ds.input_window_size, 'conv2d_in_channels': 1,
+                            'residual_channels': 32,  'conv_channels': 32, 'skip_channels': 4, 'end_channels': 128,
+                            'node_dim': 40, 'tanhalpha': 3.0, 'static_feat': None, 'dilation_exponential': 1,
                             'kernel_size': 7, 'gcn_depth': 2, 'gcn_true': False, 'propalpha': 0.05,
                             'layer_norm_affline': True, 'buildA_true': True, 'predefined_A': None, 'dropout': 0.3}],
         'gwn': [GraphWaveNet, {'out_dim': 1, 'supports': None, 'gcn_bool': True, 'addaptadj': True,
@@ -163,7 +194,7 @@ def main():
                         'cnn_kernel_size': 3, 'cnn_out_channels': 16, 'highway_window_size': 10, 'dropout_rate': 0.5}],
     }
 
-    model_cls, user_settings = ts_modeler['tslanet']
+    model_cls, user_settings = ts_modeler['coat']
 
     common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -180,14 +211,14 @@ def main():
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'MAE'])
 
-    trainer = Trainer(device, model, is_initial_weights=True,
+    trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler, ex_scaler=ex_scaler)
     print(trainer)
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 200), batch_size=32, shuffle=True,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True,
                 verbose=2)
 
     if test_ds is not None:
@@ -204,3 +235,4 @@ if __name__ == '__main__':
     initial_seed(2025)
     initial_logger()
     main()
+    # verify_sst_datasets()

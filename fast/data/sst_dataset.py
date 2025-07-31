@@ -127,9 +127,8 @@ class SSTDataset(data.Dataset):
         self.ex2_vars = ex_ts2.shape[1] if ex_ts2 is not None else None
         self.device = ts.device
 
-        self.ratio = 1.       # the ratio of the whole dataset
-        self.split_as = None
-        self.mark = mark      # None denotes non-split for 'train' or 'val'
+        self.ratio = 1.0
+        self.mark = mark
 
         self.sample_num = (ts.shape[0] - input_window_size - output_window_size - horizon + 1) // stride + 1
         assert self.sample_num > 0, "No samples can be generated."
@@ -140,47 +139,17 @@ class SSTDataset(data.Dataset):
         self.ex_ts_mask = ex_ts_mask
         self.ex_ts2 = ex_ts2
 
-    def split(self, split_ratio: float = 1.0, split_as: Literal['train', 'val'] = 'train', mark: str = None):
-        """
-            Split the time series to left part (a.k.a., training set) and right part (a.k.a., validation set).
-            :param split_ratio: ratio of left part (a.k.a., training set). Default is 1.0.
-            :param split_as: the part of dataset, the value is 'train' or 'val', default is 'train'.
-            :param mark: the mark the name of the dataset.
-        """
-        assert 0 < split_ratio <= 1.0, 'The split ratio must be in the range [0, 1].'
-        assert split_as in ['train', 'val'], "The split type must be 'train' or 'val'."
-
-        ts_len = self.ts.shape[0]
-        train_ts_len = int(ts_len * split_ratio)
-
-        split_as_lookup = {'train': 0, 'val': 1}
-        borders = [[0, train_ts_len], [train_ts_len - self.input_window_size - self.horizon + 1, ts_len]]
-        start, end = borders[split_as_lookup[split_as]]
-
-        border_len = end - start
-        self.sample_num = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
-        self.sample_num = self.sample_num // self.stride + 1
-        assert self.sample_num > 0, 'No samples can be generated in {} set.'.format(self.split_as)
-
-        border_ts = self.ts[start:end]
-        border_ts_mask = self.ts_mask[start:end] if self.ts_mask is not None else None
-        border_ex_ts = self.ex_ts[start:end] if self.ex_ts is not None else None
-        border_ex_ts_mask = self.ex_ts_mask[start:end] if self.ex_ts_mask is not None else None
-        border_ex_ts2 = self.ex_ts2[start:end] if self.ex_ts2 is not None else None
-
-        dataset = SSTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
-                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
-
-        current_ratio = split_ratio if split_as == 'train' else (1.0 - split_ratio)
-        dataset.ratio = round(self.ratio * current_ratio, 15)
-        dataset.split_as = split_as
-
-        return dataset
-
     def __len__(self) -> int:
+        """
+            :return: the number of samples in the dataset.
+        """
         return self.sample_num
 
-    def __getitem__(self, index) -> Tuple[List, List]:
+    def __getitem__(self, index) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+        """
+            Retrieve the sample at the specified index.
+            :param index: the index of the sample to be retrieved.
+        """
         start_x = self.stride * index
         end_x = start_x + self.input_window_size
         x_seq = self.ts[start_x:end_x]
@@ -216,23 +185,22 @@ class SSTDataset(data.Dataset):
 
     def __str__(self) -> str:
         """
-            Print the information of this class instance.
+            String representation of the SSTDataset instance, including its parameters.
         """
 
-        params = {
-            'device': self.device,
-            'ratio': self.ratio,
-        }
+        params = dict()
+        params['device'] = self.device
+        params['ratio'] = self.ratio
 
         if self.mark is not None:
             params['mark'] = self.mark
 
         params.update(**{
+            'sample_num': self.sample_num,
             'input_window_size': self.input_window_size,
             'output_window_size': self.output_window_size,
             'horizon': self.horizon,
             'stride': self.stride,
-            'sample_num': self.sample_num,
             'input_vars': self.input_vars,
             'output_vars': self.output_vars
         })
@@ -253,3 +221,40 @@ class SSTDataset(data.Dataset):
         params_str = 'SSTDataset({})'.format(params_str)
 
         return params_str
+
+    def split(self, start_ratio: float, end_ratio: float, is_strict: bool = False, mark: str = None):
+        """
+            Split the time series by specified boundary [start, end) for machine / incremental learning.
+
+            :param start_ratio: the start ratio of the split boundary, must be in the range [0, 1).
+            :param end_ratio: the end ratio of the split boundary, must be in the range (start_ratio, 1].
+            :param is_strict: if True, the split will be strict, i.e.,
+                                the start index will be exactly at the start_ratio position.
+            :param mark: the mark of the split dataset for string representation, default is None.
+            :return: a new SSTDataset instance with the specified split.
+        """
+        assert 0 <= start_ratio < end_ratio <= 1, \
+            f"Invalid boundary of split ratios: {start_ratio}, {end_ratio}. They must be in the range [0, 1]."
+
+        ts_len = self.ts.shape[0]
+        start, end = int(ts_len * start_ratio), int(ts_len * end_ratio)
+
+        if not is_strict:
+            start = max(0, start - self.input_window_size - self.horizon + 1)
+
+        border_len = end - start
+        min_border = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
+        if min_border < 0:
+            raise ValueError(f"No samples can be generated in the specified range: ({start_ratio}, {end_ratio}].")
+
+        border_ts = self.ts[start:end]
+        border_ts_mask = self.ts_mask[start:end] if self.ts_mask is not None else None
+        border_ex_ts = self.ex_ts[start:end] if self.ex_ts is not None else None
+        border_ex_ts_mask = self.ex_ts_mask[start:end] if self.ex_ts_mask is not None else None
+        border_ex_ts2 = self.ex_ts2[start:end] if self.ex_ts2 is not None else None
+
+        dataset = SSTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
+                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
+        dataset.ratio = round(end_ratio - start_ratio, 15)
+
+        return dataset

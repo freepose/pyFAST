@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
-from typing import Literal, Tuple, List
+import time
+from typing import Literal, Tuple, List, Union
 
 import sys, bisect
 import numpy as np
@@ -10,6 +10,8 @@ import torch
 import torch.utils.data as data
 
 from tqdm import tqdm
+
+TensorSequence = Union[Tuple[torch.Tensor, ...], List[torch.Tensor]]
 
 
 class SMTDataset(data.Dataset):
@@ -38,11 +40,11 @@ class SMTDataset(data.Dataset):
         :param mark: the mark of the dataset, default is None.
     """
 
-    def __init__(self, ts: Tuple[torch.Tensor] or List[torch.Tensor],
-                 ts_mask: Tuple[torch.Tensor] or List[torch.Tensor] = None,
-                 ex_ts: Tuple[torch.Tensor] or List[torch.Tensor] = None,
-                 ex_ts_mask: Tuple[torch.Tensor] or List[torch.Tensor] = None,
-                 ex_ts2: Tuple[torch.Tensor] or List[torch.Tensor] = None,
+    def __init__(self, ts: TensorSequence,
+                 ts_mask: TensorSequence = None,
+                 ex_ts: TensorSequence = None,
+                 ex_ts_mask: TensorSequence = None,
+                 ex_ts2: TensorSequence = None,
                  input_window_size: int = 10, output_window_size: int = 1, horizon: int = 1, stride: int = 1,
                  mark: str = None):
 
@@ -70,9 +72,9 @@ class SMTDataset(data.Dataset):
         self.ts_num = len(ts)  # number of time series sources (a.k.a., csv file number)
         self.device = ts[0].device
 
-        self.ratio = 1.         # the ratio of the whole dataset
-        self.split_as = None    # 'train' or 'val': left part or right part of each time series
-        self.mark = mark        # None denotes non-split for 'train' or 'val'
+        self.ratio = 1.  # the ratio of the whole dataset
+        self.split_as = None  # 'train' or 'val': left part or right part of each time series
+        self.mark = mark  # None denotes non-split for 'train' or 'val'
 
         self.ts = ts
         self.ts_mask = ts_mask
@@ -85,94 +87,31 @@ class SMTDataset(data.Dataset):
 
         self.index_dataset(self.ts)
 
-    def index_dataset(self, ts: Tuple[torch.Tensor] or List[torch.Tensor]) -> np.ndarray:
+    def index_dataset(self, ts: TensorSequence) -> np.ndarray:
         """
             Index the dataset (list of time series).
             :param ts: list of time series dataset.
             :return: sample intervals of each time series. E.g., [1840, 3988, ...]
         """
         with tqdm(total=len(ts), leave=False, file=sys.stdout) as pbar:
-            pbar.set_description('Indexing')
-
-        for i, ts in enumerate(ts):
-            ts_len = ts.shape[0]
-
-            sample_num = ts_len - self.input_window_size - self.output_window_size - self.horizon + 1
-            sample_num = sample_num // self.stride + 1
-            assert sample_num > 0, "No samples can be generated at time series {}.".format(i)
-
-            self.window_num_list.append(sample_num)
-
-            pbar.set_postfix(window_num='{}'.format(sample_num))
-            pbar.update(1)
-
-        # Calculate the cumulative sum of window numbers.
-        self.cum_window_num_array = np.cumsum(self.window_num_list)
-        return self.cum_window_num_array
-
-    def split(self, split_ratio: float = 1.0, split_as: Literal['train', 'val'] = 'train', mark: str = None):
-        """
-            Split all the time series to left part (a.k.a., training set) and right part (a.k.a., validation set).
-            :param split_ratio: ratio of left part (a.k.a., training set). Default is 1.0.
-            :param split_as: the part of dataset, the value is 'train' or 'val', default is 'train'.
-            :param mark: the mark the name of the dataset.
-        """
-        assert 0 < split_ratio <= 1.0, 'The split ratio must be in the range [0, 1].'
-        assert split_as in ['train', 'val'], "The split type must be 'train' or 'val'."
-
-        split_as_lookup = {'train': 0, 'val': 1}
-
-        border_ts = []
-        border_ts_mask = [] if self.ts_mask is not None else None
-        border_ex_ts = [] if self.ex_ts is not None else None
-        border_ex_ts_mask = [] if self.ex_ts_mask is not None else None
-        border_ex_ts2 = [] if self.ex_ts2 is not None else None
-
-        with tqdm(total=len(self.ts), leave=False, file=sys.stdout) as pbar:
-            pbar.set_description('Splitting')
-
-            for i, ts in enumerate(self.ts):
+            for i, ts in enumerate(ts):
+                pbar.set_description(f'Indexing ts_{i}')
                 ts_len = ts.shape[0]
-                train_ts_len = int(ts_len * split_ratio)
-                borders = [[0, train_ts_len], [train_ts_len - self.input_window_size - self.horizon + 1, ts_len]]
-                split_border = borders[split_as_lookup[split_as]]
 
-                start, end = split_border
-                border_len = end - start
-
-                sample_num = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
+                sample_num = ts_len - self.input_window_size - self.output_window_size - self.horizon + 1
                 sample_num = sample_num // self.stride + 1
                 assert sample_num > 0, "No samples can be generated at time series {}.".format(i)
-
-                border_ts.append(ts[start:end])
-
-                if self.ts_mask is not None:
-                    border_ts_mask.append(self.ts_mask[i][start:end])
-
-                if self.ex_ts is not None:
-                    border_ex_ts.append(self.ex_ts[i][start:end])
-
-                    if self.ex_ts_mask is not None:
-                        border_ex_ts_mask.append(self.ex_ts_mask[i][start:end])
-
-                if self.ex_ts2 is not None:
-                    border_ex_ts2.append(self.ex_ts2[i][start:end])
 
                 self.window_num_list.append(sample_num)
 
                 pbar.set_postfix(window_num='{}'.format(sample_num))
                 pbar.update(1)
 
-        dataset = SMTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
-                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
+        # Calculate the cumulative sum of window numbers.
+        self.cum_window_num_array = np.cumsum(self.window_num_list)
+        return self.cum_window_num_array
 
-        current_ratio = split_ratio if split_as == 'train' else (1.0 - split_ratio)
-        dataset.ratio = round(self.ratio * current_ratio, 15)
-        dataset.split_as = split_as
-
-        return dataset
-
-    def __getitem__(self, index) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    def __getitem__(self, index: int) -> Tuple[TensorSequence, TensorSequence]:
         """
             Get the input and output data of the dataset by index.
         """
@@ -221,29 +160,28 @@ class SMTDataset(data.Dataset):
 
         return input_list, output_list
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.cum_window_num_array[-1]
 
     def __str__(self) -> str:
         """
-            Print the information of this class instance.
+            String representation of the SMTDataset.
         """
 
-        params = {
-            'device': self.device,
-            'ratio': self.ratio,
-        }
+        params = dict()
+        params['device'] = self.device
+        params['ratio'] = self.ratio
 
         if self.mark is not None:
             params['mark'] = self.mark
 
         params.update(**{
+            'ts_num': self.ts_num,
+            'sample_num': self.cum_window_num_array[-1],
             'input_window_size': self.input_window_size,
             'output_window_size': self.output_window_size,
             'horizon': self.horizon,
             'stride': self.stride,
-            'sample_num': self.cum_window_num_array[-1],
-            'ts_num': self.ts_num,
             'input_vars': self.input_vars,
             'output_vars': self.output_vars,
         })
@@ -264,3 +202,62 @@ class SMTDataset(data.Dataset):
         params_str = 'SMTDataset({})'.format(params_str)
 
         return params_str
+
+    def split(self, start_ratio: float = 0.0, end_ratio: float = 1.0, is_strict: bool = False, mark: str = None):
+        """
+            Split every time series by specified boundary [start, end) for machine / incremental learning.
+            :param start_ratio: the start ratio of the split boundary, must be in the range [0, 1).
+            :param end_ratio: the end ratio of the split boundary, must be in the range (start_ratio, 1].
+            :param is_strict: if True, the split will be strict, i.e.,
+                                the start index will be exactly at the start_ratio position.
+            :param mark: the mark of the split dataset for string representation, default is None.
+            :return: a new SMTDataset instance with the specified split.
+        """
+        assert 0 <= start_ratio < end_ratio <= 1, \
+            f"Invalid boundary of split ratios: {start_ratio}, {end_ratio}. They must be in the range [0, 1]."
+
+        border_ts = []
+        border_ts_mask = [] if self.ts_mask is not None else None
+        border_ex_ts = [] if self.ex_ts is not None else None
+        border_ex_ts_mask = [] if self.ex_ts_mask is not None else None
+        border_ex_ts2 = [] if self.ex_ts2 is not None else None
+
+        with tqdm(total=len(self.ts), leave=False, file=sys.stdout) as pbar:
+            for i, ts in enumerate(self.ts):
+                pbar.set_description(f'Splitting ts_{i}')
+
+                ts_len = ts.shape[0]
+                start, end = int(ts_len * start_ratio), int(ts_len * end_ratio)
+
+                if not is_strict:
+                    start = max(0, start - self.input_window_size - self.horizon + 1)
+
+                border_len = end - start
+                sample_num = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
+                sample_num = sample_num // self.stride + 1
+                assert sample_num > 0, "No samples can be generated at time series {}.".format(i)
+
+                border_ts.append(ts[start:end])
+
+                if self.ts_mask is not None:
+                    border_ts_mask.append(self.ts_mask[i][start:end])
+
+                if self.ex_ts is not None:
+                    border_ex_ts.append(self.ex_ts[i][start:end])
+
+                    if self.ex_ts_mask is not None:
+                        border_ex_ts_mask.append(self.ex_ts_mask[i][start:end])
+
+                if self.ex_ts2 is not None:
+                    border_ex_ts2.append(self.ex_ts2[i][start:end])
+
+                self.window_num_list.append(sample_num)
+
+                pbar.set_postfix(sample_num='{}'.format(sample_num))
+                pbar.update(1)
+
+        dataset = SMTDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
+                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
+        dataset.ratio = round(end_ratio - start_ratio, 15)
+
+        return dataset

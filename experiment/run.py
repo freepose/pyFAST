@@ -9,10 +9,11 @@ import torch.optim as optim
 
 from typing import Literal, Union, List, Tuple
 
-from experiment import load_sst_dataset, DotDict
+from experiment import DotDict
 
 from fast import get_common_kwargs, get_device, initial_seed, initial_logger
-from fast.data import StandardScale, scale_several_time_series, SSTDataset, SMTDataset
+from fast.data import StandardScale, scaler_fit
+from fast.data.processing import load_sst_dataset
 from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator
@@ -72,10 +73,10 @@ def run_experiment(global_settings: DotDict, dataset_arguments: DotDict, trainer
     scaler, ex_scaler = None, None
     if 'scale' in global_settings:
         if global_settings['scale'] in ['ts', 'both']:
-            scaler = scale_several_time_series(StandardScale(), train_ds.ts, train_ds.ts_mask)
+            scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
 
         if global_settings['scale'] in ['ex_ts', 'both'] and train_ds.ex_ts is not None:
-            ex_scaler = scale_several_time_series(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask)
+            ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask)
 
     trainer = Trainer(get_device(device), model, is_initial_weights=True, is_compile=False,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=early_stop,

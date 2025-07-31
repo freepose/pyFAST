@@ -5,9 +5,10 @@
     This package supports training all models, which includes sparse data and mask models in terms of uts and mts.
     Single computer/server version.
 """
+
 import logging
 import os, sys, platform
-from typing import Literal, Tuple, List, Union, Dict
+from typing import Literal, Tuple, List, Union, Dict, Callable
 
 import torch
 import torch.nn as nn
@@ -89,7 +90,7 @@ class Trainer:
             self.model = self.model.to(self.device)
 
         if self.device.type == 'cpu':
-            if platform.machine() == 'x86_64':
+            if platform.machine() in ('x86_64', 'AMD64'):
                 torch.set_num_threads(os.cpu_count() - 2)
             elif platform.machine() == 'arm64':
                 torch.set_num_threads(os.cpu_count())
@@ -101,7 +102,7 @@ class Trainer:
         elif self.device.type == 'mps':
             pass
 
-    def run_epoch(self, dataloader: data.DataLoader,
+    def run_epoch(self, dataloader,
                   mode: Literal['train', 'val', 'online'] = 'train',
                   progress_status: str = None):
 
@@ -161,6 +162,9 @@ class Trainer:
         loss = self.criterion.compute()
         metrics = self.evaluator.compute()
 
+        if progress_status is not None:
+            pbar.clear()
+
         return {'loss': loss, **metrics}
 
     def message_header(self, has_val_dataset: bool = False):
@@ -180,13 +184,13 @@ class Trainer:
             epoch_range: Tuple[int, int] = (1, 10),
             batch_size: int = 32, shuffle: bool = False,
             checkpoint_interval: int = 0,
-            collate_fn=None,
+            collate_fn: Callable = None,
             verbose: Literal[0, 1, 2] = 2) -> List[List[Union[str, float]]]:
 
         """
             ``verbose``: 0 is silent. Mostly used for model training only.
-                     1 is epoch level, including loss and metrics. Mostly used for command lines to collect outputs;
-                     2 is batch level in an epoch, including time. Mostly used for development.
+                        1 is epoch level, including loss and metrics. Mostly used for command lines to collect outputs;
+                        2 is batch level in an epoch, including time. Mostly used for development.
          """
 
         train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)

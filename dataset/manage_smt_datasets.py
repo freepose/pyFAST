@@ -1,0 +1,224 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+"""
+
+    The multisource time series dataset loading module. Each source is loaded from a CSV file.
+
+    A dataset may consist of multiple sources, i.e, CSV files.
+    All CSV files in a common datasets share the same data fields.
+
+"""
+import os, logging
+
+from typing import Literal, Tuple, List, Union, Dict, Any
+from pathlib import Path
+
+from fast.data import SMTDataset
+from fast.data.processing.load import load_smt_datasets
+
+smt_metadata = {
+
+    # [Disease] Glucose time series datasets, which are usually unaligned.
+    "SH_diabetes": {
+        "paths": ["{root}/disease/sh_diabetes/02_multi_source/T1DM",
+                  "{root}/disease/sh_diabetes/02_multi_source/T2DM"],
+        "columns": {
+            "names": [
+                'Date', 'CGM', 'CGB', 'Blood ketone', 'Dietary intake', 'Bolus insulin', 'Basal insulin',
+                'Insulin dose s.c. id:0 medicine', 'Insulin dose s.c. id:0 dosage',
+                'Insulin dose s.c. id:1 medicine', 'Insulin dose s.c. id:1 dosage',
+                'Non-insulin id:0 medicine', 'Non-insulin id:0 dosage',
+                'Non-insulin id:1 medicine', 'Non-insulin id:1 dosage',
+                'Non-insulin id:2 medicine', 'Non-insulin id:2 dosage',
+                'Insulin dose i.v. id:0 medicine', 'Insulin dose i.v. id:0 dosage',
+                'Insulin dose i.v. id:1 medicine', 'Insulin dose i.v. id:1 dosage',
+                'Insulin dose i.v. id:2 medicine', 'Insulin dose i.v. id:2 dosage'],
+            "time": "Date",
+            "univariate": ["CGM"],
+            "multivariate": ["CGM"],  # univariate and multivariate are the same, change it if needed.
+            "exogenous": ['Dietary intake', 'Bolus insulin', 'Basal insulin',
+                          'Insulin dose s.c. id:0 dosage', 'Insulin dose s.c. id:1 dosage',
+                          'Non-insulin id:0 dosage', 'Non-insulin id:1 dosage', 'Non-insulin id:2 dosage',
+                          'Insulin dose i.v. id:0 dosage', 'Insulin dose i.v. id:1 dosage',
+                          'Insulin dose i.v. id:2 dosage']  # these features are sparse
+        }
+    },
+
+    "PhysioNet": {
+        "paths": [
+            "{root}/disease/CCC2012_PhysioNet/02_multi_source/set-a",
+            # "{root}/disease/CCC2012_PhysioNet/02_multi_source/set-b",
+            # "{root}/disease/CCC2012_PhysioNet/02_multi_source/set-c"
+        ],
+        "columns": {
+            "names": ['RecordID', 'Age', 'Gender', 'Height', 'Weight', 'ICUType', 'Albumin', 'ALP', 'ALT', 'AST',
+                      'Bilirubin', 'BUN', 'Cholesterol', 'Creatinine', 'DiasABP', 'FiO2', 'GCS', 'Glucose', 'HCO3',
+                      'HCT', 'HR', 'K', 'Lactate', 'Mg', 'MAP', 'MechVent', 'Na', 'NIDiasABP', 'NIMAP', 'NISysABP',
+                      'PaCO2', 'PaO2', 'pH', 'Platelets', 'RespRate', 'SaO2', 'SysABP', 'Temp', 'TroponinI',
+                      'TroponinT', 'Urine', 'WBC'],
+            "univariate": ["Glucose"],
+            "multivariate": ['Albumin', 'ALP', 'ALT', 'AST', 'Bilirubin', 'BUN', 'Cholesterol', 'Creatinine',
+                             'DiasABP', 'FiO2', 'GCS', 'Glucose', 'HCO3', 'HCT', 'HR', 'K', 'Lactate', 'Mg', 'MAP',
+                             # 'MechVent', # Mechanical ventilation respiration（0:false, 1:true）机械通气呼吸（0:否，1:是）
+                             'Na', 'NIDiasABP', 'NIMAP', 'NISysABP', 'PaCO2', 'PaO2',
+                             'pH', 'Platelets', 'RespRate', 'SaO2', 'SysABP', 'Temp', 'TroponinI', 'TroponinT',
+                             'Urine', 'WBC'],
+        }
+    },
+
+    # [Energy] Wind power time series datasets, some of them consist of exoogenous variables.
+    "GreeceWPF": {
+        "paths": ["{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/02_multi_source/{freq}"],
+        "freq": ["1hour", "6hour", "12hour", "1day"],
+        "time_feature_freq": "h",
+        "columns": {
+            "time": "Date",
+            "univariate": ["power(MW)"],
+            "multivariate": ["power(MW)"],  # univariate and multivariate are the same, change it if needed.
+            "exogenous": ["airTemperature", "cloudCover", "gust", "humidity", "precipitation", "pressure",
+                          "visibility", "windDirection", "windSpeed"]
+        }
+    },
+
+    "GreeceWPF_1day": {
+        "paths": ["{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/02_multi_source/1day"],
+        "time_feature_freq": "D",
+        "columns": {
+            "time": "Date",
+            "univariate": ["power(MW)"],
+            "multivariate": ["power(MW)"],  # univariate and multivariate are the same, change it if needed.
+            "exogenous": ["airTemperature", "cloudCover", "gust", "humidity", "precipitation", "pressure",
+                          "visibility", "windDirection", "windSpeed"]
+        }
+    },
+
+    "SDWPF": {
+        "paths": ["{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/02_multi_source_szw/{freq}"],
+        "freq": ["1day"] + ["10min", "30min", "1hour", "6hour", "12hour", "1day"],
+        "columns": {
+            "time": "Date",
+            "univariate": ["Patv"],
+            "multivariate": ["Patv"],
+            "exogenous": ["Wspd", "Wdir", "Etmp", "Itmp", "Ndir", "Pab1", "Pab2", "Pab3", "Prtv"]
+        }
+    },
+
+    "SDWPF_1day": {
+        "paths": ["{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/02_multi_source_szw/1day"],
+        "columns": {
+            "time": "Date",
+            "univariate": ["Patv"],
+            "multivariate": ["Patv"],
+            "exogenous": ["Wspd", "Wdir", "Etmp", "Itmp", "Ndir", "Pab1", "Pab2", "Pab3", "Prtv"]
+        }
+    },
+
+    "WSTD2": {
+        "paths": ["{root}/energy_wind/Zenodo_Wind_Spatio_Temporal_Dataset2_2010_2011/02_multi_source/{freq}"],
+        "freq": ["1hour", "6hour", "12hour", "1day"],
+        "columns": {
+            "time": "Date",
+            "univariate": ["Power"],
+            "multivariate": ["Power"],
+        }
+    },
+}
+
+
+def prepare_smt_datasets(data_root: str,
+                         dataset_name: str,
+                         input_window_size: int = 96,
+                         output_window_size: int = 24,
+                         horizon: int = 1,
+                         stride: int = 1,
+                         split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
+                         split_strategy: Literal['intra', 'inter'] = 'intra',
+                         device: Union[Literal['cpu', 'mps', 'cuda'], str] = 'cpu',
+                         **task_kwargs: Dict[str, Any]) -> Union[SMTDataset, List[SMTDataset]]:
+    """
+        Prepare several SMTDataset for machine learning tasks.
+
+        The default **float type** is ``float32``, you can change it in ``load_sst_datasets()`` to ``float64`` if needed .
+
+        :param data_root: the ``time_series`` directory.
+        :param dataset_name: the name of the dataset.
+        :param input_window_size: the input window size, i.e., the number of time steps in the input sequence.
+        :param output_window_size: the output window size, i.e., the number of time steps in the output sequence.
+        :param horizon: the distance between input and output windows of a sample.
+        :param stride: the distance between two consecutive samples.
+        :param split_ratios: the ratios of consecutive split datasets. For example,
+                    (0.7, 0.1, 0.2) means 70% for training, 10% for validation, and 20% for testing.
+                    The default is none, which means non-split.
+        :param split_strategy: the strategy to split the dataset, 'intra' or 'inter'.
+                                'intra' means to split the dataset into training, validation, and test sets
+                                within each source (CSV file).
+                                'inter' means to split the dataset into training, validation, and test sets
+                                across all sources (CSV files).
+        :param device: the device to load the data, default is 'cpu'.
+                       This dataset device can be one of ['cpu', 'cuda', 'mps'].
+                       the dataset device can be **different** to the model device.
+        :param task_kwargs: task settings for the dataset.
+                            ``ts``: str, the time series type, 'univariate' or 'multivariate'.
+                            ``ts_mask``: bool, whether to mask the time series variables, default is False.
+                            ``use_ex``: bool, whether to use exogenous variables, default is None.
+                            ``ex_ts_mask``: bool, whether to mask the exogenous variables, default is False.
+                            ``use_time_feature``: bool, whether to use time features, default is False.
+        :return: the (split) datasets as SSTDataset objects.
+    """
+    assert dataset_name in smt_metadata, \
+        f"Dataset '{dataset_name}' not found in metadata. The dataset name should be one of {list(smt_metadata.keys())}."
+    given_metadata = smt_metadata[dataset_name]
+
+    freq = given_metadata['freq'][0] if 'freq' in given_metadata else None
+    paths = given_metadata['paths']
+    paths = [path.format(root=data_root, freq=freq or '') for path in paths]
+
+    task_ts = task_kwargs.get('ts', 'univariate')
+    task_ts_mask = task_kwargs.get('ts_mask', False)
+    task_use_ex = task_kwargs.get('use_ex', False)
+    task_ex_mask = task_kwargs.get('ex_mask', False)
+    task_use_time_feature = task_kwargs.get('use_time_feature', False)
+
+    variables = given_metadata['columns'].get(task_ts, None)
+    if variables is None:
+        raise ValueError(f"Task type '{task_ts}' not found in dataset '{dataset_name}' metadata.")
+    ex_variables = given_metadata['columns'].get('exogenous', None) if task_use_ex else None
+
+    time_variable = given_metadata['columns'].get('time', None) if task_use_time_feature else None
+    tf_freq = given_metadata.get('time_feature_freq', 'D')
+    is_time_normalized = given_metadata.get('is_time_normalized', True)
+
+    filenames = []
+    for path in paths:
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f'Path not found: {path}')
+
+        if path.is_file():
+            filenames.append(path)
+        elif path.is_dir():
+            csv_files = list(path.glob('*.csv'))
+            filenames.extend(csv_files)
+
+    if len(filenames) == 0:
+        raise FileNotFoundError(f'No CSV files found in paths: {paths}')
+
+    filenames = sorted(filenames)
+    logging.getLogger().info('Loading {} files in {}'.format(len(filenames), paths))
+    # print('\n'.join([str(f) for f in filenames]))
+
+    load_smt_args = {
+        'filenames': filenames,
+        'variables': variables, 'mask_variables': task_ts_mask,
+        'ex_variables': ex_variables, 'mask_ex_variables': task_ex_mask,
+        'time_variable': time_variable, 'time_feature_freq': tf_freq, 'is_time_normalized': is_time_normalized,
+        'input_window_size': input_window_size, 'output_window_size': output_window_size,
+        'horizon': horizon, 'stride': stride,
+        'split_ratios': split_ratios,
+        'split_strategy': split_strategy,
+        'device': device,
+    }
+
+    smt_datasets = load_smt_datasets(**load_smt_args)
+    return smt_datasets

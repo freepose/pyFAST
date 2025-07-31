@@ -153,8 +153,7 @@ class ANN(nn.Module):
         :param hidden_size: hidden size.
     """
 
-    def __init__(self, input_window_size: int, output_window_size: int = 1,
-                 hidden_size: int = 64):
+    def __init__(self, input_window_size: int, output_window_size: int = 1, hidden_size: int = 64):
         super(ANN, self).__init__()
         self.input_window_size = input_window_size
         self.output_window_size = output_window_size
@@ -166,10 +165,14 @@ class ANN(nn.Module):
             nn.Linear(self.hidden_size, self.output_window_size)
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
-            x -> (..., input_window_size, input_vars)
+            :param x -> (..., input_window_size, input_vars)
+            :param x_mask: mask tensor of input tensor, the shape is ``(..., input_window_size, input_vars)``.
         """
+        if x_mask is not None:
+            x[~x_mask] = 0.
+
         x = x.transpose(-2, -1) # -> (..., input_vars, input_window_size)
         x = self.fc(x)          # -> (..., input_vars, output_window_size)
         x = x.transpose(-2, -1) # -> (..., output_window_size, input_vars)

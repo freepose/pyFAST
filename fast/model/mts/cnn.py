@@ -80,7 +80,7 @@ class CNNRNN(nn.Module):
 
     def __init__(self, input_vars: int = 1, output_window_size: int = 1, output_vars: int = 1,
                  cnn_out_channels: int = 50, cnn_kernel_size: int = 9,
-                 rnn_cls: Literal['rnn', 'lstm', 'gru'] = 'gru',
+                 rnn_cls: Literal['rnn', 'lstm', 'gru', 'minlstm'] = 'gru',
                  rnn_hidden_size: int = 20, rnn_num_layers: int = 1, rnn_bidirectional: bool = False,
                  dropout_rate: float = 0., decoder_way: Literal['inference', 'mapping'] = 'inference'):
         super(CNNRNN, self).__init__()
@@ -147,7 +147,7 @@ class CNNRNNRes(nn.Module):
     def __init__(self, input_window_size: int = 1, input_vars: int = 1,
                  output_window_size: int = 1, output_vars: int = 1,
                  cnn_out_channels: int = 50, cnn_kernel_size: int = 9,
-                 rnn_cls: Literal['rnn', 'lstm', 'gru'] = 'gru',
+                 rnn_cls: Literal['rnn', 'lstm', 'gru', 'minlstm'] = 'gru',
                  rnn_hidden_size: int = 20, rnn_num_layers: int = 1, rnn_bidirectional: bool = False,
                  dropout_rate: float = 0., decoder_way: Literal['inference', 'mapping'] = 'inference',
                  residual_window_size: int = 5, residual_ratio: float = 0.1, ):

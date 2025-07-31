@@ -89,7 +89,8 @@ class Transformer(nn.Module):
         target_embedding = self.decoder_embedding(target) + self.decoder_pe(target)
         target_embedding = self.decoder_dropout(target_embedding)
 
-        out = self.transformer(src=x_embedding, tgt=target_embedding, src_mask=x_mask)
+        out = self.transformer(src=x_embedding, tgt=target_embedding)
+
         out = self.fc(out)  # -> (batch_size, label_window_size + output_window_size, d_model)
         out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, input_vars)
 

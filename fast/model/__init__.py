@@ -15,7 +15,7 @@ from .mts import TemporalConvNet, CNN1D, CNNRNN, CNNRNNRes, LSTNet
 from .mts import DeepResidualNetwork
 from .mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
 from .mts import TimesNet, PatchTST, STAEformer, iTransformer, TimeXer, TimeMixer
-from .mts import TimesFM, Timer
+from .mts import TimesFM, Timer, TSLANet
 from .mts import STID, STNorm, MAGNet, GraphWaveNet, FourierGNN, AGCRN
 from .mts import COAT, TCOAT, CoDR, CTRL, GAIN, DRED, AFTS
 
@@ -77,7 +77,6 @@ ts_model_classes = {
     'ctrl': CTRL,
     'dred': DRED,
     'uninet': AFTS,
-
 }
 
 """

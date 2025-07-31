@@ -12,10 +12,10 @@ import pandas as pd
 
 import torch
 
-from fast.data import AbstractScale, scale_several_time_series
+from fast.data import AbstractScale, scaler_fit
 from fast.data import SSTDataset, SMTDataset
 
-from experiment.time_feature import TimeAsFeature
+from fast.data.processing.time_feature import TimeAsFeature
 
 """
 
@@ -259,10 +259,10 @@ def load_xmcdc_smt(freq: Literal['1day', '1week'] = '1day',
                 ex_ts2_list.append(time_feature_tensor)
 
     if scaler is not None:
-        scaler = scale_several_time_series(scaler, ts_list)
+        scaler = scaler_fit(scaler, ts_list)
 
     if ex_vars is not None and ex_scaler is not None:
-        ex_scaler = scale_several_time_series(ex_scaler, ex_ts_list)
+        ex_scaler = scaler_fit(ex_scaler, ex_ts_list)
 
     stm_params['ts'] = ts_list
     stm_params['ex_ts'] = ex_ts_list

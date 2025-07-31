@@ -4,6 +4,7 @@
 """
     Patch maker for input window time series.
 """
+
 import torch
 import torch.nn as nn
 

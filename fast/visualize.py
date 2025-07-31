@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from typing import Literal
 import numpy as np
 
+from typing import Literal
 from matplotlib import pyplot as plt
 
 plt.rcParams['figure.max_open_warning'] = 300
-
 
 # from matplotlib import rcParams
 # import matplotlib.font_manager as fm

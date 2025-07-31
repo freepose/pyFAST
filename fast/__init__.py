@@ -83,7 +83,7 @@ def get_device(preferred_device: str = 'cpu'):
         return torch.device('cpu')
 
     if preferred_device == 'mps' and not torch.backends.mps.is_available():
-        print("Warning: MPS is not available. Falling back to CPU.")
+        logging.getLogger().info("Warning: MPS is not available. Falling back to CPU.")
         return torch.device('cpu')
 
     device = torch.device(preferred_device)

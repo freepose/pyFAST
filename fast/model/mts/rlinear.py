@@ -61,12 +61,17 @@ class RLinear(nn.Module):
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x_mask: shape is (batch_size, input_window_size, input_vars), mask tensor.
         """
+
         if self.use_instance_scale:
-            x = self.inst_scaler.fit_transform(x)
+            x = self.inst_scaler.fit_transform(x, x_mask)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.
 
         x = self.d1(x)
         out = self.l1(x)  # -> (batch_size, output_window_size, input_vars)

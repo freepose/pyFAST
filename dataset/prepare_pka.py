@@ -63,7 +63,7 @@ def load_pka(data_root: str, ds_params: dict,
         :param load_as: the dataset type, either 'stm' or 'bdp'.
         :return: train and validation datasets.
     """
-    pka_data_root = data_root + 'time_series/protein_pKa/{}/'.format(ds_name)
+    pka_data_root = data_root + '/protein_pKa/{}/'.format(ds_name)
     dirs = {'train': pka_data_root + 'train', 'val': pka_data_root + 'test'}
 
     ds_cls_dict = {'smt': SMTDataset, 'bdp': BDPDataset}

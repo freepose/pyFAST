@@ -12,7 +12,10 @@ from .ar import GAR
 
 class DRED(nn.Module):
     """
-        Directional Representations with Encoder-Decoder.
+        Directional Representation Encoder-Decoder for Personalized Blood Glucose Forecasting.
+        Yu Chen, Zhijin Wang, Jinmo Tang, Henghong Lin, Senzhen Wu, Yaohui Huang.
+        PAKDD 2025.
+        url: https://link.springer.com/chapter/10.1007/978-981-96-8197-6_15
 
         Author: Senzhen Wu
 

@@ -68,7 +68,7 @@ class AdaptiveSpectralBlock(nn.Module):
         trunc_normal_(self.complex_weight, std=.02)
 
         # Learnable threshold parameter: decide which frequencies to keep
-        self.threshold_param = nn.Parameter(torch.rand(1))
+        self.threshold_param = nn.Parameter(torch.rand(1) * 0.5)    # maybe not need 0.5
 
     def create_adaptive_high_freq_mask(self, x_fft):
         # Calculate energy in the frequency domain
@@ -168,6 +168,17 @@ class TSLANet(nn.Module):
 
         Author provide code: https://github.com/emadeldeen24/TSLANet
 
+        :param input_window_size: input window size.
+        :param input_vars: number of input variables.
+        :param output_window_size: output window size.
+        :param patch_len: length of each patch.
+        :param patch_stride: stride of the patch, defaults to patch_len // 2.
+        :param embedding_dim: dimension of the embedding layer.
+        :param mlp_hidden_size: hidden size for MLP, defaults to embedding_dim * 3.
+        :param num_blocks: number of TSLABlocks.
+        :param block_type: type of block to use, can be 'asb', 'icb', or 'asb_icb'.
+        :param dropout_rate: dropout rate for the blocks.
+        :param use_instance_scale: whether to use instance standard scaling, defaults to True.
     """
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
@@ -228,7 +239,7 @@ class TSLANet(nn.Module):
         x = x.flatten(1, 2)  # -> [batch_size * input_vars, patch_num * embedding_dim]
 
         out = self.l2(x)  # -> [batch_size * input_vars, output_window_size]
-        out = out.view(-1, self.output_window_size, self.input_vars)  # -> [B, output_window_size, input_vars]
+        out = out.reshape(-1, self.input_vars, self.output_window_size).transpose(1, 2)  # -> [B, output_window_size, input_vars]
 
         if self.use_instance_scale:
             out = self.inst_scaler.inverse_transform(out)
