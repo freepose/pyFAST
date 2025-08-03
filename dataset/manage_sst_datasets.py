@@ -79,7 +79,6 @@ sst_metadata = {
     "TurkeyWPF": {
         "path": "{root}/energy_wind/Kaggle_Turkey_Wind_Turbine_Scada_Dataset_2018/Turkey_wind_turbine_{freq}.csv",
         "freq": ["10min", "30min", "1hour", "6hour", "12hour", "1day"],
-        "time_feature_freq": "10min",
         "columns": {
             "time": "Date",
             "univariate": ["LV ActivePower (kW)"],
@@ -89,7 +88,6 @@ sst_metadata = {
     },
     "TurkeyWPF_1day": {
         "path": "{root}/energy_wind/Kaggle_Turkey_Wind_Turbine_Scada_Dataset_2018/Turkey_wind_turbine_1day.csv",
-        "time_feature_freq": "D",
         "columns": {
             "time": "Date",
             "univariate": ["LV ActivePower (kW)"],
@@ -101,7 +99,6 @@ sst_metadata = {
     "GreeceWPF": {
         "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/power_{freq}.csv",
         "freq": ["1day"] + ["1hour", "6hour", "12hour", "1day"],
-        "time_feature_freq": "h",
         "columns": {
             "time": "Date",
             "univariate": ["#36876_power(MW)"],
@@ -109,14 +106,15 @@ sst_metadata = {
         }
     },
     "GreeceWPF_1day": {
-        "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/power_1day.csv",
-        "time_feature_freq": "D",
+        "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/Greece_power_1day.csv",
         "columns": {
             "time": "Date",
             "univariate": ["#36876_power(MW)"],
             "multivariate": slice("#32947_power(MW)", "#36876_power(MW)"),
+            "exogenous": slice("#32947_airTemperature", "#36876_windSpeed")
         }
     },
+
     "SDWPF": {
         "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source/Patv_cubicspline_{freq}.csv",
         "freq": ["10min", "30min", "1hour", "6hour", "12hour", "1day"],
