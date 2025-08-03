@@ -4,12 +4,12 @@
 """
     Batch-wise Dynamic Padding (BDP) Dataset for sequence prediction.
 """
-import itertools, sys, bisect
+import sys, bisect
 import numpy as np
 import torch
 import torch.utils.data as data
 
-from typing import Literal, Tuple, List, Union
+from typing import Tuple
 from tqdm import tqdm
 from .smt_dataset import TensorSequence
 
@@ -18,7 +18,7 @@ class SMDDataset(data.Dataset):
     """
         Single prediction object Multiple sources sequential dataset using Dynamic-padding (SMD).
 
-        ``SMDDataset`` pads zero values to **several** varying-length sequences in a batch.
+        ``SMDDataset`` pads zero values while the selected (part) of sequence/subsequence is **shorter** than a window.
 
         :param ts: list of univariate time series dataset.
         :param ts_mask: list of mask of univariate time series dataset.
@@ -244,7 +244,7 @@ class SMDDataset(data.Dataset):
         """
             Split every time series by specified boundary [start, end) for machine / incremental learning.
             :param start_ratio: the start ratio of the split boundary, must be in the range [0, 1).
-            :param end_ratio: the end ratio of the split boundary, must be in the range (start_ratio, 1].
+            :param end_ratio: the end ratio of the split boundary, must be in the range [start_ratio, 1).
             :param is_strict: if True, the split will be strict, i.e.,
                                 the start index will be exactly at the start_ratio position.
             :param mark: the mark of the split dataset for string representation, default is None.

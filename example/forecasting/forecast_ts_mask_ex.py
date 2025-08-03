@@ -34,7 +34,7 @@ def ts_mask_ex():
     ds_device, model_device = 'cpu', 'cpu'
 
     seq, stride, horizon = 128, 128, 1 - 128
-    task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'dynamic_padding': True}
+    task_config = {'ts': 'univariate', 'ts_mask': True, 'use_ex': True, 'dynamic_padding': True}
 
     train_ds = prepare_smt_datasets(data_root, 'phmd_2d_549_train', seq, seq, horizon, stride, device=ds_device, **task_config)
     val_ds = prepare_smt_datasets(data_root, 'phmd_2d_549_val', seq, seq, horizon, stride, device=ds_device, **task_config)

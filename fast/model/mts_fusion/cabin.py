@@ -64,6 +64,8 @@ class Cabin(nn.Module):
     """
         Senzhen Wu, Yu Chen, Xinhao He, Zhijin Wang, Xiufeng Liu, Yonggang Fu
 
+        Cabin: A Collaborative and Adaptive Framework for Wind Power Forecasting Integrating Ambient Variables
+
         :param input_window_size: input sequence length.
         :param input_vars: number of input variables (channels).
         :param output_window_size: output sequence length.
@@ -212,6 +214,3 @@ class Cabin(nn.Module):
             out = self.cav(out)
 
             return out
-
-
-        return None
