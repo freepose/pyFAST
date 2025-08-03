@@ -11,13 +11,16 @@ import numpy as np
 import pandas as pd
 import torch
 
-from typing import Literal, List, Tuple, Union, Dict, Any
+from typing import Literal, List, Tuple, Union, Dict, Any, Type
 from pathlib import Path
 from tqdm import tqdm
 
 from ... import get_device
-from .. import SSTDataset, SMTDataset
-from .time_feature import TimeAsFeature
+from .. import SSTDataset, SMTDataset, SMDDataset
+
+SSTDatasetSequence = Union[SSTDataset, List[SSTDataset]]
+SMTDatasetSequence = Union[SMTDataset, List[SMTDataset]]
+SMDDatasetSequence = Union[SMDDataset, List[SMDDataset]]
 
 
 def load_sst_dataset(filename: str,
@@ -31,7 +34,7 @@ def load_sst_dataset(filename: str,
                      horizon: int = 1,
                      stride: int = 1,
                      split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
-                     device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> Union[SSTDataset, List[SSTDataset]]:
+                     device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> SSTDatasetSequence:
     """
         Load time series dataset from a **CSV** file,
         transform time series data into supervised data,
@@ -210,9 +213,11 @@ def load_smt_datasets(filenames: List[str],
                       stride: int = 1,
                       split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
                       split_strategy: Literal['intra', 'inter'] = 'intra',
-                      device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> Union[SMTDataset, List[SMTDataset]]:
+                      device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu',
+                      ds_cls: Union[Type[SMTDataset], Type[SMDDataset]] = SMTDataset) \
+        -> Union[SMTDatasetSequence, SMDDatasetSequence]:
     """
-        Load **SMTDataset** from several **CSV** files or directories,
+        Load **SMTDataset**/**SMDDataset** from several **CSV** files or directories,
 
         :param filenames: list of CSV filenames.
         :param variables: names of the target variables, and can be one or more variables in the list.
@@ -237,6 +242,7 @@ def load_smt_datasets(filenames: List[str],
         :param device: the device to load the data, default is 'cpu'.
                        This dataset device can be one of ['cpu', 'cuda', 'mps'].
                        This dataset device can be **different** to the model device.
+        :param ds_cls: the dataset class to use, default is SMTDataset.
 
         :return: the (split) datasets as SMTDataset objects.
     """
@@ -264,7 +270,7 @@ def load_smt_datasets(filenames: List[str],
                                 float_type=float_type, device=device, show_progress=show_pregress)
         smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                          'horizon': horizon, 'stride': stride})
-        return SMTDataset(**smt_args)
+        return ds_cls(**smt_args)
 
     smt_datasets = []
     cum_split_ratios = np.cumsum([0, *split_ratios])
@@ -278,7 +284,7 @@ def load_smt_datasets(filenames: List[str],
         for i, (s, e) in enumerate(zip(cum_split_ratios[:-1], cum_split_ratios[1:])):
             if i > 0:
                 smt_args.update({'stride': output_window_size})
-            split_ds = SMTDataset(**smt_args).split(s, e, is_strict=False, mark='split_{}'.format(i))
+            split_ds = ds_cls(**smt_args).split(s, e, is_strict=False, mark='split_{}'.format(i))
             smt_datasets.append(split_ds)
     else:  # split_strategy == 'inter'
         filename_num = len(filenames)
@@ -291,6 +297,6 @@ def load_smt_datasets(filenames: List[str],
                              'horizon': horizon, 'stride': stride})
             if i > 0:
                 smt_args.update({'stride': output_window_size})
-            smt_datasets.append(SMTDataset(**smt_args, mark='split_{}'.format(i)))
+            smt_datasets.append(ds_cls(**smt_args, mark='split_{}'.format(i)))
 
     return smt_datasets

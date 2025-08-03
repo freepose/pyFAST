@@ -3,5 +3,4 @@ numpy
 pandas
 matplotlib
 tqdm
-fire
 scipy

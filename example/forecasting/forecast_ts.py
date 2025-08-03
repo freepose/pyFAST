@@ -17,14 +17,14 @@
 
     (4) Multi-source multivariate time series forecasting. None examples are provided yet.
 
-    Some tips:
+    Some tips for benefiting from the codes:
 
     (1) Device: the dataset device and model device can be the same or different, and they work well together.
         If they are different, the dataset will be moved to the model device before training.
         If the dataset is large, it is recommended to set the dataset device to 'cpu' and
             the model device to 'cuda' or 'mps'.
 
-    (2) Normalization: the scaler and ex_scaler are fitted on the training set,
+    (2) Normalization: the scaler on target variables is fitted on the training set (maybe add validation set),
         and then applied to transform the validation and test sets.
 
 """
@@ -64,9 +64,9 @@ def main():
 
     task_config = {'ts': 'univariate'}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate_x1000', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
@@ -76,17 +76,13 @@ def main():
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    # scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
-    # ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask) if train_ds.ex_ts is not None else None
-    # train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
-    # if val_ds is not None:
-    #     val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
-    #     val_ds.ex_ts = scaler_transform(ex_scaler, val_ds.ex_ts, val_ds.ex_ts_mask) if val_ds.ex_ts is not None else None
-    # if test_ds is not None:
-    #     test_ds.ts = scaler_transform(scaler, test_ds.ts, test_ds.ts_mask)
-    #     test_ds.ex_ts = scaler_transform(ex_scaler, test_ds.ex_ts, test_ds.ex_ts_mask) if test_ds.ex_ts is not None else None
-    scaler, ex_scaler = None, None
-    # ex_scaler = None
+    scaler = scaler_fit(StandardScale(), train_ds.ts)
+    train_ds.ts = scaler_transform(scaler, train_ds.ts)
+    if val_ds is not None:
+        val_ds.ts = scaler_transform(scaler, val_ds.ts)
+    if test_ds is not None:
+        test_ds.ts = scaler_transform(scaler, test_ds.ts)
+    scaler = None
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -214,7 +210,7 @@ def main():
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
                       criterion=criterion, evaluator=evaluator,
-                      scaler=scaler, ex_scaler=ex_scaler)
+                      scaler=scaler)
     print(trainer)
 
     trainer.fit(train_ds, val_ds,
@@ -234,5 +230,5 @@ def main():
 if __name__ == '__main__':
     initial_seed(2025)
     initial_logger()
-    # main()
-    verify_sst_datasets()
+    main()
+    # verify_sst_datasets()

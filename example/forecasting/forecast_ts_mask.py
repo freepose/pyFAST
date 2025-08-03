@@ -6,6 +6,20 @@
     Examples on incomplete (sparse) time series forecasting (ITSF).
     The incomplete (sparse) time series data is represented by a dense tensor and a mask (indicator) tensor.
 
+    (1) Single-source single/multivariate time series forecasting with missing values.
+
+    (2) Multi-source single/multivariate time series forecasting with missing values.
+
+    Some tips for benefiting from the codes:
+
+    (1) For irregular time series datasets, this supports models working on both fixed-length and
+        vary-length input windows.
+
+        The codes avoid the two problems:
+        (1.a) Relative time steps/points mis-alignment.
+        (1.b) Randomly dynamic padding on collected vary-length slicing windows.
+
+    (2) Computation efficiency: ITSF can work well on personal computers (PC).
 
 """
 
@@ -23,7 +37,7 @@ from fast.metric import Evaluator, MSE
 
 from fast.model.base import get_model_info, covert_parameters
 from fast.model.mts import GAR, AR, VAR, ANN
-from fast.model.mts import DLinear, NLinear, RLinear
+from fast.model.mts import DLinear, NLinear, RLinear, STD
 from fast.model.mts import Transformer
 
 from dataset.prepare_xmcdc import load_xmcdc_sst
@@ -37,25 +51,22 @@ def main():
     ds_device, model_device = 'cpu', 'cpu'
 
     task_config = {'ts': 'multivariate', 'ts_mask': True}
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
+    # fit scalers on training and validation datasets
     scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
-    ex_scaler = scaler_fit(MinMaxScale(), train_ds.ex_ts, train_ds.ex_ts_mask) if train_ds.ex_ts is not None else None
     train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
     if val_ds is not None:
         val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
-        val_ds.ex_ts = scaler_transform(ex_scaler, val_ds.ex_ts, val_ds.ex_ts_mask) if val_ds.ex_ts is not None else None
     if test_ds is not None:
         test_ds.ts = scaler_transform(scaler, test_ds.ts, test_ds.ts_mask)
-        test_ds.ex_ts = scaler_transform(ex_scaler, test_ds.ex_ts, test_ds.ex_ts_mask) if test_ds.ex_ts is not None else None
-
-    scaler, ex_scaler = None, None
-    # ex_scaler = None
+    scaler = None
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -65,14 +76,15 @@ def main():
         'var': [VAR, {'activation': 'linear'}],
         'ann': [ANN, {'hidden_size': 512}],
         'nlinear': [NLinear, {'mapping': 'gar'}],
-        'dlinear': [DLinear, {'kernel_size': 25, 'mapping': 'gar'}],
+        'dlinear': [DLinear, {'kernel_size': 75, 'mapping': 'gar'}],
         'rlinear': [RLinear, {'dropout_rate': 0., 'use_instance_scale': True, 'mapping': 'gar',
                               'd_model': 128}],  # AAAI 2025
+        'std': [STD, {'kernel_size': 75, 'd_model': 512, 'use_instance_scale': True}],
         'transformer': [Transformer, {'d_model': 512, 'num_heads': 8, 'num_encoder_layers': 1,
                                       'num_decoder_layers': 1,  'dim_ff': 2048, 'dropout_rate': 0.}],
     }
 
-    model_cls, user_settings = ts_modeler['rlinear']
+    model_cls, user_settings = ts_modeler['std']
 
     common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -90,9 +102,9 @@ def main():
     evaluator = Evaluator(['MSE', 'MAE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
-                      optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
+                      optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=None, # stopper,
                       criterion=criterion, evaluator=evaluator,
-                      scaler=scaler, ex_scaler=ex_scaler)
+                      scaler=scaler)
     print(trainer)
 
     trainer.fit(train_ds, val_ds,

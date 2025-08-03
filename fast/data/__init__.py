@@ -22,4 +22,4 @@ from .patch import PatchMaker
 from .sst_dataset import SSTDataset, multi_step_ahead_split, train_test_split
 from .smt_dataset import SMTDataset
 from .mmt_dataset import MMTDataset
-from .bdp_dataset import BDPDataset, bdp_collate_fn
+from .smd_dataset import SMDDataset

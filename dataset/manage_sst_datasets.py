@@ -61,7 +61,7 @@ sst_metadata = {
             "exogenous": ["temperature", "humidity"]
         }
     },
-    "SuzhouIPL_sparse": {
+    "SuzhouIPL_Sparse": {
         "path": "{root}/energy_electronic_power_load/Suzhou_industrial_park_2016_2021/" +
                 "01_single_source/Suzhou_ipl_has_nan_{freq}.csv",
         "freq": ["5min", "30min", "1hour"],

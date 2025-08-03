@@ -14,10 +14,24 @@ import os, logging
 from typing import Literal, Tuple, List, Union, Dict, Any
 from pathlib import Path
 
-from fast.data import SMTDataset
+from fast.data import SMTDataset, SMDDataset
 from fast.data.processing.load import load_smt_datasets
 
 smt_metadata = {
+    # [Climate] Climate time series datasets are available from:
+    # https://github.com/edebrouwer/gru_ode_bayes/blob/master/gru_ode_bayes/datasets/Climate/small_chunked_sporadic.csv
+    # https://www.osti.gov/biblio/1394920
+
+    "USHCN": {
+        "paths": ["{root}/climate/US_Historical_Climatology_Network/02_multi_source_nan_rows"],
+        "columns": {
+            "names": ['ID', 'Time', 'Snow', 'SnowDepth', 'Precipitation', 'T_max', 'T_min'],
+            "time": "Time",
+            "univariate": ["T_max", "T_min"],
+            "multivariate": ["Snow", "SnowDepth", "Precipitation", "T_max", "T_min"],
+            "exogenous2": ["ID"]
+        }
+    },
 
     # [Disease] Glucose time series datasets, which are usually unaligned.
     "SH_diabetes": {
@@ -47,9 +61,9 @@ smt_metadata = {
 
     "PhysioNet": {
         "paths": [
-            "{root}/disease/CCC2012_PhysioNet/02_multi_source/set-a",
-            # "{root}/disease/CCC2012_PhysioNet/02_multi_source/set-b",
-            # "{root}/disease/CCC2012_PhysioNet/02_multi_source/set-c"
+            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source/set-a",
+            # "{root}/disease/PhysioNet_Challenge_2012/02_multi_source/set-b",
+            # "{root}/disease/PhysioNet_Challenge_2012/02_multi_source/set-c"
         ],
         "columns": {
             "names": ['RecordID', 'Age', 'Gender', 'Height', 'Weight', 'ICUType', 'Albumin', 'ALP', 'ALT', 'AST',
@@ -127,7 +141,8 @@ smt_metadata = {
     # [Spatio-temporal] Human activity recognition datasets, the "time" feature is normalized.
     # The original data is from: https://archive.ics.uci.edu/dataset/196/localization+data+for+person+activity
     "HumanActivity": {
-        "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source/"],
+        # "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source/"],
+        "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source_nan_rows/"],
         "columns": {
             "univariate": ["010-000-024-033_x", "010-000-024-033_y", "010-000-024-033_z"],
             "multivariate": ["010-000-024-033_x", "010-000-024-033_y", "010-000-024-033_z",
@@ -136,6 +151,44 @@ smt_metadata = {
                              "020-000-033-111_x", "020-000-033-111_y", "020-000-033-111_z"
                              ],
             "exogenous2": ["normalized_time"],
+        }
+    },
+
+    # [Protein] pKa prediction datasets
+    "phmd_2d_549_train": {
+        "paths": ["{root}/protein_pKa/phmd_2d_549_sparse/train/"],
+        "columns": {
+            "names":[
+                "PDB ID", "chain", "amino acid", "Res Name", "Res ID", "Titration", "Target_pKa", "model_pKa",
+                "pKa shift", "res_name", *[str(i) for i in range(480)]
+            ],
+            "univariate": ["pKa_shift"],    # mask variable is 'Res Name'
+            "multivariate": ["pKa_shift"],
+            "exogenous": [str(i) for i in range(480)]
+        }
+    },
+    "phmd_2d_549_val": {
+        "paths": ["{root}/protein_pKa/phmd_2d_549_sparse/valid/"],
+        "columns": {
+            "names": [
+                "PDB ID", "chain", "amino acid", "Res Name", "Res ID", "Titration", "Target_pKa", "model_pKa",
+                "pKa shift", "res_name", *[str(i) for i in range(480)]
+            ],
+            "univariate": ["pKa_shift"],  # mask variable is 'Res Name'
+            "multivariate": ["pKa_shift"],
+            "exogenous": [str(i) for i in range(480)]
+        }
+    },
+    "phmd_2d_549_test": {
+        "paths": ["{root}/protein_pKa/phmd_2d_549_sparse/test/"],
+        "columns": {
+            "names": [
+                "PDB ID", "chain", "amino acid", "Res Name", "Res ID", "Titration", "Target_pKa", "model_pKa",
+                "pKa shift", "res_name", *[str(i) for i in range(480)]
+            ],
+            "univariate": ["pKa_shift"],  # mask variable is 'Res Name'
+            "multivariate": ["pKa_shift"],
+            "exogenous": [str(i) for i in range(480)]
         }
     },
 }
@@ -152,7 +205,7 @@ def prepare_smt_datasets(data_root: str,
                          device: Union[Literal['cpu', 'mps', 'cuda'], str] = 'cpu',
                          **task_kwargs: Dict[str, Any]) -> Union[SMTDataset, List[SMTDataset]]:
     """
-        Prepare several SMTDataset for machine learning tasks.
+        Prepare several SMTDataset/SMDDataset for machine/incremental learning tasks.
 
         The default **float type** is ``float32``, you can change it in ``load_sst_datasets()`` to ``float64`` if needed .
 
@@ -179,6 +232,7 @@ def prepare_smt_datasets(data_root: str,
                             ``use_ex``: bool, whether to use exogenous variables, default is None.
                             ``ex_ts_mask``: bool, whether to mask the exogenous variables, default is False.
                             ``use_ex2``: bool, whether to use time features, default is False.
+                            ``dynamic_padding``: bool, whether to use dynamic padding for the time series, default is False.
         :return: the (split) datasets as SSTDataset objects.
     """
     assert dataset_name in smt_metadata, \
@@ -187,13 +241,14 @@ def prepare_smt_datasets(data_root: str,
 
     freq = given_metadata['freq'][0] if 'freq' in given_metadata else None
     paths = given_metadata['paths']
-    paths = [path.format(root=data_root, freq=freq or '') for path in paths]
+    paths = [os.path.normpath(path.format(root=data_root, freq=freq or '')) for path in paths]
 
     task_ts = task_kwargs.get('ts', 'univariate')
     task_ts_mask = task_kwargs.get('ts_mask', False)
     task_use_ex = task_kwargs.get('use_ex', False)
     task_ex_mask = task_kwargs.get('ex_mask', False)
     task_ex2 = task_kwargs.get('use_ex2', False)
+    task_dynamic_padding = task_kwargs.get('dynamic_padding', False)
 
     variables = given_metadata['columns'].get(task_ts, None)
     if variables is None:
@@ -231,6 +286,7 @@ def prepare_smt_datasets(data_root: str,
         'split_ratios': split_ratios,
         'split_strategy': split_strategy,
         'device': device,
+        'ds_cls': SMDDataset if task_dynamic_padding else SMTDataset,
     }
 
     smt_datasets = load_smt_datasets(**load_smt_args)

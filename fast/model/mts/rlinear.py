@@ -114,10 +114,14 @@ class STD(nn.Module):
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
-            :param x: Input tensor shape is (batch_size, input_window_size, input_vars).
+            :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x_mask: shape is (batch_size, input_window_size, input_vars), mask tensor.
         """
+        if x_mask is not None:
+            x[~x_mask] = 0.
+
         trend_init, seasonal_init = self.decomposition(x)   # -> (batch_size, input_window_size, input_vars)
 
         if self.use_instance_scale:
