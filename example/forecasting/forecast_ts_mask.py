@@ -40,8 +40,7 @@ from fast.model.mts import GAR, AR, VAR, ANN
 from fast.model.mts import DLinear, NLinear, RLinear, STD
 from fast.model.mts import Transformer
 
-from dataset.prepare_xmcdc import load_xmcdc_sst
-from dataset.manage_sst_datasets import prepare_sst_datasets, verify_sst_datasets
+from dataset.manage_sst_datasets import prepare_sst_datasets
 from dataset.manage_smt_datasets import prepare_smt_datasets
 
 

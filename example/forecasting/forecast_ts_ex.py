@@ -16,7 +16,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
-from fast.data import scaler_fit, scaler_transform, StandardScale, MinMaxScale
+from fast.data import scaler_fit, scaler_transform, StandardScale, MinMaxScale, AbstractScale
 from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
@@ -25,7 +25,7 @@ from fast.model.base import get_model_info, covert_parameters
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
 from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE, TSPT
 
-from dataset.prepare_xmcdc import load_xmcdc_sst
+from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
 from dataset.manage_sst_datasets import prepare_sst_datasets
 from dataset.manage_smt_datasets import prepare_smt_datasets
 
@@ -35,25 +35,26 @@ def main():
     torch_float_type = torch.float32
     ds_device, model_device = 'cpu', 'mps'
 
-    # ds_params = {'input_window_size': 10, 'output_window_size': 1, 'horizon': 1, 'stride': 1, 'split_ratio': 0.8}
-    # (train_ds, val_ds), (scaler, ex_scaler) = load_xmcdc_sst('1week', None, ['weather'], **ds_params)
+    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv'
+    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'multivariate', 'use_ex': True}
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 8 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 8 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
+    scaler = None # scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
     ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask) if train_ds.ex_ts is not None else None
-    train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
-    if val_ds is not None:
-        val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
-        val_ds.ex_ts = scaler_transform(ex_scaler, val_ds.ex_ts, val_ds.ex_ts_mask) if val_ds.ex_ts is not None else None
-    if test_ds is not None:
-        test_ds.ts = scaler_transform(scaler, test_ds.ts, test_ds.ts_mask)
-        test_ds.ex_ts = scaler_transform(ex_scaler, test_ds.ex_ts, test_ds.ex_ts_mask) if test_ds.ex_ts is not None else None
-    scaler, ex_scaler = None, None
+    # train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
+    # if val_ds is not None:
+    #     val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
+    #     val_ds.ex_ts = scaler_transform(ex_scaler, val_ds.ex_ts, val_ds.ex_ts_mask) if val_ds.ex_ts is not None else None
+    # if test_ds is not None:
+    #     test_ds.ts = scaler_transform(scaler, test_ds.ts, test_ds.ts_mask)
+    #     test_ds.ex_ts = scaler_transform(ex_scaler, test_ds.ex_ts, test_ds.ex_ts_mask) if test_ds.ex_ts is not None else None
+    # scaler, ex_scaler = None, None
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -77,7 +78,7 @@ def main():
                         'use_instance_scale': True}],
     }
 
-    model_cls, user_settings = modeler['tspt']
+    model_cls, user_settings = modeler['arx']
 
     common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}

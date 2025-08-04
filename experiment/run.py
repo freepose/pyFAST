@@ -13,7 +13,7 @@ from experiment import DotDict
 
 from fast import get_common_kwargs, get_device, initial_seed, initial_logger
 from fast.data import StandardScale, scaler_fit
-from fast.data.processing import load_sst_dataset
+from fast.data.processing import load_sst_datasets
 from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator
@@ -38,7 +38,7 @@ def run_experiment(global_settings: DotDict, dataset_arguments: DotDict, trainer
     initial_seed(getattr(global_settings, 'seed', 2025))
     logger = initial_logger(log_file, logging.INFO)
 
-    sst_datasets = load_sst_dataset(**dataset_arguments)
+    sst_datasets = load_sst_datasets(**dataset_arguments)
     train_ds, val_ds, test_ds = [*sst_datasets, None, None][:3]
     assert train_ds is not None, 'train dataset is None'
 

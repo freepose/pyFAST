@@ -27,7 +27,7 @@ def load_kdd2018_glucose_smt(data_root: str,
                              horizon: int = 1,
                              stride: int = 1,
                              factor: float = 1.,
-                             scaler: AbstractScale = None) -> tuple[tuple, tuple]:
+                             scaler: AbstractScale = None):
     """
         Load KDD 2018 glucose datasets.
 
@@ -91,8 +91,7 @@ def load_kdd2018_glucose_smt(data_root: str,
     split_position = int(len(cgm_uts_list) * split_ratio)
     train_data, val_data = cgm_uts_list[:split_position], cgm_uts_list[split_position:]
 
-    train_smt_params = {
-        'ts': train_data,
+    smt_args = {
         'ex_ts': None,
         'ex_ts_mask': None,
         'ex_ts2': None,
@@ -101,20 +100,7 @@ def load_kdd2018_glucose_smt(data_root: str,
         'horizon': horizon,
     }
 
-    val_smt_params = {
-        'ts': val_data,
-        'ex_ts': None,
-        'ex_ts_mask': None,
-        'ex_ts2': None,
-        'input_window_size': input_window_size,
-        'output_window_size': output_window_size,
-        'horizon': horizon,
-    }
+    train_ds = SMTDataset(train_data, **smt_args, stride=stride)
+    val_ds = SMTDataset(val_data, **smt_args, stride=output_window_size)
 
-    if scaler is not None:
-        scaler = scaler_fit(scaler, train_data)
-
-    train_ds = SMTDataset(**train_smt_params, stride=stride)
-    val_ds = SMTDataset(**val_smt_params, stride=output_window_size)
-
-    return (train_ds, val_ds), (scaler, None)
+    return train_ds, val_ds

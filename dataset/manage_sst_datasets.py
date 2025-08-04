@@ -10,7 +10,7 @@ import os, logging
 
 from typing import Literal, List, Tuple, Union, Dict, Any
 from fast.data import SSTDataset
-from fast.data.processing import load_sst_dataset
+from fast.data.processing import load_sst_datasets
 
 sst_metadata = {
     # [Disease] Xiamen Center for Disease Control and Prevention (XMCDC): infectious disease surveillance data.
@@ -24,8 +24,7 @@ sst_metadata = {
                       'BSI_厦门肝炎_all', 'BSI_厦门肝炎_pc', 'BSI_厦门肝炎_wise',
                       'BSI_厦门腹泻_all', 'BSI_厦门腹泻_pc', 'BSI_厦门腹泻_wise',
                       '手足口病', '肝炎', '其他感染性腹泻'],
-            "time": "Date",
-            "univariate": ["手足口病"],  # ['手足口病', '肝炎', '其他感染性腹泻']
+            "univariate": ["手足口病"],
             "multivariate": ['手足口病', '肝炎', '其他感染性腹泻'],
             "exogenous": slice('平均温度', '最低风速'),  # meteorological variables
         }
@@ -43,7 +42,7 @@ sst_metadata = {
                       'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7',
                       'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'],
             # "time": "Date",   # time format is 'YYYYWW', this cause errors.
-            "univariate": ["手足口病"],  # ['手足口病', '肝炎', '其他感染性腹泻']
+            "univariate": ["手足口病"],
             "multivariate": ['手足口病', '肝炎', '其他感染性腹泻'],
             "exogenous": slice('平均温度', 'D7'),  # meteorological variables
         }
@@ -359,7 +358,7 @@ def prepare_sst_datasets(data_root: str,
         'split_ratios': split_ratios,
         'device': device,
     }
-    sst_datasets = load_sst_dataset(**load_sst_args)
+    sst_datasets = load_sst_datasets(**load_sst_args)
 
     return sst_datasets
 

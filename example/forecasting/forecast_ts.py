@@ -32,29 +32,23 @@
 import os
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 
+from dataset.prepare_xmcdc import load_xmcdc_as_sst
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
-from fast.data import StandardScale, MinMaxScale, scaler_fit, scaler_transform
-from fast.train import Trainer
-from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
-
 from fast.model.base import get_model_info, covert_parameters
+from fast.model.mts import COAT, GAIN
+from fast.model.mts import DeepResidualNetwork
 from fast.model.mts import GAR, AR, VAR, ANN, TimeSeriesRNN, EncoderDecoder
 from fast.model.mts import NHiTS, DLinear, NLinear, RLinear, STD, Amplifier, PatchMLP
-from fast.model.mts import TemporalConvNet, CNNRNN, CNNRNNRes, LSTNet
-from fast.model.mts import DeepResidualNetwork
-from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
-from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TSMixer, TimeXer, TimeMixer
-from fast.model.mts import TimesFM, Timer, TSLANet
 from fast.model.mts import STID, STNorm, MAGNet, GraphWaveNet, FourierGNN
-from fast.model.mts import COAT, GAIN
-
-from dataset.prepare_xmcdc import load_xmcdc_sst
-from dataset.manage_sst_datasets import prepare_sst_datasets, verify_sst_datasets
-from dataset.manage_smt_datasets import prepare_smt_datasets
+from fast.model.mts import TemporalConvNet, CNNRNN, CNNRNNRes, LSTNet
+from fast.model.mts import TimesFM, Timer, TSLANet
+from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TSMixer, TimeXer, TimeMixer
+from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
+from fast.stop import EarlyStop
+from fast.train import Trainer
 
 
 def main():
@@ -62,11 +56,16 @@ def main():
     torch_float_type = torch.float32
     ds_device, model_device = 'cpu', 'mps'
 
+    # Built-in dataset
+    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'
+    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+
     task_config = {'ts': 'univariate'}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate_x1000', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
@@ -76,12 +75,12 @@ def main():
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    scaler = scaler_fit(StandardScale(), train_ds.ts)
-    train_ds.ts = scaler_transform(scaler, train_ds.ts)
-    if val_ds is not None:
-        val_ds.ts = scaler_transform(scaler, val_ds.ts)
-    if test_ds is not None:
-        test_ds.ts = scaler_transform(scaler, test_ds.ts)
+    # scaler = scaler_fit(StandardScale(), train_ds.ts)
+    # train_ds.ts = scaler_transform(scaler, train_ds.ts)
+    # if val_ds is not None:
+    #     val_ds.ts = scaler_transform(scaler, val_ds.ts)
+    # if test_ds is not None:
+    #     test_ds.ts = scaler_transform(scaler, test_ds.ts)
     scaler = None
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
@@ -190,7 +189,7 @@ def main():
                         'cnn_kernel_size': 3, 'cnn_out_channels': 16, 'highway_window_size': 10, 'dropout_rate': 0.5}],
     }
 
-    model_cls, user_settings = ts_modeler['coat']
+    model_cls, user_settings = ts_modeler['ar']
 
     common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}
@@ -205,7 +204,7 @@ def main():
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
 
     criterion = MSE()
-    evaluator = Evaluator(['MSE', 'MAE'])
+    evaluator = Evaluator(['MSE', 'MAE', 'RMSE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,

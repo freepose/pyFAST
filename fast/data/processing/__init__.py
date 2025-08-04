@@ -3,12 +3,9 @@
 
 """
 
-    This package contains the data processing modules for time series datasets.
-
-    (1) Time feature extraction.
-    (2) Dataset loading tools.
+    This package contains the data processing modules.
 
 """
 
-from .time_feature import TimeAsFeature
-from .load import load_sst_dataset, load_smt_datasets
+from .load import load_sst_datasets, load_smt_datasets
+from .load import SSTDatasetSequence, SMTDatasetSequence, SMDDatasetSequence

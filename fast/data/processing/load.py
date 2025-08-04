@@ -5,7 +5,7 @@
     Loading tools for time series datasets.
 """
 
-import os, sys, random, time
+import os, sys
 
 import numpy as np
 import pandas as pd
@@ -23,22 +23,22 @@ SMTDatasetSequence = Union[SMTDataset, List[SMTDataset]]
 SMDDatasetSequence = Union[SMDDataset, List[SMDDataset]]
 
 
-def load_sst_dataset(filename: str,
-                     variables: List[str],
-                     mask_variables: bool = False,
-                     ex_variables: List[str] = None,
-                     mask_ex_variables: bool = False,
-                     ex2_variables: str = None,
-                     input_window_size: int = 96,
-                     output_window_size: int = 24,
-                     horizon: int = 1,
-                     stride: int = 1,
-                     split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
-                     device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> SSTDatasetSequence:
+def load_sst_datasets(filename: str,
+                      variables: List[str],
+                      mask_variables: bool = False,
+                      ex_variables: List[str] = None,
+                      mask_ex_variables: bool = False,
+                      ex2_variables: str = None,
+                      input_window_size: int = 96,
+                      output_window_size: int = 24,
+                      horizon: int = 1,
+                      stride: int = 1,
+                      split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
+                      device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> SSTDatasetSequence:
     """
         Load time series dataset from a **CSV** file,
         transform time series data into supervised data,
-        and split the dataset into training, validation, and test sets.
+        and split the dataset into several datasets.
 
         The default **float type** is ``float32``, you can change it to ``float64`` if needed.
         The default **device** is ``cpu``, you can change it to ``cuda`` or ``mps`` if needed.
@@ -212,12 +212,14 @@ def load_smt_datasets(filenames: List[str],
                       horizon: int = 1,
                       stride: int = 1,
                       split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
-                      split_strategy: Literal['intra', 'inter'] = 'intra',
+                      split_strategy: Literal['intra', 'inter'] = None,
                       device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu',
                       ds_cls: Union[Type[SMTDataset], Type[SMDDataset]] = SMTDataset) \
         -> Union[SMTDatasetSequence, SMDDatasetSequence]:
     """
         Load **SMTDataset**/**SMDDataset** from several **CSV** files or directories,
+        transform time series data into supervised data,
+        and split the dataset into several datasets.
 
         :param filenames: list of CSV filenames.
         :param variables: names of the target variables, and can be one or more variables in the list.
@@ -236,7 +238,7 @@ def load_smt_datasets(filenames: List[str],
         :param split_ratios: the ratios of consecutive split datasets. For example,
                             (0.7, 0.1, 0.2) means 70 % for training, 10% for validation, and 20% for testing.
                             The default is none, which means non-split.
-        :param split_strategy: the strategy to split the dataset, can be 'intra' or 'inter'.
+        :param split_strategy: the strategy to split the dataset, can be 'intra' or 'inter', the default is 'inter'.
                                 'intra' means splitting the dataset into several parts by the ratios,
                                 'inter' means splitting the dataset by the filenames.
         :param device: the device to load the data, default is 'cpu'.
@@ -258,6 +260,7 @@ def load_smt_datasets(filenames: List[str],
         if not all(0 < ratio <= 1 for ratio in split_ratios) or sum(split_ratios) > 1:
             raise ValueError(f'Invalid split ratio: {split_ratios}. All ratios must be in (0, 1] and sum <= 1.')
 
+    split_strategy = split_strategy if split_strategy is not None else 'inter'
     assert split_strategy in ('intra', 'inter'), \
         f"Invalid split strategy: {split_strategy}. The split strategy should be one of ['intra', 'inter']."
 

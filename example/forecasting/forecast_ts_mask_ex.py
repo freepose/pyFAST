@@ -9,6 +9,8 @@
     (1) pKa prediction using protein embeddings,
         this is the problem of **mask** time series forecasting using exogenous data.
 
+    (2) Ensemble Distributed Time series Learning (ETL) for Sparse Time Series Forecasting.
+        Forcast the missing values of the time series solely based on exogenous data.
 """
 
 import os

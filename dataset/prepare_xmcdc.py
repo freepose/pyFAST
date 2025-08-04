@@ -2,20 +2,23 @@
 # encoding: utf-8
 
 """
-    Prepare datasets by loading XMCDC case counts as ``STSDataset`` and ``STMDataset``.
-"""
+    This is an example of how to prepare the XMCDC datasets for forecasting tasks using built-in datasets.
 
-from typing import Literal, List
+    Prepare datasets by loading XMCDC case counts as ``SSTDataset`` and ``SMTDataset``.
+"""
+import os.path
 
 import numpy as np
 import pandas as pd
-
 import torch
 
-from fast.data import AbstractScale, scaler_fit
+from typing import Literal, List, Union, Tuple
 from fast.data import SSTDataset, SMTDataset
 
-from fast.data.processing.time_feature import TimeAsFeature
+from fast.data.processing import load_sst_datasets, load_smt_datasets
+
+SSTDatasetSequence = Union[SSTDataset, List[SSTDataset]]
+SMTDatasetSequence = Union[SMTDataset, List[SMTDataset]]
 
 """
 
@@ -43,236 +46,207 @@ The data fields of XMCDC datasets are as follows:
 """
 
 
-def load_xmcdc_sst(freq: Literal['1day', '1week'] = '1day',
-                   vars: List[str] = None,
-                   ex_vars: List[str] = None,
-                   use_time_features: bool = False,
-                   split_ratio: float = 0.8,
-                   input_window_size: int = 10,
-                   output_window_size: int = 1,
-                   horizon: int = 1,
-                   stride: int = 1,
-                   scaler: AbstractScale = None,
-                   ex_scaler: AbstractScale = None) -> tuple[tuple, tuple]:
+def get_xmcdc_targets() -> List[str]:
     """
-        Load XMCDC disease outpatient count as ``SSTDataset`` for mts forecasting (or using exogenous data).
+        Get the target variables of XMCDC datasets.
+
+        :return: the list of target variables.
+    """
+    return ['手足口病', '肝炎', '其他感染性腹泻']
+
+
+def get_xmcdc_ex_columns(freq: Literal['1day', '1week'] = '1day', targets: List[str] = None,
+                         ex_category: Literal['weather', 'bsi', 'fine_granularity', 'all'] = 'weather') -> List[str]:
+    """
+        The XMCDC datasets have too many columns, and this function is used to get the columns by category.
 
         :param freq: the frequency of the time series, either '1day' or '1week'.
-        :param vars: target variables.
-                     the list of disease names, one or all in ['手足口病', '肝炎', '其他感染性腹泻'].
-                     If ``vars`` is None, then the value is all disease names.
-        :param ex_vars: exogenous variables.
-                        The list of exogenous factor types,
-                        maybe none, one or all in ['weather', 'bsi', 'fine_grained', 'all'].
-                        The 'fine_grained' is available only for weekly frequency.
-                     If ``ex_vars`` is None, then exogenous factors are not used.
-        :param use_time_features: whether to use time features, default is False.
-        :param split_ratio: the ratio to split the target time series into train and test.
-        :param input_window_size: the size of the input window, default is 10.
-        :param output_window_size: the size of the output window, default is 1.
-        :param horizon: the size of the horizon, default is 1.
-        :param stride: the stride of the dataset, default is 1.
-        :param scaler: the global scaler target time series and exogenous time series.
-        :param ex_scaler: the global scaler for exogenous time series.
-        :return: train and validation dataset, and the target and exogenous scalers.
+        :param targets: the target variables, can be one or more in ['手足口病', '肝炎', '其他感染性腹泻'].
+        :param ex_category: the category of the exogenous variables,
+                            can be 'weather', 'bsi', 'fine_granularity', or 'all'.
+                            The default is 'weather', and can not be ``None``.
+                            If 'all', then all exogenous variables are included.
+
+        :return: the selected column names.
     """
 
-    sst_params = {
-        'ts': None,
-        'ex_ts': None,
-        'ex_ts2': None,
-        'input_window_size': input_window_size,
-        'output_window_size': output_window_size,
-        'horizon': horizon,
-    }
+    assert freq in ['1day', '1week'], "Frequency must be either '1day' or '1week'."
+    assert ex_category in ['weather', 'bsi', 'fine_granularity', 'all'], \
+        "Exogenous category must be one of 'weather', 'bsi', 'fine_granularity', or 'all'."
 
-    if vars is None:
-        vars = ['手足口病', '肝炎', '其他感染性腹泻']
-
-    csv_file = r'../../dataset/xmcdc/outpatients_2011_2020_{}.csv'.format(freq)
-    df = pd.read_csv(csv_file)
-
-    target_df = df.loc[:, vars]
-    target_array = target_df.values.astype(np.float32)
-    target_tensor = torch.tensor(target_array)
-    sst_params['ts'] = target_tensor
-
-    if scaler is not None:
-        scaler = scaler.fit(target_tensor)
-
-    if use_time_features:
-        if freq == '1day':
-            df['Date'] = pd.to_datetime(df['Date'])
-            time_dt = df['Date'].dt
-            time_feature_array = TimeAsFeature(freq='d', is_normalized=True)(time_dt)
-
-            time_feature_array = time_feature_array.astype(np.float32)
-            time_feature_tensor = torch.tensor(time_feature_array)
-            sst_params['ex_ts2'] = time_feature_tensor
-
-        elif freq == '1week':
-            # 2020Y12W -> 52: extract week number
-            weekofyear_series = df['Date'].apply(lambda x: int(x.split('Y')[1].rstrip('W')))
-            weekofyear = weekofyear_series.values.astype(np.float32).reshape(-1, 1)
-            weekofyear = (weekofyear - 1) / 52 - 0.5
-            time_feature_tensor = torch.tensor(weekofyear)
-            sst_params['ex_ts2'] = time_feature_tensor
-
-    if ex_vars is not None:
-        weather_columns = ['平均温度', '最高温', '最低温', '平均降水', '最高露点', '平均露点', '最低露点',
-                           '最高湿度(%)', '最低湿度(%)', '平均相对湿度(%)', '最高气压', '平均气压', '最低气压',
-                           '最高风速', '平均风速', '最低风速']
-        target_bsi_lookup = {'手足口病': ['BSI_厦门手足口病_all', 'BSI_厦门手足口病_pc', 'BSI_厦门手足口病_wise'],
-                             '肝炎': ['BSI_厦门肝炎_all', 'BSI_厦门肝炎_pc', 'BSI_厦门肝炎_wise'],
-                             '其他感染性腹泻': ['BSI_厦门腹泻_all', 'BSI_厦门腹泻_pc', 'BSI_厦门腹泻_wise']}
-        target_fine_grained_lookup = {'手足口病': ['HF{}'.format(i) for i in range(1, 8)],
-                                      '肝炎': ['H{}'.format(i) for i in range(1, 8)],
-                                      '其他感染性腹泻': ['D{}'.format(i) for i in range(1, 8)]}
-
-        ex_columns = weather_columns if 'weather' in ex_vars else []
-        for t in vars:
-            for ex in ex_vars:
-                if ex == 'bsi':
-                    ex_columns += target_bsi_lookup[t]
-                elif ex == 'fine_grained' and freq == 'weekly':
-                    ex_columns += target_fine_grained_lookup[t]
-                elif ex == 'all':
-                    ex_columns += target_bsi_lookup[t] + target_fine_grained_lookup[t]
-
-        ex_df = df.loc[:, ex_columns]
-        ex_array = ex_df.values.astype(np.float32)
-        ex_tensor = torch.tensor(ex_array)
-        sst_params['ex_ts'] = ex_tensor
-
-        if ex_scaler is not None:
-            ex_scaler = ex_scaler.fit(ex_tensor)
-
-    if split_ratio == 1.0:
-        train_ds = SSTDataset(**sst_params, stride=stride)
-        return (train_ds, None), (scaler, ex_scaler)
-
-    train_ds = SSTDataset(**sst_params, stride=stride).split(split_ratio, 'train', 'train')
-    val_ds = SSTDataset(**sst_params, stride=sst_params['output_window_size']).split(split_ratio, 'val', 'val')
-
-    return (train_ds, val_ds), (scaler, ex_scaler)
-
-
-def load_xmcdc_smt(freq: Literal['1day', '1week'] = '1day',
-                   vars: List[str] = None,
-                   ex_vars: List[str] = None,
-                   use_time_features: bool = False,
-                   split_ratio: float = 0.8,
-                   input_window_size: int = 10,
-                   output_window_size: int = 1,
-                   horizon: int = 1,
-                   stride: int = 1,
-                   scaler: AbstractScale = None,
-                   ex_scaler: AbstractScale = None) -> tuple[tuple, tuple]:
-    """
-        Load XMCDC disease outpatient count as ``SMTDataset`` for multi-source time series forecasting (using
-        exogenous data).
-
-        :param freq: the frequency of the time series, either '1day' or '1week'.
-        :param vars: target variables.
-                     the list of disease names, one or all in ['手足口病', '肝炎', '其他感染性腹泻'].
-                     If ``vars`` is None, then the value is all disease names.
-        :param ex_vars: exogenous variables.
-                        The list of exogenous factor types,
-                        maybe none, one or all in ['weather', 'bsi', 'fine_grained', 'all'].
-                        The 'fine_grained' is available only for weekly frequency.
-                     If ``ex_vars`` is None, then exogenous factors are not used.
-        :param use_time_features: whether to use time features, default is False.
-        :param split_ratio: the ratio to split the target time series into train and test.
-        :param input_window_size: the size of the input window, default is 10.
-        :param output_window_size: the size of the output window, default is 1.
-        :param horizon: the size of the horizon, default is 1.
-        :param stride: the stride of the dataset, default is 1.
-        :param scaler: the global scaler target time series and exogenous time series.
-        :param ex_scaler: the global scaler for exogenous time series.
-        :return: train and validation dataset, and the target and exogenous scalers.
-    """
+    if targets is None:
+        targets = ['手足口病', '肝炎', '其他感染性腹泻']
 
     weather_columns = ['平均温度', '最高温', '最低温', '平均降水', '最高露点', '平均露点', '最低露点',
                        '最高湿度(%)', '最低湿度(%)', '平均相对湿度(%)', '最高气压', '平均气压', '最低气压',
                        '最高风速', '平均风速', '最低风速']
-    target_bsi_lookup = {'手足口病': ['BSI_厦门手足口病_all', 'BSI_厦门手足口病_pc', 'BSI_厦门手足口病_wise'],
-                         '肝炎': ['BSI_厦门肝炎_all', 'BSI_厦门肝炎_pc', 'BSI_厦门肝炎_wise'],
-                         '其他感染性腹泻': ['BSI_厦门腹泻_all', 'BSI_厦门腹泻_pc', 'BSI_厦门腹泻_wise']}
-    target_fine_grained_lookup = {'手足口病': ['HF{}'.format(i) for i in range(1, 8)],
-                                  '肝炎': ['H{}'.format(i) for i in range(1, 8)],
-                                  '其他感染性腹泻': ['D{}'.format(i) for i in range(1, 8)]}
 
-    if vars is None:
-        vars = ['手足口病', '肝炎', '其他感染性腹泻']
+    target_bsi_lookup = {
+        '手足口病': ['BSI_厦门手足口病_all', 'BSI_厦门手足口病_pc', 'BSI_厦门手足口病_wise'],
+        '肝炎': ['BSI_厦门肝炎_all', 'BSI_厦门肝炎_pc', 'BSI_厦门肝炎_wise'],
+        '其他感染性腹泻': ['BSI_厦门腹泻_all', 'BSI_厦门腹泻_pc', 'BSI_厦门腹泻_wise']
+    }
 
-    stm_params = {
-        'ts': None,
-        'ex_ts': None,
-        'ex_ts2': None,
+    target_fine_grained_lookup = {
+        '手足口病': ['HF{}'.format(i) for i in range(1, 8)],
+        '肝炎': ['H{}'.format(i) for i in range(1, 8)],
+        '其他感染性腹泻': ['D{}'.format(i) for i in range(1, 8)]
+    }
+
+    ret_columns = []
+    if ex_category in ('weather', 'all'):
+        ret_columns.extend(weather_columns)
+
+    if ex_category in ('bsi', 'all'):
+        for target in targets:
+            ret_columns.extend(target_bsi_lookup[target])
+
+    if freq == '1week' and ex_category in ('fine_granularity', 'all'):
+        for target in targets:
+            ret_columns.extend(target_fine_grained_lookup[target])
+
+    return ret_columns
+
+
+def load_xmcdc_as_sst(filename: str = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv',
+                      variables: List[str] = None,
+                      mask_variables: bool = False,
+                      ex_categories: List[str] = None,
+                      mask_ex_variables: bool = False,
+                      input_window_size: int = 10,
+                      output_window_size: int = 1,
+                      horizon: int = 1,
+                      stride: int = 1,
+                      split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
+                      device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> SSTDatasetSequence:
+    """
+        Load XMCDC disease outpatient count as ``SSTDataset``.
+
+        Load time series dataset from a **CSV** file, transform time series data into supervised data,
+        and split the dataset into training, validation, and test sets.
+
+        The default **float type** is ``float32``, you can change it to ``float64`` if needed.
+        The default **device** is ``cpu``, you can change it to ``cuda`` or ``mps`` if needed.
+
+        :param filename: the CSV filename.
+        :param variables: names of the target variables, and can be one or more variables in the list.
+        :param mask_variables: whether to mask the target variables. This uses for sparse time series.
+        :param ex_categories: categories of the exogenous variables.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param input_window_size: input window size of the transformed supervised data. A.k.a., lookback window size.
+        :param output_window_size: output window size of the transformed supervised data. A.k.a., prediction length.
+        :param horizon: the distance between input and output windows of a sample.
+        :param stride: the distance between two consecutive samples.
+        :param split_ratios: the ratios of consecutive split datasets. For example,
+                            (0.7, 0.1, 0.2) means 70% for training, 10% for validation, and 20% for testing.
+                            The default is none, which means non-split.
+        :param device: the device to load the data, default is 'cpu'.
+                       This dataset device can be one of ['cpu', 'cuda', 'mps'].
+                       This dataset device can be **different** to the model device.
+
+        :return: the (split) datasets as SSTDataset objects.
+    """
+
+    if variables is None:
+        variables = get_xmcdc_targets()
+
+    ex_variables = None
+    freq = filename.split('_')[-1].strip('.csv')
+    if ex_categories is not None:
+        ex_variables = []
+        for category in ex_categories:
+            for target in variables:
+                ex_variables.extend(get_xmcdc_ex_columns(freq, [target], category))
+
+    sst_datasets = load_sst_datasets(filename, variables, mask_variables, ex_variables, mask_ex_variables, None,
+                                     input_window_size, output_window_size, horizon, stride, split_ratios, device)
+
+    return sst_datasets
+
+
+def load_xmcdc_as_smt(filename: str = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv',
+                      variables: List[str] = None,
+                      mask_variables: bool = False,
+                      ex_categories: List[str] = None,
+                      mask_ex_variables: bool = False,
+                      input_window_size: int = 96,
+                      output_window_size: int = 24,
+                      horizon: int = 1,
+                      stride: int = 1,
+                      split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
+                      device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu') -> SMTDatasetSequence:
+    """
+        Load XMCDC time series as **SMTDataset**s.
+
+        :param filename: the CSV filename.
+        :param variables: names of the target variables, and can be one or more variables in the list.
+        :param mask_variables: whether to mask the target variables. This uses for sparse time series
+        :param ex_categories: categories of the exogenous variables.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param input_window_size: input window size of the transformed supervised data
+                            A.k.a., lookback window size.
+        :param output_window_size: output window size of the transformed supervised data
+                            A.k.a., prediction length.
+        :param horizon: the distance between input and output windows of a sample.
+        :param stride: the distance between two consecutive samples.
+        :param split_ratios: the ratios of consecutive split datasets. For example,
+                            (0.7, 0.1, 0.2) means 70 % for training, 10% for validation, and 20% for testing.
+                            The default is none, which means non-split.
+        :param device: the device to load the data, default is 'cpu'.
+                       This dataset device can be one of ['cpu', 'cuda', 'mps'].
+                       This dataset device can be **different** to the model device.
+
+        :return: the (split) datasets as SMTDataset objects.
+    """
+
+    if variables is None:
+        variables = get_xmcdc_targets()
+
+    freq = filename.split('_')[-1].strip('.csv')
+
+    sst_datasets = []
+    for target in variables:
+        ex_variables = None
+        if ex_categories is not None:
+            ex_variables = []
+            for category in ex_categories:
+                ex_variables.extend(get_xmcdc_ex_columns(freq, [target], category))
+
+        sst = load_sst_datasets(filename, [target], mask_variables, ex_variables, mask_ex_variables, None,
+                                input_window_size, output_window_size, horizon, stride, None, device)
+        sst_datasets.append(sst)
+
+    # Merge all SSTDatasets into a single SMTDataset
+    smt_args = dict()
+    smt_args.update({
+        'ts': [],
+        'ts_mask': [] if mask_variables else None,
+        'ex_ts': [] if ex_categories is not None else None,
+        'ex_ts_mask': [] if (ex_categories is not None and mask_ex_variables) else None,
         'input_window_size': input_window_size,
         'output_window_size': output_window_size,
         'horizon': horizon,
-    }
+        'stride': stride,
+    })
 
-    csv_file = r'../../dataset/xmcdc/outpatients_2011_2020_{}.csv'.format(freq)
-    df = pd.read_csv(csv_file)
+    for sst in sst_datasets:
+        smt_args['ts'].append(sst.ts)
+        if mask_variables:
+            smt_args['ts_mask'].append(sst.ts_mask)
+        if ex_categories is not None:
+            smt_args['ex_ts'].append(sst.ex_ts)
+            if mask_ex_variables:
+                smt_args['ex_ts_mask'].append(sst.ex_ts_mask)
 
-    ts_list = []
-    ex_ts_list = [] if ex_vars is not None else None
-    ex_ts2_list = [] if use_time_features else None
+    if split_ratios is None:
+        return SMTDataset(**smt_args)
 
-    for name in vars:
-        ts_array = df[name].values.reshape(-1, 1).astype(np.float32)
-        ts_tensor = torch.tensor(ts_array)
-        ts_list.append(ts_tensor)
+    smt_datasets = []
+    cum_split_ratios = np.cumsum([0, *split_ratios])
+    for i, (s, e) in enumerate(zip(cum_split_ratios[:-1], cum_split_ratios[1:])):
+        if i > 0:
+            smt_args.update({'stride': output_window_size})
+        split_ds = SMTDataset(**smt_args).split(s, e, is_strict=False, mark='split_{}'.format(i))
+        smt_datasets.append(split_ds)
 
-        if ex_vars is not None:
-            ex_columns = weather_columns if 'weather' in ex_vars else []
-            for ex in ex_vars:
-                if ex == 'bsi':
-                    ex_columns += target_bsi_lookup[name]
-                elif ex == 'fine_grained' and freq == '1week':
-                    ex_columns += target_fine_grained_lookup[name]
-                elif ex == 'all':
-                    ex_columns += target_bsi_lookup[name] + target_fine_grained_lookup[name]
-
-            ex_df = df.loc[:, ex_columns]
-            ex_array = ex_df.values.astype(np.float32)
-            ex_tensor = torch.tensor(ex_array)
-            ex_ts_list.append(ex_tensor)
-
-        if use_time_features:
-            if freq == '1day':
-                df['Date'] = pd.to_datetime(df['Date'])
-                time_dt = df['Date'].dt
-                time_feature_array = TimeAsFeature(freq='d', is_normalized=True)(time_dt)
-
-                time_feature_array = time_feature_array.astype(np.float32)
-                time_feature_tensor = torch.tensor(time_feature_array)
-                ex_ts2_list.append(time_feature_tensor)
-
-            elif freq == '1week':
-                weekofyear_series = df['Date'].apply(lambda x: int(x.split('Y')[1].rstrip('W')))
-                weekofyear = weekofyear_series.values.astype(np.float32).reshape(-1, 1)
-                weekofyear = (weekofyear - 1) / 52 - 0.5
-                time_feature_tensor = torch.tensor(weekofyear)
-                ex_ts2_list.append(time_feature_tensor)
-
-    if scaler is not None:
-        scaler = scaler_fit(scaler, ts_list)
-
-    if ex_vars is not None and ex_scaler is not None:
-        ex_scaler = scaler_fit(ex_scaler, ex_ts_list)
-
-    stm_params['ts'] = ts_list
-    stm_params['ex_ts'] = ex_ts_list
-    stm_params['ex_ts2'] = ex_ts2_list
-
-    if split_ratio == 1.:
-        train_ds = SMTDataset(**stm_params, stride=stride)
-        return (train_ds, None), (scaler, ex_scaler)
-
-    train_ds = SMTDataset(**stm_params, stride=stride).split(split_ratio, 'train', 'train')
-    val_ds = SMTDataset(**stm_params, stride=stm_params['output_window_size']).split(split_ratio, 'val', 'val')
-
-    return (train_ds, val_ds), (scaler, ex_scaler)
+    return smt_datasets
