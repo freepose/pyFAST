@@ -217,8 +217,7 @@ def load_xmcdc_as_smt(filename: str = '../../dataset/xmcdc/outpatients_2011_2020
         sst_datasets.append(sst)
 
     # Merge all SSTDatasets into a single SMTDataset
-    smt_args = dict()
-    smt_args.update({
+    smt_args = dict({
         'ts': [],
         'ts_mask': [] if mask_variables else None,
         'ex_ts': [] if ex_categories is not None else None,

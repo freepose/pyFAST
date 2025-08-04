@@ -54,12 +54,13 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
+    # Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation/decomposition
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config) # dense rate: < 0.5%
 
     # fit scalers on training and validation datasets
-    scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
+    scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
     train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
     if val_ds is not None:
         val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
@@ -70,7 +71,7 @@ def main():
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
     ts_modeler = {
-        'gar': [GAR, {'activation': 'linear'}],
+        'gar': [GAR, {'activation': 'relu'}],
         'ar': [AR, {'activation': 'relu'}],
         'var': [VAR, {'activation': 'linear'}],
         'ann': [ANN, {'hidden_size': 512}],
@@ -83,7 +84,7 @@ def main():
                                       'num_decoder_layers': 1,  'dim_ff': 2048, 'dropout_rate': 0.}],
     }
 
-    model_cls, user_settings = ts_modeler['std']
+    model_cls, user_settings = ts_modeler['gar']
 
     common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     model_settings = {**common_ds_params, **user_settings}

@@ -152,3 +152,4 @@ class ExogenousDataDrivenPlugin(nn.Module):
         out = self.ex_model_inst(ex)  # -> (batch_size, output_window_size, output_vars)
 
         return out
+

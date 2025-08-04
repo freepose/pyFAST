@@ -34,9 +34,11 @@ import os
 import torch
 import torch.optim as optim
 
-from dataset.prepare_xmcdc import load_xmcdc_as_sst
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
 from fast.metric import Evaluator, MSE
+from fast.stop import EarlyStop
+from fast.train import Trainer
+
 from fast.model.base import get_model_info, covert_parameters
 from fast.model.mts import COAT, GAIN
 from fast.model.mts import DeepResidualNetwork
@@ -47,8 +49,10 @@ from fast.model.mts import TemporalConvNet, CNNRNN, CNNRNNRes, LSTNet
 from fast.model.mts import TimesFM, Timer, TSLANet
 from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TSMixer, TimeXer, TimeMixer
 from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
-from fast.stop import EarlyStop
-from fast.train import Trainer
+
+from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
+from dataset.manage_sst_datasets import prepare_sst_datasets
+from dataset.manage_smt_datasets import prepare_smt_datasets
 
 
 def main():
@@ -58,8 +62,8 @@ def main():
 
     # Built-in dataset
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'
-    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
-    # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'univariate'}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)

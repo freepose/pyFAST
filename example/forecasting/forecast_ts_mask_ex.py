@@ -9,7 +9,7 @@
     (1) pKa prediction using protein embeddings,
         this is the problem of **mask** time series forecasting using exogenous data.
 
-    (2) Ensemble Distributed Time series Learning (ETL) for Sparse Time Series Forecasting.
+    (2) Ensemble / Distributed Time series Learning (ETL) for Sparse Time Series Forecasting.
         Forcast the missing values of the time series solely based on exogenous data.
 """
 
@@ -35,7 +35,7 @@ def ts_mask_ex():
     torch_float_type = torch.float32
     ds_device, model_device = 'cpu', 'cpu'
 
-    seq, stride, horizon = 128, 128, 1 - 128
+    seq, stride, horizon = 128, 128, 1 - 128    # input window is the output window
     task_config = {'ts': 'univariate', 'ts_mask': True, 'use_ex': True, 'dynamic_padding': True}
 
     train_ds = prepare_smt_datasets(data_root, 'phmd_2d_549_train', seq, seq, horizon, stride, device=ds_device, **task_config)
