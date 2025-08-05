@@ -8,6 +8,7 @@
 import torch
 import torch.nn as nn
 
+from typing import Literal, Union, List, Tuple
 from ..base import get_activation_cls
 from ..base import MLP
 
@@ -36,7 +37,7 @@ class GAR(nn.Module):
         """
             :param x: input tensor, the shape is ``(..., input_window_size, input_vars)``.
             :param x_mask: mask tensor of input tensor, the shape is ``(..., input_window_size, input_vars)``.
-            :return:
+            :return: output tensor, the shape is ``(..., output_window_size, input_vars)``.
         """
 
         if x_mask is not None:
@@ -84,7 +85,7 @@ class AR(nn.Module):
         """
             :param x: input tensor, the shape is ``(..., input_window_size, input_vars)``.
             :param x_mask: mask tensor of input tensor, the shape is ``(..., input_window_size, input_vars)``.
-            :return:
+            :return: output tensor, the shape is ``(..., output_window_size, input_vars)``.
         """
 
         if x_mask is not None:
@@ -126,7 +127,7 @@ class VAR(nn.Module):
         """
             :param x: input tensor, the shape is ``(..., input_window_size, input_vars)``.
             :param x_mask: mask tensor of input tensor, the shape is ``(..., input_window_size, input_vars)``.
-            :return:
+            :return: output tensor, the shape is ``(..., output_window_size, output_vars)``.
         """
 
         if x_mask is not None:
@@ -149,33 +150,50 @@ class ANN(nn.Module):
         Energy Conversion and Management 2022.
         url: https://doi.org/10.1016/j.enconman.2022.116163
 
+        The default ``hidden_sizes`` is [64], ``activation`` is 'relu',
+        which is the same as the original paper.
+
+        We extend the ``hidden_sizes`` to be a list of integers, the choice of activation functions.
+
         :param input_window_size:  input window size.
         :param output_window_size: output window size.
-        :param hidden_size: hidden size.
+        :param hidden_sizes: hidden layer sizes, can be a single integer or a list of integers.
+        :param layer_norm: type str, the layer normalization method, can be 'DyT' or 'LN'.
+                           If None, no layer normalization is applied.
+        :param activation: type str, the activation function to use.
+        :param dropout_rate: float in [0, 1), the dropout rate to apply after each layer.
+                             If 0, no dropout is applied.
     """
 
-    def __init__(self, input_window_size: int, output_window_size: int = 1, hidden_size: int = 64):
+    def __init__(self, input_window_size: int, output_window_size: int = 1,
+                 hidden_sizes: Union[int, Tuple[int, ...], List[int]] = 64,
+                 layer_norm: Literal['DyT', 'LN'] = None,
+                 activation: str = 'relu',
+                 dropout_rate: float = 0.):
         super(ANN, self).__init__()
+
         self.input_window_size = input_window_size
         self.output_window_size = output_window_size
-        self.hidden_size = hidden_size
+        self.hidden_sizes = hidden_sizes if isinstance(hidden_sizes, (list, tuple)) else [hidden_sizes]
+        self.layer_norm = layer_norm
+        self.activation = activation
+        self.dropout_rate = dropout_rate
 
-        self.fc = nn.Sequential(
-            nn.Linear(self.input_window_size, self.hidden_size),
-            nn.ReLU(True),
-            nn.Linear(self.hidden_size, self.output_window_size)
-        )
+        self.mlp = MLP(self.input_window_size, self.hidden_sizes, self.output_window_size,
+                       self.layer_norm, self.activation, self.dropout_rate)
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             :param x -> (..., input_window_size, input_vars)
             :param x_mask: mask tensor of input tensor, the shape is ``(..., input_window_size, input_vars)``.
+                           If None, no mask is applied.
+            :return: output tensor, the shape is ``(..., output_window_size, input_vars)``.
         """
         if x_mask is not None:
             x[~x_mask] = 0.
 
-        x = x.transpose(-2, -1) # -> (..., input_vars, input_window_size)
-        x = self.fc(x)          # -> (..., input_vars, output_window_size)
-        x = x.transpose(-2, -1) # -> (..., output_window_size, input_vars)
+        x = x.transpose(-2, -1)  # -> (..., input_vars, input_window_size)
+        x = self.mlp(x)  # -> (..., input_vars, output_window_size)
+        x = x.transpose(-2, -1)  # -> (..., output_window_size, input_vars)
 
         return x

@@ -52,7 +52,7 @@ def ts_mask_ex():
                               'params': {'rnn_cls': 'lstm', 'hidden_size': 128, 'num_layers': 1,
                                          'bidirectional': False, 'dropout_rate': 0.05, 'decoder_way': 'mapping'}}],
         'exddm-trans': [ExDD, {'ex_model_cls': Transformer,
-                               'params': {'label_window_size': 0, 'd_model': 512, 'num_heads': 8,
+                               'params': {'label_window_size': seq, 'd_model': 512, 'num_heads': 8,
                                           'num_encoder_layers': 6, 'num_decoder_layers': 6,
                                           'dim_ff': 2048, 'dropout_rate': 0., 'activation': 'gelu'}}],
     }

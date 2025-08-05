@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 
-from typing import Literal
+from typing import Literal, List, Union, Tuple
 from .activation import get_activation_cls
 from .norm import DynamicTanh
 
@@ -20,7 +20,7 @@ class MLP(nn.Module):
         :param activation: the activation function to use.
         :param dropout_rate: float in [0, 1). Fraction of the units to dropout.
     """
-    def __init__(self, input_dim: int, hidden_units: list, output_dim: int = 1,
+    def __init__(self, input_dim: int, hidden_units: Union[Tuple[int, ...], List[int]], output_dim: int = 1,
                  layer_norm: Literal['DyT', 'LN']  = None, activation: str = None, dropout_rate: float = 0.):
         super(MLP, self).__init__()
         self.input_dim = input_dim  # input feature dimension

@@ -29,7 +29,6 @@ class MMTDataset(data.Dataset):
 
         (5) Support multiple prediction objects, and multiple exogenous data.
 
-
     """
 
     def __init__(self, ts: TensorSequenceSources,
@@ -125,10 +124,23 @@ class MMTDataset(data.Dataset):
 
         input_list, output_list = x_seq_list, y_seq_list
 
+        if self.ts_mask is not None:
+            ts_mask_objects = self.ts_mask[ts_index]
+            input_mask_list = [ts_m[start_x:end_x] for ts_m in ts_mask_objects]
+            output_mask_list = [ts_m[start_y:end_y] for ts_m in ts_mask_objects]
+
+            input_list.extend(input_mask_list)
+            output_list.extend(output_mask_list)
+
         if self.ex_ts is not None:
             ex_ts_objects = self.ex_ts[ts_index]
             ex_input_list = [ex_ts_o[start_x:end_x] for ex_ts_o in ex_ts_objects]
             input_list.extend(ex_input_list)
+
+            if self.ex_ts_mask is not None:
+                ex_ts_mask_objects = self.ex_ts_mask[ts_index]
+                ex_input_mask_list = [ex_ts_m[start_x:end_x] for ex_ts_m in ex_ts_mask_objects]
+                input_list.extend(ex_input_mask_list)
 
         return input_list, output_list
 

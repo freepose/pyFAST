@@ -6,6 +6,7 @@
 """
 
 import torch.nn as nn
+from torch.nn import ReLU, GELU, ELU, SELU, Tanh, Sigmoid, SiLU, Identity
 
 
 class Sin(nn.Module):

@@ -33,7 +33,7 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 *   **`model/` Module:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
 *   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
 *   **`metric/` Module:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
-*   **`visualize.py` Module:**  Equips users with visualization tools to plot time series data and model predictions, facilitating model analysis and interpretation through line charts and comparable real vs. predicted plots.
+[//]: # (*   **`visualize.py` Module:**  Equips users with visualization tools to plot time series data and model predictions, facilitating model analysis and interpretation through line charts and comparable real vs. predicted plots.)
 *   **`generative/` Module:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
 
 ## Installation
@@ -74,7 +74,7 @@ val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 1
 model = ANN(
     input_window_size=train_ds.input_window_size,  # Adapt input window size from dataset
     output_window_size=train_ds.output_window_size,  # Adapt output window size from dataset, a.k.a. prediction steps
-    hidden_size=32  # Hidden layer size
+    hidden_sizes=32  # Hidden layer size
 )
 
 # Set up the Trainer for model training and evaluation

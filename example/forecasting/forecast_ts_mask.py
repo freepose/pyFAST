@@ -49,7 +49,7 @@ from dataset.manage_smt_datasets import prepare_smt_datasets
 def main():
     data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
     torch_float_type = torch.float32
-    ds_device, model_device = 'cpu', 'cpu'
+    ds_device, model_device = 'cpu', 'mps'
 
     task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
@@ -59,7 +59,8 @@ def main():
     # Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation/decomposition
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config) # dense rate: < 0.5%
+    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter',
+                                                     ds_device, **task_config)  # dense rate: < 0.5%
 
     # fit scalers based on training and validation datasets
     scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
@@ -76,7 +77,9 @@ def main():
         'gar': [GAR, {'activation': 'relu'}],
         'ar': [AR, {'activation': 'relu'}],
         'var': [VAR, {'activation': 'linear'}],
-        'ann': [ANN, {'hidden_size': 512}],
+        'ann': [ANN, {  # 'hidden_sizes': [1024, 512, 256, 128, 256, 512, 1024],
+            # 'layer_norm': None, 'activation': 'linear '
+        }],
         'cnnrnn': [CNNRNN, {'cnn_out_channels': 50, 'cnn_kernel_size': 9,
                             'rnn_cls': 'gru', 'rnn_hidden_size': 32, 'rnn_num_layers': 1,
                             'rnn_bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
@@ -92,14 +95,13 @@ def main():
         'patchmlp': [PatchMLP, {'kernel_size': 13, 'd_model': 512, 'patch_lens': [256, 128, 96, 48],
                                 'num_encoder_layers': 1, 'use_instance_scale': True}],  # AAAI 2025
         'transformer': [Transformer, {'d_model': 512, 'num_heads': 8, 'num_encoder_layers': 1,
-                                      'num_decoder_layers': 1,  'dim_ff': 2048, 'dropout_rate': 0.}],
+                                      'num_decoder_layers': 1, 'dim_ff': 2048, 'dropout_rate': 0.05}],
         'tsmixer': [TSMixer, {'num_blocks': 2, 'block_hidden_size': 2048, 'dropout_rate': 0.05,
                               'use_instance_scale': True}],  # TMLR 2023
-        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': False, 'dropout_rate': 0.}],
-
+        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': True, 'dropout_rate': 0.}],
     }
 
-    model_cls, user_args = ts_modeler['cnnrnnres']
+    model_cls, user_args = ts_modeler['ann']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
@@ -117,7 +119,7 @@ def main():
     evaluator = Evaluator(['MSE', 'MAE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
-                      optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=None, # stopper,
+                      optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=None,  # stopper,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler)
     print(trainer)

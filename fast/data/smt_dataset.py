@@ -73,7 +73,6 @@ class SMTDataset(data.Dataset):
         self.device = ts[0].device
 
         self.ratio = 1.  # the ratio of the whole dataset
-        self.split_as = None  # 'train' or 'val': left part or right part of each time series
         self.mark = mark  # None denotes non-split for 'train' or 'val'
 
         self.ts = ts
