@@ -111,6 +111,9 @@ class SMTDataset(data.Dataset):
         self.cum_window_num_array = np.cumsum(self.window_num_list)
         return self.cum_window_num_array
 
+    def __len__(self) -> int:
+        return self.cum_window_num_array[-1]
+
     def __getitem__(self, index: int) -> Tuple[TensorSequence, TensorSequence]:
         """
             Get the input and output data of the dataset by index.
@@ -159,9 +162,6 @@ class SMTDataset(data.Dataset):
             input_list.append(ex2_seq)
 
         return input_list, output_list
-
-    def __len__(self) -> int:
-        return self.cum_window_num_array[-1]
 
     def __str__(self) -> str:
         """

@@ -39,7 +39,7 @@ from fast.metric import Evaluator, MSE
 from fast.stop import EarlyStop
 from fast.train import Trainer
 
-from fast.model.base import get_model_info, covert_parameters
+from fast.model.base import get_model_info, covert_weight_types
 from fast.model.mts import COAT, GAIN
 from fast.model.mts import DeepResidualNetwork
 from fast.model.mts import GAR, AR, VAR, ANN, TimeSeriesRNN, EncoderDecoder
@@ -193,13 +193,13 @@ def main():
                         'cnn_kernel_size': 3, 'cnn_out_channels': 16, 'highway_window_size': 10, 'dropout_rate': 0.5}],
     }
 
-    model_cls, user_settings = ts_modeler['ar']
+    model_cls, user_args = ts_modeler['ar']
 
-    common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
-    model_settings = {**common_ds_params, **user_settings}
-    model = model_cls(**model_settings)
+    common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
+    combined_args = {**common_ds_args, **user_args}
+    model = model_cls(**combined_args)
 
-    model = covert_parameters(model, torch_float_type)
+    model = covert_weight_types(model, torch_float_type)
     print(get_model_info(model))
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())

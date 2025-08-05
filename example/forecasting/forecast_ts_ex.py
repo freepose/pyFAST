@@ -21,7 +21,7 @@ from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
 
-from fast.model.base import get_model_info, covert_parameters
+from fast.model.base import get_model_info, covert_weight_types
 from fast.model.mts_fusion import ARX, NARXMLP, NARXRNN
 from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE, TSPT
 
@@ -78,13 +78,13 @@ def main():
                         'use_instance_scale': True}],
     }
 
-    model_cls, user_settings = modeler['arx']
+    model_cls, user_args = modeler['arx']
 
-    common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
-    model_settings = {**common_ds_params, **user_settings}
-    model = model_cls(**model_settings)
+    common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
+    combined_args = {**common_ds_args, **user_args}
+    model = model_cls(**combined_args)
 
-    model = covert_parameters(model, torch_float_type)
+    model = covert_weight_types(model, torch_float_type)
     print(get_model_info(model))
 
     model_weights = filter(lambda p: p.requires_grad, model.parameters())
@@ -93,7 +93,7 @@ def main():
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
 
     criterion = MSE()
-    evaluator = Evaluator(['MSE', 'MAE'])
+    evaluator = Evaluator(['MSE', 'RMSE', 'MAE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,

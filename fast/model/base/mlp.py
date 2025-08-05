@@ -8,9 +8,11 @@ from typing import Literal
 from .activation import get_activation_cls
 from .norm import DynamicTanh
 
+
 class MLP(nn.Module):
     """
         Multiple Layer Perceptron (MLP).
+
         :param input_dim: input feature dimension.
         :param hidden_units: list of positive integer, the layer number and units in each layer.
         :param output_dim: output feature dimension.

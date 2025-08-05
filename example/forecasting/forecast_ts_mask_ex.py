@@ -23,7 +23,7 @@ from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
 
-from fast.model.base import get_model_info, covert_parameters
+from fast.model.base import get_model_info, covert_weight_types
 from fast.model.mts import TimeSeriesRNN, Transformer
 from fast.model.mts_fusion import ExogenousDataDrivenPlugin as ExDD
 
@@ -63,7 +63,7 @@ def ts_mask_ex():
     model_settings = {**common_ds_params, **user_settings}
     model = plugin(**model_settings)
 
-    model = covert_parameters(model, torch_float_type)
+    model = covert_weight_types(model, torch_float_type)
     print(get_model_info(model))
     # print(model)
 

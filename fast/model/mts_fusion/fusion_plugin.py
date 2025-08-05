@@ -134,6 +134,7 @@ class ExogenousDataDrivenPlugin(nn.Module):
 
         ex_ds_dict = {'input_window_size': input_window_size, 'input_vars': ex_vars,
                       'output_window_size': output_window_size, 'output_vars': output_vars}
+
         ex_ds_params = get_common_kwargs(ex_model_cls.__init__, ex_ds_dict)
         model_settings = {**ex_ds_params, **params}
         self.ex_model_inst = ex_model_cls(**model_settings)

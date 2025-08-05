@@ -12,6 +12,6 @@ from .dr import DirectionalRepresentation
 from .attention import SelfAttention, SymmetricAttention, MultiHeadSymmetricAttention
 
 from .utils import rolling_forecasting
-from .utils import freeze_parameters, covert_parameters, init_weights, to_string, get_model_info
+from .utils import freeze_parameters, covert_weight_types, init_weights, to_string, get_model_info
 
 from .rnn.minlstm import MinLSTM

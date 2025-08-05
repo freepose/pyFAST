@@ -67,7 +67,7 @@ class Evaluator(AbstractEvaluator):
                               {'PCC': {'bias': 0.001}}.
     """
 
-    def __init__(self, metrics: Union[List[str], Tuple[str]] = None, metric_params: dict = None):
+    def __init__(self, metrics: Union[List[str], Tuple[str, ...]] = None, metric_params: dict = None):
         super().__init__()
 
         self.available_metrics = {
@@ -127,7 +127,7 @@ class Evaluator(AbstractEvaluator):
             results[name] = float(ret)
         return results
 
-    def evaluate(self, *tensors: Union[Tuple[torch.Tensor], List[torch.Tensor]]) -> Dict:
+    def evaluate(self, *tensors: Union[Tuple[torch.Tensor, ...], List[torch.Tensor]]) -> Dict:
         """
             Evaluate the prediction performance using the error / accuracy metrics.
 

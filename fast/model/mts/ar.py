@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 
 from ..base import get_activation_cls
+from ..base import MLP
 
 
 class GAR(nn.Module):

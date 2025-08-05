@@ -92,18 +92,23 @@ class TSMixer(nn.Module):
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             :param x: Input tensor of shape (batch_size, input_window_size, input_vars).
+            :param x_mask: Optional mask tensor of shape (batch_size, input_window_size, input_vars).
+                           If provided, masked values will be set to zero.
         """
 
         if self.use_instance_scale:
-            x = self.inst_scaler.fit_transform(x)
+            x = self.inst_scaler.fit_transform(x, x_mask)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0    # set the masked values to zero
 
         for res_block in self.res_blocks:
-            x = res_block(x)  # -> (batch_size, input_window_size, input_vars)
+            x = res_block(x)    # -> (batch_size, input_window_size, input_vars)
 
-        x = self.l1(x)  # -> (batch_size, output_window_size, input_vars)
+        x = self.l1(x)          # -> (batch_size, output_window_size, input_vars)
 
         if self.use_instance_scale:
             x = self.inst_scaler.inverse_transform(x)

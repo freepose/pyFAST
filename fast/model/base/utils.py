@@ -110,7 +110,7 @@ def freeze_parameters(model: nn.Module) -> nn.Module:
     return model
 
 
-def covert_parameters(model: nn.Module, *args, **kwargs) -> nn.Module:
+def covert_weight_types(model: nn.Module, *args, **kwargs) -> nn.Module:
     """ covert float parameters to target types (dtype). """
     device, dtype, non_blocking, convert_to_format = torch._C._nn._parse_to(*args, **kwargs)
 

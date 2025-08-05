@@ -42,8 +42,12 @@ class CNN1D(nn.Module):
         self.l1 = nn.Linear(self.input_window_size, self.output_window_size)
         self.l2 = nn.Linear(self.out_channels, self.output_vars)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """ x => [batch_size, window_size, input_vars] """
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
+
         x = x.permute(0, 2, 1)  # => [batch_size, input_vars, input_window_size]
         x = self.conv1d(x)  # => [batch_size, out_channels, input_window_size]
 
@@ -107,8 +111,12 @@ class CNNRNN(nn.Module):
 
         self.d1 = nn.Dropout(self.dropout_rate)
 
-    def forward(self, x: torch.Tensor):
-        """ x -> [batch_size, window_size, input_size] """
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
+        """ x => [batch_size, window_size, input_vars] """
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
+
         x = x.permute(0, 2, 1)  # => [batch_size, input_size, input_window_size]
         x = self.conv1d(x)  # => [batch_size, cnn_out_channels, input_window_size]
         x = torch.relu(x)
@@ -187,8 +195,12 @@ class CNNRNNRes(nn.Module):
             self.residual = nn.Linear(self.residual_window_size * self.input_vars,
                                       self.output_window_size * self.output_vars)
 
-    def forward(self, x: torch.Tensor):
-        """ x -> [batch_size, input_window_size, input_size] """
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
+        """ x => [batch_size, window_size, input_vars] """
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
+
         res = x.permute(0, 2, 1)  # => [batch_size, input_size, input_window_size]
         res = self.cnn(res)  # => [batch_size, cnn_out_channels, input_window_size]
         res = torch.relu(res)

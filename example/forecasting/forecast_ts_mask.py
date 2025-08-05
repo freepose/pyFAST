@@ -35,10 +35,12 @@ from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
 
-from fast.model.base import get_model_info, covert_parameters
+from fast.model.base import get_model_info, covert_weight_types
 from fast.model.mts import GAR, AR, VAR, ANN
-from fast.model.mts import DLinear, NLinear, RLinear, STD
-from fast.model.mts import Transformer
+from fast.model.mts import DLinear, NLinear, RLinear, STD, PatchMLP
+from fast.model.mts import CNNRNN, CNNRNNRes
+from fast.model.mts import Transformer, TSMixer
+from fast.model.mts import COAT, TCOAT, CoDR, CTRL
 
 from dataset.manage_sst_datasets import prepare_sst_datasets
 from dataset.manage_smt_datasets import prepare_smt_datasets
@@ -59,7 +61,7 @@ def main():
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config) # dense rate: < 0.5%
 
-    # fit scalers on training and validation datasets
+    # fit scalers based on training and validation datasets
     scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
     train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
     if val_ds is not None:
@@ -75,22 +77,35 @@ def main():
         'ar': [AR, {'activation': 'relu'}],
         'var': [VAR, {'activation': 'linear'}],
         'ann': [ANN, {'hidden_size': 512}],
+        'cnnrnn': [CNNRNN, {'cnn_out_channels': 50, 'cnn_kernel_size': 9,
+                            'rnn_cls': 'gru', 'rnn_hidden_size': 32, 'rnn_num_layers': 1,
+                            'rnn_bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
+        'cnnrnnres': [CNNRNNRes, {'cnn_out_channels': 50, 'cnn_kernel_size': 9,
+                                  'rnn_cls': 'gru', 'rnn_hidden_size': 32, 'rnn_num_layers': 1,
+                                  'rnn_bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping',
+                                  'residual_window_size': 5, 'residual_ratio': 0.1}],
         'nlinear': [NLinear, {'mapping': 'gar'}],
         'dlinear': [DLinear, {'kernel_size': 75, 'mapping': 'gar'}],
         'rlinear': [RLinear, {'dropout_rate': 0., 'use_instance_scale': True, 'mapping': 'gar',
                               'd_model': 128}],  # AAAI 2025
         'std': [STD, {'kernel_size': 75, 'd_model': 512, 'use_instance_scale': True}],
+        'patchmlp': [PatchMLP, {'kernel_size': 13, 'd_model': 512, 'patch_lens': [256, 128, 96, 48],
+                                'num_encoder_layers': 1, 'use_instance_scale': True}],  # AAAI 2025
         'transformer': [Transformer, {'d_model': 512, 'num_heads': 8, 'num_encoder_layers': 1,
                                       'num_decoder_layers': 1,  'dim_ff': 2048, 'dropout_rate': 0.}],
+        'tsmixer': [TSMixer, {'num_blocks': 2, 'block_hidden_size': 2048, 'dropout_rate': 0.05,
+                              'use_instance_scale': True}],  # TMLR 2023
+        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': False, 'dropout_rate': 0.}],
+
     }
 
-    model_cls, user_settings = ts_modeler['gar']
+    model_cls, user_args = ts_modeler['cnnrnnres']
 
-    common_ds_params = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
-    model_settings = {**common_ds_params, **user_settings}
-    model = model_cls(**model_settings)
+    common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
+    combined_args = {**common_ds_args, **user_args}
+    model = model_cls(**combined_args)
 
-    model = covert_parameters(model, torch_float_type)
+    model = covert_weight_types(model, torch_float_type)
     print(get_model_info(model))
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())

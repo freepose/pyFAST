@@ -72,10 +72,14 @@ class COAT(nn.Module):
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
-    def forward(self, x):
-        """ x => [batch_size, input_window_size, input_vars (1)] """
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
+        """ x => [batch_size, window_size, input_vars] """
+
         if self.use_instance_scale:
-            x = self.inst_scaler.fit_transform(x)
+            x = self.inst_scaler.fit_transform(x, x_mask)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
 
         if self.mode == 'dr':
             # x > DR
@@ -139,8 +143,11 @@ class CoDR(nn.Module):
 
         self.ar4 = GAR(self.hidden_size, self.output_window_size)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """ x -> [batch_size, input_window_size, input_vars] """
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
 
         seq_last = x[:, -self.horizon:, :].detach()  # -> [batch_size, horizon, input_vars]
         seq_last = seq_last.mean(dim=1, keepdim=True)  # -> [batch_size, 1, input_vars]
@@ -232,10 +239,13 @@ class TCOAT(nn.Module):
 
         self.d1 = nn.Dropout(dropout_rate)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             x -> (batch_size, input_window_size, input_vars)
          """
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
 
         # RNN
         rnn_out, _ = self.rnn(x)  # -> [batch_size, input_window_size, rnn_hidden_size]
@@ -326,10 +336,16 @@ class CTRL(nn.Module):
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
-    def forward(self, x):
-        """ x -> [batch_size, input_window_size, input_vars] """
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            x -> (batch_size, input_window_size, input_vars)
+         """
+
         if self.use_instance_scale:
-            x = self.inst_scaler.fit_transform(x)
+            x = self.inst_scaler.fit_transform(x, x_mask)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
 
         # rnn as encoder
         rnn_out, _ = self.rnn(x)  # -> [batch_size, input_window_size, hidden_size]

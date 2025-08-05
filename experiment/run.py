@@ -18,7 +18,7 @@ from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator
 
-from fast.model.base import get_model_info, covert_parameters
+from fast.model.base import get_model_info, covert_weight_types
 from fast.model import ts_model_classes
 
 
@@ -53,7 +53,7 @@ def run_experiment(global_settings: DotDict, dataset_arguments: DotDict, trainer
     settings = {**common_ds_args, **settings}
     model = model_class(**settings)
 
-    model = covert_parameters(model, torch.float32)
+    model = covert_weight_types(model, torch.float32)
     logger.info(get_model_info(model))
 
     optim_args = getattr(trainer_arguments, 'optimizer', {})

@@ -59,7 +59,8 @@ class MultiScalePatchEmbedding(nn.Module):
         super(MultiScalePatchEmbedding, self).__init__()
         self.seq_len = seq_len
         self.patch_lens = patch_lens    # the patch lengths for different scales
-        assert d_model % len(patch_lens) == 0, "d_model must be divisible by the number of patch lengths / scales."
+        assert d_model % len(patch_lens) == 0, \
+            f"d_model {d_model} must be divisible by len(patch_lens) {len(patch_lens)} ."
         self.d_model = d_model // len(patch_lens)
 
         self.patch_embeddings = nn.ModuleList([
@@ -165,13 +166,18 @@ class PatchMLP(nn.Module):
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             :param x: Input tensor of shape (batch_size, input_window_size, input_vars)
+            :param x_mask: Optional mask tensor of shape (batch_size, input_window_size, input_vars).
+                           If provided, masked values will be set to zero.
         """
 
         if self.use_instance_scale:
-            x = self.inst_scaler.fit_transform(x)
+            x = self.inst_scaler.fit_transform(x, x_mask)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set the masked values to zero
 
         x = self.patch_embeddings(x)    # -> (batch_size, input_vars, d_model)
 
