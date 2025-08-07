@@ -73,7 +73,11 @@ class COAT(nn.Module):
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
-        """ x => [batch_size, window_size, input_vars] """
+        """
+            :param x: input tensor of shape (batch_size, input_window_size, input_vars)
+            :param x_mask: optional mask tensor of shape (batch_size, input_window_size)
+            :return: output tensor of shape (batch_size, output_window_size, output_vars)
+        """
 
         if self.use_instance_scale:
             x = self.inst_scaler.fit_transform(x, x_mask)

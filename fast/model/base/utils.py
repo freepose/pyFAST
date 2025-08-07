@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from typing import Dict, Literal, Union
+from typing import Dict, Literal, Union, Type, Any
 
 
 def rolling_forecasting(model, given_x: torch.Tensor, steps: int = 30) -> torch.Tensor:
@@ -27,8 +27,8 @@ def rolling_forecasting(model, given_x: torch.Tensor, steps: int = 30) -> torch.
     return predictions
 
 
-def count_parameters(model: nn.Module, unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> Dict[
-    str, Union[int, float, str]]:
+def count_weights(model: nn.Module, unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> \
+        Dict[str, Union[int, float, str]]:
     """
     Count parameter numbers of a given torch module.
 
@@ -62,16 +62,28 @@ def count_parameters(model: nn.Module, unit: Literal['k', 'm', 'g', 'auto'] = 'a
     return {'trainable': trainable_params / divisor, 'total': total_params / divisor, 'unit': unit}
 
 
-def get_constants(model: nn.Module) -> dict:
+def collect_model_members(model_inst: nn.Module) -> Dict[str, Any]:
     """
-        :param model: model instance.
+        Get the members of a model instance
+
+        :param model_inst: model instance.
         :return: a dictionary of model constants.
     """
-    constant_dict = {key: value for key, value in vars(model).items() if
-                     isinstance(value, (int, float, str, bool, list, tuple))
-                     and not key.startswith('_') and not key == 'training'}
 
-    return constant_dict
+    all_members = vars(model_inst)
+
+    ret_members = {}
+    for key, value in all_members.items():
+        if key.startswith('_') or key == 'training':
+            continue
+
+        if isinstance(value, (int, float, str, bool, list, tuple, dict)):
+            ret_members[key] = value
+
+        if isinstance(value, type) and issubclass(value, nn.Module):
+            ret_members[key] = value.__name__
+
+    return ret_members
 
 
 def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> str:
@@ -83,18 +95,18 @@ def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', 'auto'] 
         :return: the string of model information.
     """
 
+    weight_counts = count_weights(model, count_unit)
+    count_str = '{:.2f}{}/{:.2f}{}'.format(weight_counts['trainable'], weight_counts['unit'],
+                                           weight_counts['total'], weight_counts['unit'])
+
+    members = collect_model_members(model)
+    params_dict = {**members, 'trainable/total': count_str}
+
     name = model.__class__.__name__
-    constants = get_constants(model)
-    params_counts = count_parameters(model, count_unit)
+    kwargs_str = ', '.join([f'{key}={value}' for key, value in params_dict.items()])
+    kwargs_str = '{}({})'.format(name, kwargs_str)
 
-    count_str = '{:.2f}{}/{:.2f}{}'.format(params_counts['trainable'], params_counts['unit'],
-                                         params_counts['total'], params_counts['unit'])
-    params_dict = {**constants, 'trainable/total': count_str}
-
-    params_str = ', '.join([f'{key}={value}' for key, value in params_dict.items()])
-    params_str = '{}({})'.format(name, params_str)
-
-    return params_str
+    return kwargs_str
 
 
 def freeze_parameters(model: nn.Module) -> nn.Module:

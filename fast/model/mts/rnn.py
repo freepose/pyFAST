@@ -24,13 +24,13 @@ class TimeSeriesRNN(nn.Module):
 
         :param input_vars: input variable number.
         :param output_window_size: output window size.
-        :param output_vars: output size.
+        :param output_vars: output variable(s) number.
         :param rnn_cls: the rnn type is in ['rnn', 'lstm', 'gru', 'minlstm'].
         :param hidden_size: hidden size of rnn.
         :param num_layers: number of rnn layers.
         :param bidirectional: whether to use bidirectional rnn or not.
         :param dropout_rate: dropout rate.
-        :param decoder_way: the decoder way is in ['inference', 'mapping']. In KDD 2018,
+        :param decoder_way: the decoder way is in ['inference', 'mapping']. In KDD 2018 Glucose,
                             the 'inference' is also called 'recursive'. The 'mapping' is also called 'multi-output'.
     """
 
@@ -63,7 +63,8 @@ class TimeSeriesRNN(nn.Module):
         rnn_out_dim = self.hidden_size * 2 if self.bidirectional else self.hidden_size
         if self.decoder_way == 'inference':
             self.l1 = nn.Linear(rnn_out_dim, self.input_vars)
-            self.l2 = nn.Linear(self.input_vars, self.output_vars)
+            if self.input_vars != self.output_vars:
+                self.l2 = nn.Linear(self.input_vars, self.output_vars)
         else:
             self.l3 = nn.Linear(rnn_out_dim, self.output_vars)
 
@@ -85,7 +86,7 @@ class TimeSeriesRNN(nn.Module):
                 rnn_output, hidden = self.rnn(inputs, hidden)   # -> (batch_size, 1, hidden_size)
                 out = self.l1(rnn_output)   # -> (batch_size, 1, input_vars)
                 inputs = out
-                outputs[:, t:t+1, :] = self.l2(out)
+                outputs[:, t:t+1, :] = self.l2(out) if self.l2 is not None else out
         else:
             # Decoder: mapping, assure that input_window_size >= output_window_size
             rnn_output, hidden = self.rnn(x, hidden)    # -> (batch_size, input_window_size, hidden_size)
@@ -143,7 +144,8 @@ class EncoderDecoder(nn.Module):
         rnn_out_dim = self.hidden_size * 2 if self.bidirectional else self.hidden_size
         if self.decoder_way == 'inference':
             self.l1 = nn.Linear(rnn_out_dim, self.input_vars)
-            self.l2 = nn.Linear(self.input_vars, self.output_vars)
+            if self.input_vars != self.output_vars:
+                self.l2 = nn.Linear(self.input_vars, self.output_vars)
         else:
             self.l3 = nn.Linear(rnn_out_dim, self.output_vars)
 
@@ -170,7 +172,7 @@ class EncoderDecoder(nn.Module):
                 decoder_output, decoder_hidden = self.rnn_decoder.forward(decoder_input, decoder_hidden)
                 out = self.l1(decoder_output)  # -> (batch_size, 1, input_vars)
                 decoder_input = out
-                outputs[:, t:t + 1, :] = self.l2(out)
+                outputs[:, t:t + 1, :] = self.l2(out) if self.l2 is not None else out
         else:
             # Decoder: mapping, assure that input_window_size >= output_window_size
             decoder_output, decoder_hidden = self.rnn_decoder(x, decoder_hidden)

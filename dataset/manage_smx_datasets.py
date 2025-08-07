@@ -194,7 +194,7 @@ smt_metadata = {
 }
 
 
-def prepare_smt_datasets(data_root: str,
+def prepare_smx_datasets(data_root: str,
                          dataset_name: str,
                          input_window_size: int = 96,
                          output_window_size: int = 24,

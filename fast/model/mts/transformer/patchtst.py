@@ -231,10 +231,13 @@ class PatchTST(nn.Module):
 
         self.inst_scale = InstanceStandardScale() if use_instance_scale else InstanceScale()
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """ x -> (batch_size, input_window_size, input_vars) """
 
-        norm_x = self.inst_scale.fit_transform(x)
+        norm_x = self.inst_scale.fit_transform(x, x_mask)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.
 
         batch_size, input_window_size, input_vars = x.shape
         x_patches = self.patch_maker(norm_x)  # -> (batch_size, input_vars, patch_num, patch_len)

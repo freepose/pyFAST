@@ -22,6 +22,7 @@ class MultiHeadAttention(nn.Module):
         respectivement. La transformation dense est appliquée après l'opération
         d'attention pour obtenir la sortie finale.
     """
+
     def __init__(self, d_model: int, num_heads: int):
         super(MultiHeadAttention, self).__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
@@ -103,7 +104,7 @@ class LayerNormResidual(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         self.linear = nn.Linear(d_model, d_model)  # Linear transformation for residual connection
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor = None):
         normalized_x = self.norm(x)
         sublayer_output = self.sublayer(normalized_x, mask)
 
@@ -163,6 +164,14 @@ class TimesFM(nn.Module):
         self.output_layer = nn.Linear(d_model, input_vars)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            :param x: input tensor of shape (batch_size, input_window_size, input_vars).
+            :param mask: causal mask tensor of shape (input_window_size, input_window_size).
+            :return: output tensor of shape (batch_size, output_window_size, input_vars).
+        """
+        if mask is not None and mask.ndim != 2:
+            raise ValueError("Mask must be a 2D tensor.")
+
         x = self.embedding(x)
         x += self.pos_embedding[:, :x.shape[1], :]
 
@@ -175,6 +184,11 @@ class TimesFM(nn.Module):
 
 
 def create_causal_mask(size):
+    """
+    Crée un masque causal pour l'attention dans les modèles de type Transformer.
+    :param size: the size of the mask (commonly, ``input_window_size``).
+    :return: A tensor of shape (size, size) where positions that should not be attended to are set to -inf,
+    """
     mask = torch.triu(torch.ones(size, size), diagonal=1)
     mask = mask.masked_fill(mask == 1, float('-inf'))
     return mask

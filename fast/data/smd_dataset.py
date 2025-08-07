@@ -20,6 +20,14 @@ class SMDDataset(data.Dataset):
 
         ``SMDDataset`` pads zero values while the selected (part) of sequence/subsequence is **shorter** than a window.
 
+        (1) It supports both fixed-length and vary-length input windows.
+            The vary-length input windows are padded with zero values on the right side of the input window,
+            to align the relative time steps/points with ``input_window_size`` or ``output_window_size``.
+        (2) It supports both single-source and multi-source time series datasets.
+        (3) It supports both univariate and multivariate time series datasets.
+        (4) It supports exogenous time series datasets, and pre-known exogenous time series datasets.
+        (5) It supports time series datasets with missing values.
+
         :param ts: list of univariate time series dataset.
         :param ts_mask: list of mask of univariate time series dataset.
         :param ex_ts: list of exogenous time series.
@@ -64,9 +72,8 @@ class SMDDataset(data.Dataset):
         self.ts_num = len(ts)  # number of time series sources (a.k.a., csv file number)
         self.device = ts[0].device
 
-        self.ratio = 1.  # the ratio of the whole dataset
-        self.split_as = None  # 'train' or 'val': left part or right part of each time series
-        self.mark = mark  # None denotes non-split for 'train' or 'val'
+        self.ratio = 1.
+        self.mark = mark  # use to mark the (split) dataset
 
         self.ts = ts
         self.ts_mask = ts_mask
@@ -96,7 +103,7 @@ class SMDDataset(data.Dataset):
                     raise ValueError(f'The length of ts[{i}] is 0.')
 
                 window_size = self.input_window_size + self.output_window_size - self.horizon + 1
-                if ts_len < window_size:    # Padding is needed
+                if ts_len < window_size:  # Padding is needed
                     sample_num = 1
                 else:
                     sample_num = (ts_len - window_size) // self.stride + 1
@@ -121,7 +128,6 @@ class SMDDataset(data.Dataset):
         padding_tensor = torch.zeros(padding, seq.shape[1], dtype=seq.dtype, device=self.device)
         padded_seq = torch.cat([seq, padding_tensor], dim=0)
         return padded_seq
-
 
     def __getitem__(self, index: int) -> Tuple[TensorSequence, TensorSequence]:
         """
@@ -187,10 +193,12 @@ class SMDDataset(data.Dataset):
             local_ex_ts2 = self.ex_ts2[ts_index]
             ex2_seq_current = local_ex_ts2[start_x:end_x]
             if ex2_seq_current.shape[0] < self.input_window_size:
-                ex2_seq_current = self.dynamic_padding(ex2_seq_current, self.input_window_size - ex2_seq_current.shape[0])
+                ex2_seq_current = self.dynamic_padding(ex2_seq_current,
+                                                       self.input_window_size - ex2_seq_current.shape[0])
             ex2_seq_upcoming = local_ex_ts2[start_y:end_y]
             if ex2_seq_upcoming.shape[0] < self.output_window_size:
-                ex2_seq_upcoming = self.dynamic_padding(ex2_seq_upcoming, self.output_window_size - ex2_seq_upcoming.shape[0])
+                ex2_seq_upcoming = self.dynamic_padding(ex2_seq_upcoming,
+                                                        self.output_window_size - ex2_seq_upcoming.shape[0])
             ex2_seq = torch.cat([ex2_seq_current, ex2_seq_upcoming], dim=0)
 
             input_list.append(ex2_seq)
@@ -239,62 +247,3 @@ class SMDDataset(data.Dataset):
         params_str = 'SMDDataset({})'.format(params_str)
 
         return params_str
-
-    def split(self, start_ratio: float = 0.0, end_ratio: float = 1.0, is_strict: bool = False, mark: str = None):
-        """
-            Split every time series by specified boundary [start, end) for machine / incremental learning.
-            :param start_ratio: the start ratio of the split boundary, must be in the range [0, 1).
-            :param end_ratio: the end ratio of the split boundary, must be in the range [start_ratio, 1).
-            :param is_strict: if True, the split will be strict, i.e.,
-                                the start index will be exactly at the start_ratio position.
-            :param mark: the mark of the split dataset for string representation, default is None.
-            :return: a new SMTDataset instance with the specified split.
-        """
-        assert 0 <= start_ratio < end_ratio <= 1, \
-            f"Invalid boundary of split ratios: {start_ratio}, {end_ratio}. They must be in the range [0, 1]."
-
-        border_ts = []
-        border_ts_mask = [] if self.ts_mask is not None else None
-        border_ex_ts = [] if self.ex_ts is not None else None
-        border_ex_ts_mask = [] if self.ex_ts_mask is not None else None
-        border_ex_ts2 = [] if self.ex_ts2 is not None else None
-
-        with tqdm(total=len(self.ts), leave=False, file=sys.stdout) as pbar:
-            for i, ts in enumerate(self.ts):
-                pbar.set_description(f'Splitting ts_{i}')
-
-                ts_len = ts.shape[0]
-                start, end = int(ts_len * start_ratio), int(ts_len * end_ratio)
-
-                if not is_strict:
-                    start = max(0, start - self.input_window_size - self.horizon + 1)
-
-                border_len = end - start
-                sample_num = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
-                sample_num = sample_num // self.stride + 1
-                assert sample_num > 0, "No samples can be generated at time series {}.".format(i)
-
-                border_ts.append(ts[start:end])
-
-                if self.ts_mask is not None:
-                    border_ts_mask.append(self.ts_mask[i][start:end])
-
-                if self.ex_ts is not None:
-                    border_ex_ts.append(self.ex_ts[i][start:end])
-
-                    if self.ex_ts_mask is not None:
-                        border_ex_ts_mask.append(self.ex_ts_mask[i][start:end])
-
-                if self.ex_ts2 is not None:
-                    border_ex_ts2.append(self.ex_ts2[i][start:end])
-
-                self.window_num_list.append(sample_num)
-
-                pbar.set_postfix(sample_num='{}'.format(sample_num))
-                pbar.update(1)
-
-        dataset = SMDDataset(border_ts, border_ts_mask, border_ex_ts, border_ex_ts_mask, border_ex_ts2,
-                             self.input_window_size, self.output_window_size, self.horizon, self.stride, mark=mark)
-        dataset.ratio = round(end_ratio - start_ratio, 15)
-
-        return dataset

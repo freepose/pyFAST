@@ -246,14 +246,17 @@ class Timer(nn.Module):
 
         self.inst_scale = InstanceStandardScale()
 
-    def forward(self, x_enc):
+    def forward(self, x_enc: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             将forecast改名为forward
         """
         B, L, M = x_enc.shape
 
         # Normalization from Non-stationary Transformer
-        x_enc = self.inst_scale.fit_transform(x_enc)
+        x_enc = self.inst_scale.fit_transform(x_enc, x_mask)
+
+        if x_mask is not None:
+            x_enc[~x_mask] = 0.
 
         # do patching and embedding
         x_enc = x_enc.permute(0, 2, 1)  # [B, M, T]

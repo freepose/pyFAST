@@ -27,7 +27,7 @@ from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE, TSPT
 
 from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
 from dataset.manage_sst_datasets import prepare_sst_datasets
-from dataset.manage_smt_datasets import prepare_smt_datasets
+from dataset.manage_smx_datasets import prepare_smx_datasets
 
 
 def main():

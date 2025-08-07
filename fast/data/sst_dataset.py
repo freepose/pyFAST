@@ -128,7 +128,7 @@ class SSTDataset(data.Dataset):
         self.device = ts.device
 
         self.ratio = 1.0
-        self.mark = mark
+        self.mark = mark    # use to mark the (split) dataset
 
         self.sample_num = (ts.shape[0] - input_window_size - output_window_size - horizon + 1) // stride + 1
         assert self.sample_num > 0, "No samples can be generated."

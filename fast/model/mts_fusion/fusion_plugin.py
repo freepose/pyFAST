@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 
+from typing import Type
 from fast import get_common_kwargs
 from fast.model.mts import GAR
 
@@ -25,7 +26,7 @@ class DataFirstPlugin(nn.Module):
     def __init__(self, input_window_size: int = 1, input_vars: int = 1,
                  ex_retain_window_size: int = 1, ex_vars: int = 1,
                  output_window_size: int = 1, output_vars: int = 1,
-                 model_cls: nn.Module = GAR, params: dict = {}):
+                 model_cls: Type[nn.Module] = GAR, params: dict = {}):
         super(DataFirstPlugin, self).__init__()
 
         self.input_window_size = input_window_size
@@ -81,7 +82,7 @@ class LearningFirstPlugin(nn.Module):
     def __init__(self, input_window_size: int = 1, input_vars: int = 1,
                  ex_retain_window_size: int = 1, ex_vars: int = 1,
                  output_window_size: int = 1, output_vars: int = 1,
-                 model_cls: nn.Module = GAR, params: dict = {}):
+                 model_cls: Type[nn.Module] = GAR, params: dict = {}):
         super(LearningFirstPlugin, self).__init__()
 
         self.input_window_size = input_window_size
@@ -129,17 +130,25 @@ class ExogenousDataDrivenPlugin(nn.Module):
 
     def __init__(self, input_window_size, ex_vars: int = 1,
                  output_window_size: int = 1, output_vars: int = 1,
-                 ex_model_cls: nn.Module = GAR, params: dict = {}):
+                 ex_model_cls: Type[nn.Module] = GAR, ex_model_args: dict = None):
         super(ExogenousDataDrivenPlugin, self).__init__()
 
         ex_ds_dict = {'input_window_size': input_window_size, 'input_vars': ex_vars,
                       'output_window_size': output_window_size, 'output_vars': output_vars}
 
-        ex_ds_params = get_common_kwargs(ex_model_cls.__init__, ex_ds_dict)
-        model_settings = {**ex_ds_params, **params}
+        self.input_window_size = input_window_size
+        self.ex_vars = ex_vars
+        self.output_window_size = output_window_size
+        self.output_vars = output_vars
+        self.ex_model_cls = ex_model_cls
+        self.ex_model_args = ex_model_args if ex_model_args is not None else {}
+
+        ex_ds_params = get_common_kwargs(self.ex_model_cls.__init__, ex_ds_dict)
+        model_settings = {**ex_ds_params, **self.ex_model_args}
         self.ex_model_inst = ex_model_cls(**model_settings)
 
         if 'output_vars' not in ex_ds_params:
+            # ex_model_cls supports only when ``input_vars`` == ``output_vars``.
             self.ex_model_inst = nn.Sequential(self.ex_model_inst, nn.Linear(ex_vars, output_vars))
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor, ex: torch.Tensor):
@@ -147,6 +156,7 @@ class ExogenousDataDrivenPlugin(nn.Module):
             :param x: shape is (batch_size, input_window_size, input_vars), data type is float.
             :param x_mask: shape is (batch_size, input_window_size, input_vars), data type is bool.
             :param ex: shape is (batch_size, input_window_size, ex_vars), data type is float.
+
             :return: shape is (batch_size, output_window_size, output_vars), data type is float.
         """
 

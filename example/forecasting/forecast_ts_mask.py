@@ -22,7 +22,7 @@
     (2) Computation efficiency: ITSF can work well on personal computers (PC).
 
 """
-
+import logging
 import os
 
 import torch
@@ -39,11 +39,11 @@ from fast.model.base import get_model_info, covert_weight_types
 from fast.model.mts import GAR, AR, VAR, ANN
 from fast.model.mts import DLinear, NLinear, RLinear, STD, PatchMLP
 from fast.model.mts import CNNRNN, CNNRNNRes
-from fast.model.mts import Transformer, TSMixer
+from fast.model.mts import Transformer, TSMixer, Timer
 from fast.model.mts import COAT, TCOAT, CoDR, CTRL
 
 from dataset.manage_sst_datasets import prepare_sst_datasets
-from dataset.manage_smt_datasets import prepare_smt_datasets
+from dataset.manage_smx_datasets import prepare_smx_datasets
 
 
 def main():
@@ -56,11 +56,10 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation/decomposition
+    # Sparse long-sequence time series forecasting problems: sparse decomposition (OMP), shapelet representation/decomposition
     # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter',
-                                                     ds_device, **task_config)  # dense rate: < 0.5%
+    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
     # fit scalers based on training and validation datasets
     scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
@@ -77,9 +76,7 @@ def main():
         'gar': [GAR, {'activation': 'relu'}],
         'ar': [AR, {'activation': 'relu'}],
         'var': [VAR, {'activation': 'linear'}],
-        'ann': [ANN, {  # 'hidden_sizes': [1024, 512, 256, 128, 256, 512, 1024],
-            # 'layer_norm': None, 'activation': 'linear '
-        }],
+        'ann': [ANN, {'hidden_sizes': [256] * 10, 'layer_norm': 'LN', 'activation': 'linear'}],
         'cnnrnn': [CNNRNN, {'cnn_out_channels': 50, 'cnn_kernel_size': 9,
                             'rnn_cls': 'gru', 'rnn_hidden_size': 32, 'rnn_num_layers': 1,
                             'rnn_bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
@@ -88,27 +85,38 @@ def main():
                                   'rnn_bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping',
                                   'residual_window_size': 5, 'residual_ratio': 0.1}],
         'nlinear': [NLinear, {'mapping': 'gar'}],
-        'dlinear': [DLinear, {'kernel_size': 75, 'mapping': 'gar'}],
+        'dlinear': [DLinear, {'kernel_size': 135, 'mapping': 'gar'}],
         'rlinear': [RLinear, {'dropout_rate': 0., 'use_instance_scale': True, 'mapping': 'gar',
                               'd_model': 128}],  # AAAI 2025
         'std': [STD, {'kernel_size': 75, 'd_model': 512, 'use_instance_scale': True}],
         'patchmlp': [PatchMLP, {'kernel_size': 13, 'd_model': 512, 'patch_lens': [256, 128, 96, 48],
                                 'num_encoder_layers': 1, 'use_instance_scale': True}],  # AAAI 2025
-        'transformer': [Transformer, {'d_model': 512, 'num_heads': 8, 'num_encoder_layers': 1,
-                                      'num_decoder_layers': 1, 'dim_ff': 2048, 'dropout_rate': 0.05}],
+        'transformer': [Transformer, {'label_window_size': train_ds.output_window_size, 'd_model': 512, 'num_heads': 8,
+                                      'num_encoder_layers': 1, 'num_decoder_layers': 1, 'dim_ff': 2048,
+                                      'dropout_rate': 0.05}],
+        'timer': [Timer, {'patch_len': 4, 'd_model': 64, 'num_heads': 8, 'e_layers': 1, 'dim_ff': 512,
+                          'activation': 'relu', 'dropout_rate': 0.}],
         'tsmixer': [TSMixer, {'num_blocks': 2, 'block_hidden_size': 2048, 'dropout_rate': 0.05,
                               'use_instance_scale': True}],  # TMLR 2023
-        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': True, 'dropout_rate': 0.}],
+        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': False, 'dropout_rate': 0.}],
+        "tcoat": [TCOAT, {"rnn_hidden_size": 8, "rnn_num_layers": 2, "rnn_bidirectional": True,
+                          "residual_window_size": 240, "residual_ratio": 0.5, "dropout_rate": 0.05}],
+        "codr": [CoDR, {"horizon": 1, "hidden_size": 179,
+                        "use_window_fluctuation_extraction": True, "dropout_rate": 0.05}],
+        "ctrl": [CTRL, {"rnn_hidden_size": 32, "rnn_num_layers": 2, "rnn_bidirectional": False,
+                        "activation": 'linear', "use_instance_scale": True, "dropout_rate": 0.05}]
     }
 
-    model_cls, user_args = ts_modeler['ann']
+    model_cls, user_args = ts_modeler['ar']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
     model = model_cls(**combined_args)
 
+    loger = logging.getLogger()
     model = covert_weight_types(model, torch_float_type)
-    print(get_model_info(model))
+    loger.info(get_model_info(model))
+    # loger.info(str(model))
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
@@ -122,7 +130,7 @@ def main():
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=None,  # stopper,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler)
-    print(trainer)
+    loger.info(str(trainer))
 
     trainer.fit(train_ds, val_ds,
                 epoch_range=(1, 2000), batch_size=32, shuffle=True,
@@ -130,10 +138,10 @@ def main():
 
     if test_ds is not None:
         results = trainer.evaluate(test_ds, 32, None, False, is_online=False)
-        print('test {}'.format(results))
+        loger.info('test {}'.format(results))
     elif val_ds is not None:
         results = trainer.evaluate(val_ds, 32, None, False, is_online=False)
-        print('val {}'.format(results))
+        loger.info('val {}'.format(results))
 
     print('Good luck!')
 

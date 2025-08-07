@@ -19,7 +19,7 @@ class CNN1D(nn.Module):
         :param input_window_size: input window size.
         :param input_vars: input variable number.
         :param output_window_size: output window size.
-        :param output_vars: output variable number.
+        :param output_vars: output variable number. The ``output_vars`` maybe not equal to ``input_vars``.
         :param out_channels: number of out channels.
         :param kernel_size: kernel size of cnn.
     """
@@ -43,7 +43,12 @@ class CNN1D(nn.Module):
         self.l2 = nn.Linear(self.out_channels, self.output_vars)
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
-        """ x => [batch_size, window_size, input_vars] """
+        """
+            :param x: shape is (batch_size, input_window_size, input_vars), data type is float.
+            :param x_mask: shape is (batch_size, input_window_size, input_vars), data type is bool.
+                          If None, no masking is applied.
+            :return: shape is (batch_size, output_window_size, output_vars), data type is float.
+        """
 
         if x_mask is not None:
             x[~x_mask] = 0.0  # set the masked values to zero
@@ -78,7 +83,7 @@ class CNNRNN(nn.Module):
         :param rnn_num_layers: number of rnn layers.
         :param rnn_bidirectional: whether to use bidirectional rnn or not.
         :param dropout_rate: dropout rate.
-        :param decoder_way: the decoder way is in ['inference', 'mapping']. In KDD 2018,
+        :param decoder_way: the decoder way is in ['inference', 'mapping']. In KDD 2018 Glucose,
                             the 'inference' is also called 'recursive'. The 'mapping' is also called 'multi-output'.
     """
 
@@ -112,7 +117,12 @@ class CNNRNN(nn.Module):
         self.d1 = nn.Dropout(self.dropout_rate)
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
-        """ x => [batch_size, window_size, input_vars] """
+        """
+            :param x: shape is (batch_size, input_window_size, input_vars), data type is float.
+            :param x_mask: shape is (batch_size, input_window_size, input_vars), data type is bool.
+                          If None, no masking is applied.
+            :return: shape is (batch_size, output_window_size, output_vars), data type is float.
+        """
 
         if x_mask is not None:
             x[~x_mask] = 0.0  # set the masked values to zero
@@ -146,7 +156,7 @@ class CNNRNNRes(nn.Module):
         :param rnn_num_layers: number of rnn layers.
         :param rnn_bidirectional: whether to use bidirectional rnn or not.
         :param dropout_rate: dropout rate.
-        :param decoder_way: the decoder way is in ['inference', 'mapping']. In KDD 2018,
+        :param decoder_way: the decoder way is in ['inference', 'mapping']. In KDD 2018 Glucose,
                             the 'inference' is also called 'recursive'. The 'mapping' is also called 'multi-output'.
         :param residual_window_size: residual window size.
         :param residual_ratio: the residual ratio of outputs.
@@ -196,7 +206,12 @@ class CNNRNNRes(nn.Module):
                                       self.output_window_size * self.output_vars)
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
-        """ x => [batch_size, window_size, input_vars] """
+        """
+            :param x: shape is (batch_size, input_window_size, input_vars), data type is float.
+            :param x_mask: shape is (batch_size, input_window_size, input_vars), data type is bool.
+                          If None, no masking is applied.
+            :return: shape is (batch_size, output_window_size, output_vars), data type is float.
+        """
 
         if x_mask is not None:
             x[~x_mask] = 0.0  # set the masked values to zero

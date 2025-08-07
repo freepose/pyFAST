@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 # encoding: utf-8
-import time
-from typing import Literal, Tuple, List, Union
 
 import sys, bisect
 import numpy as np
@@ -9,6 +7,7 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
+from typing import Literal, Tuple, List, Union
 from tqdm import tqdm
 
 TensorSequence = Union[Tuple[torch.Tensor, ...], List[torch.Tensor]]
@@ -73,7 +72,7 @@ class SMTDataset(data.Dataset):
         self.device = ts[0].device
 
         self.ratio = 1.  # the ratio of the whole dataset
-        self.mark = mark  # None denotes non-split for 'train' or 'val'
+        self.mark = mark  # use to mark the (split) dataset
 
         self.ts = ts
         self.ts_mask = ts_mask
