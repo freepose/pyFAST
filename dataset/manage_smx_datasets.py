@@ -15,7 +15,7 @@ from typing import Literal, Tuple, List, Union, Dict, Any
 from pathlib import Path
 
 from fast.data import SMTDataset, SMDDataset
-from fast.data.processing.load import load_smt_datasets
+from fast.data.processing.load import load_smx_datasets
 
 smt_metadata = {
     # [Climate] Climate time series datasets are available from:
@@ -23,7 +23,7 @@ smt_metadata = {
     # https://www.osti.gov/biblio/1394920
 
     "USHCN": {
-        "paths": ["{root}/climate/US_Historical_Climatology_Network/02_multi_source_nan_rows"],
+        "paths": ["{root}/climate/US_Historical_Climatology_Network/02_multi_source_sparse"],
         "columns": {
             "names": ['ID', 'Time', 'Snow', 'SnowDepth', 'Precipitation', 'T_max', 'T_min'],
             "time": "Time",
@@ -61,9 +61,9 @@ smt_metadata = {
 
     "PhysioNet": {
         "paths": [
-            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source/set-a",
-            # "{root}/disease/PhysioNet_Challenge_2012/02_multi_source/set-b",
-            # "{root}/disease/PhysioNet_Challenge_2012/02_multi_source/set-c"
+            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-a",
+            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-b",
+            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-c"
         ],
         "columns": {
             "names": ['RecordID', 'Age', 'Gender', 'Height', 'Weight', 'ICUType', 'Albumin', 'ALP', 'ALT', 'AST',
@@ -142,7 +142,7 @@ smt_metadata = {
     # The original data is from: https://archive.ics.uci.edu/dataset/196/localization+data+for+person+activity
     "HumanActivity": {
         # "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source/"],
-        "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source_nan_rows/"],
+        "paths": ["{root}/../spatio_temporal/human_activity/02_multi_source_sparse/"],
         "columns": {
             "univariate": ["010-000-024-033_x", "010-000-024-033_y", "010-000-024-033_z"],
             "multivariate": ["010-000-024-033_x", "010-000-024-033_y", "010-000-024-033_z",
@@ -287,7 +287,27 @@ def prepare_smx_datasets(data_root: str,
         'split_strategy': split_strategy,
         'device': device,
         'ds_cls': SMDDataset if task_dynamic_padding else SMTDataset,
+        'show_loading_progress': True,
+        'max_loading_workers': None,
     }
 
-    smt_datasets = load_smt_datasets(**load_smt_args)
+    smt_datasets = load_smx_datasets(**load_smt_args)
     return smt_datasets
+
+
+def verify_smt_datasets():
+    """
+        Verify the metadata.
+    """
+    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
+
+    ds_names = list(smt_metadata.keys())
+    for i, name in enumerate(ds_names):
+        # task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex_mask': True, 'use_ex2': True}
+        # task_config = {'ts': 'multivariate'}
+        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex_mask': True,
+                       'dynamic_padding': False}
+        print(i, end='\t')
+        smt_datasets = prepare_smx_datasets(data_root, name, 10, 2, 1, 1, **task_config)
+        smt_datasets = [smt_datasets] if isinstance(smt_datasets, (SMTDataset, SMDDataset)) else smt_datasets
+        print('\n'.join([str(ds) for ds in smt_datasets]))

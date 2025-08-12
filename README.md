@@ -33,7 +33,6 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 *   **`model/` Module:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
 *   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
 *   **`metric/` Module:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
-[//]: # (*   **`visualize.py` Module:**  Equips users with visualization tools to plot time series data and model predictions, facilitating model analysis and interpretation through line charts and comparable real vs. predicted plots.)
 *   **`generative/` Module:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
 
 ## Installation
@@ -63,7 +62,7 @@ from fast.model.mts.ar import ANN  # Example: Using a simple ANN model
 initial_seed(2025)
 
 # Initialize logger for tracking training progress
-initial_logger()
+logger = initial_logger()
 
 # Prepare your time series data: replace with actual data loading.
 ts = torch.sin(torch.arange(0, 100, 0.1)).unsqueeze(1)  # Shape: (1000, 1)
@@ -84,11 +83,11 @@ trainer = Trainer(device, model, evaluator=evaluator)
 
 # Train model using prepared datasets
 history = trainer.fit(train_ds, val_ds, epoch_range=(1, 10))  # Train for 10 epochs
-print(history)
+logger.info(str(history))
 
 # After training, evaluate on a test dataset (if available)
 val_results = trainer.evaluate(val_ds)
-print(val_results)
+logger.info(str(val_results))
 ```
 
 ### Data Structures Overview
@@ -121,7 +120,7 @@ pyFAST's performance and efficiency have been rigorously evaluated against estab
 
 ### Univariate Time Series Forecasting
 
-<!-- **Example Benchmarking Results (Table 1 from Paper):** -->
+**Example Benchmarking Results (Table 1 from Paper):**
 
 ### Multivariate Time Series Forecasting
 

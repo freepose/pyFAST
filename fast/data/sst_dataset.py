@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from typing import Literal, Tuple, List
 
 import numpy as np
 
 import torch
 import torch.utils.data as data
 
+from typing import Tuple, List
 
-def multi_step_ahead_split(time_series: torch.tensor, input_window_size: int = 10, output_window_size: int = 1,
+
+def multi_step_ahead_split(time_series: torch.Tensor, input_window_size: int = 10, output_window_size: int = 1,
                            horizon: int = 1, stride: int = 1) -> tuple:
     """
         Transform a univariate/multivariate time series to supervised data using slicing windows.
@@ -42,9 +43,11 @@ def multi_step_ahead_split(time_series: torch.tensor, input_window_size: int = 1
     return inputs, outputs
 
 
-def train_test_split(tensors: list or tuple, split_ratio: float = 0.2, shuffle: bool = False) -> list or tuple:
+def train_test_split(tensors: List[torch.Tensor], split_ratio: float = 0.2,
+                     shuffle: bool = False) -> List[torch.Tensor]:
     """
         Split supervised dataset to train / test sets.
+
         :param tensors: numpy arrays or torch tensors to be split.
         :param split_ratio: split ratio of training set and test set of all tensors.
         :param shuffle: shuffle flag. If ``True``, shuffle the tensors before splitting.
@@ -77,10 +80,11 @@ class SSTDataset(data.Dataset):
         ``SSTDataset`` transforms a **single** (univariate or multivariate) time series to supervised (input / output) data.
 
         (1) Transformation from target time series to supervised (i.e., input / output) data.
-        (2) Support input data == output data for autoencoders or generative models. ``horizon`` == 1 - ``output_window_size``.
+        (2) Support input data == output data for autoencoders or generative models.
+            ``horizon`` == 1 - ``output_window_size``.
         (3) Support exogenous time series data.
         (4) Support sparse time series data: target, exogenous, and both.
-        (5) Support training / validation ``split`` function.
+        (5) Support split for machine learning or incremental learning.
 
         The default device is the same as ``ts`` device.
 
@@ -145,9 +149,10 @@ class SSTDataset(data.Dataset):
         """
         return self.sample_num
 
-    def __getitem__(self, index) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    def __getitem__(self, index: int) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """
             Retrieve the sample at the specified index.
+
             :param index: the index of the sample to be retrieved.
         """
         start_x = self.stride * index

@@ -23,9 +23,9 @@ class SMTDataset(data.Dataset):
         (1) Transformation from target time series to supervised (i.e., input / output) data.
         (2) Support alignment-free time series dataset.
         (3) Support input data == output data for autoencoders or generative models.
-        (4) Support exogenous time series data.
-        (5) Support sparse time series data: target, exogenous, and both.
-        (6) Support training / validation ``split`` function.
+        (4) Support **exogenous** time series data.
+        (5) Support **sparse** time series data: target, exogenous, and both.
+        (6) Support datasets splitting for machine / incremental learning.
 
         :param ts: list of univariate/multivariate time series dataset.
         :param ts_mask: list of mask of univariate/multivariate time series dataset.

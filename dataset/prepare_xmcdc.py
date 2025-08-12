@@ -6,7 +6,8 @@
 
     Prepare datasets by loading XMCDC case counts as ``SSTDataset`` and ``SMTDataset``.
 """
-import os.path
+
+import os, logging
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ import torch
 from typing import Literal, List, Union, Tuple
 from fast.data import SSTDataset, SMTDataset
 
-from fast.data.processing import load_sst_datasets, load_smt_datasets
+from fast.data.processing import load_sst_datasets, load_smx_datasets
 
 SSTDatasetSequence = Union[SSTDataset, List[SSTDataset]]
 SMTDatasetSequence = Union[SMTDataset, List[SMTDataset]]
@@ -158,6 +159,7 @@ def load_xmcdc_as_sst(filename: str = '../../dataset/xmcdc/outpatients_2011_2020
             for target in variables:
                 ex_variables.extend(get_xmcdc_ex_columns(freq, [target], category))
 
+    logging.getLogger().info('Loading {}'.format(filename))
     sst_datasets = load_sst_datasets(filename, variables, mask_variables, ex_variables, mask_ex_variables, None,
                                      input_window_size, output_window_size, horizon, stride, split_ratios, device)
 
@@ -212,6 +214,7 @@ def load_xmcdc_as_smt(filename: str = '../../dataset/xmcdc/outpatients_2011_2020
             for category in ex_categories:
                 ex_variables.extend(get_xmcdc_ex_columns(freq, [target], category))
 
+        logging.getLogger().info('Loading {}'.format(filename))
         sst = load_sst_datasets(filename, [target], mask_variables, ex_variables, mask_ex_variables, None,
                                 input_window_size, output_window_size, horizon, stride, None, device)
         sst_datasets.append(sst)

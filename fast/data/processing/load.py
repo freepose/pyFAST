@@ -11,16 +11,17 @@ import numpy as np
 import pandas as pd
 import torch
 
-from typing import Literal, List, Tuple, Union, Dict, Any, Type
 from pathlib import Path
+from typing import Literal, List, Tuple, Union, Dict, Any, Type
 from tqdm import tqdm
+from tqdm.contrib.concurrent import thread_map
 
 from ... import get_device
 from .. import SSTDataset, SMTDataset, SMDDataset
 
-SSTDatasetSequence = Union[SSTDataset, List[SSTDataset]]
-SMTDatasetSequence = Union[SMTDataset, List[SMTDataset]]
-SMDDatasetSequence = Union[SMDDataset, List[SMDDataset]]
+SSTDatasetSequence = Union[SSTDataset, Tuple[SSTDataset, ...], List[SSTDataset]]
+SMTDatasetSequence = Union[SMTDataset, Tuple[SMTDataset, ...], List[SMTDataset]]
+SMDDatasetSequence = Union[SMDDataset, Tuple[SMDDataset, ...], List[SMDDataset]]
 
 
 def load_sst_datasets(filename: str,
@@ -147,6 +148,7 @@ def get_smt_args(filenames: List[str],
                        This dataset device can be one of ['cpu', 'cuda', 'mps'].
         :param show_progress: whether to show the progress bar.
                         Set to ``False`` to disable the progress bar in logging mode.
+
         :return: a dictionary of arguments for **SMTDataset**.
     """
 
@@ -201,7 +203,97 @@ def get_smt_args(filenames: List[str],
     return smt_args
 
 
-def load_smt_datasets(filenames: List[str],
+def get_smt_args_parallel(filenames: List[str],
+                          variables: List[str], mask_variables: bool = False,
+                          ex_variables: List[str] = None, mask_ex_variables: bool = False,
+                          ex2_variables: List[str] = None,
+                          float_type: np.dtype = np.float32,
+                          device: torch.device = torch.device('cpu'),
+                          show_progress: bool = True,
+                          max_workers: int = None) -> Dict[str, Any]:
+    """
+        Get the arguments of **SMTDataset** dataset by reading several **CSV** files.
+        Uses multi-threading to process files concurrently.
+
+        :param filenames: list of CSV filenames.
+        :param variables: names of the target variables, and can be one or more variables in the list.
+        :param mask_variables: whether to mask the target variables. This uses for sparse time series
+        :param ex_variables: names of the exogenous variables.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param ex2_variables: names of the exogenous variables.
+        :param float_type: the data type of the time series data, default is ``np.float32``.
+        :param device: the device to load the data, default is 'cpu'.
+                       This dataset device can be one of ['cpu', 'cuda', 'mps'].
+        :param show_progress: whether to show the progress bar.
+                        Set to ``False`` to disable the progress bar in logging mode.
+        :param max_workers: maximum number of threads, default is None (uses system default).
+
+        :return: a dictionary of arguments for **SMTDataset**.
+    """
+
+    def process_file(filename: str) -> Dict[str, Any]:
+        """Process a single CSV file and return tensors"""
+        df = pd.read_csv(filename)
+        result = {}
+
+        # Process target variables
+        target_df = df.loc[:, variables]
+        target_array = target_df.values.astype(float_type)
+        target_tensor = torch.tensor(target_array, device=device)
+        result['ts'] = target_tensor
+
+        # Process target mask
+        if mask_variables:
+            mask_target_array = ~np.isnan(target_array)
+            mask_target_tensor = torch.tensor(mask_target_array, dtype=torch.bool, device=device)
+            result['ts_mask'] = mask_target_tensor
+
+        # Process exogenous variables
+        if ex_variables is not None:
+            ex_df = df.loc[:, ex_variables]
+            ex_array = ex_df.values.astype(float_type)
+            ex_tensor = torch.tensor(ex_array, device=device)
+            result['ex_ts'] = ex_tensor
+
+            if mask_ex_variables:
+                mask_ex_array = ~np.isnan(ex_array)
+                mask_ex_tensor = torch.tensor(mask_ex_array, dtype=torch.bool, device=device)
+                result['ex_ts_mask'] = mask_ex_tensor
+
+        # Process second exogenous variables
+        if ex2_variables is not None:
+            ex_df = df.loc[:, ex2_variables]
+            ex_array = ex_df.values.astype(float_type)
+            ex_tensor = torch.tensor(ex_array, device=device)
+            result['ex_ts2'] = ex_tensor
+
+        return result
+
+    # Use thread_map to process files concurrently
+    results = thread_map(
+        process_file,
+        filenames,
+        max_workers=max_workers,
+        desc="Loading files",
+        disable=not show_progress,
+        leave=False,
+        file=sys.stdout
+    )
+
+    # Aggregate results
+    smt_args = dict()
+    smt_args['ts'] = [result['ts'] for result in results]
+    smt_args['ts_mask'] = [result['ts_mask'] for result in results] if mask_variables else None
+    if ex_variables is not None:
+        smt_args['ex_ts'] = [result['ex_ts'] for result in results]
+        if mask_ex_variables:
+            smt_args['ex_ts_mask'] = [result['ex_ts_mask'] for result in results]
+    smt_args['ex_ts2'] = [result['ex_ts2'] for result in results] if ex2_variables is not None else None
+
+    return smt_args
+
+
+def load_smx_datasets(filenames: List[str],
                       variables: List[str],
                       mask_variables: bool = False,
                       ex_variables: List[str] = None,
@@ -214,8 +306,9 @@ def load_smt_datasets(filenames: List[str],
                       split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
                       split_strategy: Literal['intra', 'inter'] = None,
                       device: Union[Literal['cpu', 'cuda', 'mps'], str] = 'cpu',
-                      ds_cls: Union[Type[SMTDataset], Type[SMDDataset]] = SMTDataset) \
-        -> Union[SMTDatasetSequence, SMDDatasetSequence]:
+                      ds_cls: Union[Type[SMTDataset], Type[SMDDataset]] = SMTDataset,
+                      show_loading_progress: bool = True,
+                      max_loading_workers: int = None) -> Union[SMTDatasetSequence, SMDDatasetSequence]:
     """
         Load **SMTDataset**/**SMDDataset** from several **CSV** files or directories,
         transform time series data into supervised data,
@@ -245,8 +338,10 @@ def load_smt_datasets(filenames: List[str],
                        This dataset device can be one of ['cpu', 'cuda', 'mps'].
                        This dataset device can be **different** to the model device.
         :param ds_cls: the dataset class to use, default is SMTDataset.
+        :param show_loading_progress: whether to show the loading progress bar.
+        :param max_loading_workers: maximum number of threads for loading data, default is None (uses system default).
 
-        :return: the (split) datasets as SMTDataset objects.
+        :return: the (split) datasets as ``SMTDataset`` or ``SMDDataset`` objects.
     """
 
     assert input_window_size > 0, f'Invalid input window size: {input_window_size}'
@@ -266,11 +361,13 @@ def load_smt_datasets(filenames: List[str],
 
     float_type = np.float32
     device = get_device(device)
-    show_pregress = True
+    show_pregress = show_loading_progress
+    max_workers = max_loading_workers
 
     if split_ratios is None:
-        smt_args = get_smt_args(filenames, variables, mask_variables, ex_variables, mask_ex_variables, ex2_variables,
-                                float_type=float_type, device=device, show_progress=show_pregress)
+        smt_args = get_smt_args_parallel(filenames, variables, mask_variables, ex_variables, mask_ex_variables,
+                                         ex2_variables, float_type=float_type, device=device,
+                                         show_progress=show_pregress, max_workers=max_workers)
         smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                          'horizon': horizon, 'stride': stride})
         return ds_cls(**smt_args)
@@ -279,8 +376,9 @@ def load_smt_datasets(filenames: List[str],
     cum_split_ratios = np.cumsum([0, *split_ratios])
 
     if split_strategy == 'intra':
-        smt_args = get_smt_args(filenames, variables, mask_variables, ex_variables, mask_ex_variables, ex2_variables,
-                                float_type=float_type, device=device, show_progress=show_pregress)
+        smt_args = get_smt_args_parallel(filenames, variables, mask_variables, ex_variables, mask_ex_variables,
+                                         ex2_variables, float_type=float_type,
+                                         device=device, show_progress=show_pregress, max_workers=max_workers)
         smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                          'horizon': horizon, 'stride': stride})
 
@@ -294,8 +392,9 @@ def load_smt_datasets(filenames: List[str],
         for i, (s, e) in enumerate(zip(cum_split_ratios[:-1], cum_split_ratios[1:])):
             start, end = int(filename_num * s), int(filename_num * e)
             split_filenames = filenames[start:end]
-            smt_args = get_smt_args(split_filenames, variables, mask_variables, ex_variables, mask_ex_variables,
-                                    ex2_variables, float_type=float_type, device=device, show_progress=show_pregress)
+            smt_args = get_smt_args_parallel(split_filenames, variables, mask_variables, ex_variables,
+                                             mask_ex_variables, ex2_variables, float_type=float_type,
+                                             device=device, show_progress=show_pregress, max_workers=max_workers)
             smt_args.update({'input_window_size': input_window_size, 'output_window_size': output_window_size,
                              'horizon': horizon, 'stride': stride})
             if i > 0:

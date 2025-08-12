@@ -9,7 +9,7 @@ import torch
 from typing import List, Tuple, Dict, Union
 from abc import ABC, abstractmethod
 
-from .metric import MSE, MAE, RMSE, MAPE, CVRMSE, SMAPE, PCC, RAE, RSE, R2
+from .metric import MSE, MAE, MRE, RMSE, MAPE, CVRMSE, SMAPE, PCC, RAE, RSE, R2
 
 
 class AbstractEvaluator(ABC):
@@ -73,6 +73,7 @@ class Evaluator(AbstractEvaluator):
         self.available_metrics = {
             'MSE': MSE,
             'MAE': MAE,
+            'MRE': MRE,
             'RMSE': RMSE,
             'MAPE': MAPE,
             'sMAPE': SMAPE,

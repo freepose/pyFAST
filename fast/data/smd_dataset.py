@@ -18,11 +18,15 @@ class SMDDataset(data.Dataset):
     """
         Single prediction object Multiple sources sequential dataset using Dynamic-padding (SMD).
 
+        Previous methods, mainly focused on padding (a batch of) sequences.
+        ``SMDDataset`` focuses on padding subsequences / windows in overall level.
+
         ``SMDDataset`` pads zero values while the selected (part) of sequence/subsequence is **shorter** than a window.
 
         (1) It supports both fixed-length and vary-length input windows.
             The vary-length input windows are padded with zero values on the right side of the input window,
             to align the relative time steps/points with ``input_window_size`` or ``output_window_size``.
+
         (2) It supports both single-source and multi-source time series datasets.
         (3) It supports both univariate and multivariate time series datasets.
         (4) It supports exogenous time series datasets, and pre-known exogenous time series datasets.

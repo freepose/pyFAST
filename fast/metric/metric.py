@@ -163,6 +163,65 @@ class MAE(AbstractMetric):
         return self.sum_absolute_errors / self.total_samples
 
 
+class MRE(AbstractMetric):
+    """
+        Mean Relative Error (MRE). This class supports both element-wise evaluation,
+        and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+    """
+
+    def __init__(self):
+        self.sum_relative_errors: float = 0.0
+        self.total_samples: int = 0
+
+    def __call__(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+        """
+            MRE. Element-wise metrics.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+            :return:            MRE value.
+        """
+
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        relative_errors = ((prediction - real) / real).abs()
+        mre = relative_errors.mean()
+
+        return mre
+
+    def reset(self):
+        self.sum_relative_errors = 0.0
+        self.total_samples = 0
+
+    def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
+        """
+            Update the metric with a batch of predictions and targets.
+
+            :param prediction:  predicted values (1d, 2d, or 3d torch tensor).
+            :param real:        real values (1d, 2d, or 3d torch tensor).
+            :param mask:        mask tensor (1d, 2d, or 3d torch tensor).
+        """
+        if mask is not None:
+            prediction = prediction[mask]
+            real = real[mask]
+
+        relative_errors = ((prediction - real) / real).abs()
+
+        self.sum_relative_errors += relative_errors.sum().detach().item()
+        self.total_samples += prediction.numel()
+
+    def compute(self) -> float:
+        """
+            :return: Aggregated Mean Relative Error (MRE)
+        """
+        if self.total_samples == 0:
+            return 0.0
+        return self.sum_relative_errors / self.total_samples
+
+
 class RMSE(AbstractMetric):
     """
         Root Mean Squared Error (RMSE). This class supports both element-wise evaluation,

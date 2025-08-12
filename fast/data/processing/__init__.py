@@ -7,5 +7,5 @@
 
 """
 
-from .load import load_sst_datasets, load_smt_datasets
+from .load import load_sst_datasets, load_smx_datasets
 from .load import SSTDatasetSequence, SMTDatasetSequence, SMDDatasetSequence

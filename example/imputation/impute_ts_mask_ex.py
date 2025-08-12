@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    Examples on **multiple sources** incomplete (sparse) time series imputation using exogenous data.
+    Examples on **multiple sources** incomplete (sparse) time series imputation using (dense) exogenous data.
 
     This is an example incomplete time series forecasting using exogenous data.
 
@@ -24,7 +24,9 @@ from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
 
 from fast.model.base import get_model_info, covert_weight_types
-from fast.model.mts import TimeSeriesRNN, Transformer
+from fast.model.mts import GAR, AR, VAR, ANN, DLinear, NLinear, RLinear, STD, PatchMLP, CNNRNN, CNNRNNRes
+from fast.model.mts import TimeSeriesRNN, Transformer, TSMixer
+from fast.model.mts import COAT, TCOAT, CoDR, CTRL
 from fast.model.mts_fusion import ExogenousDataDrivenPlugin as ExDD
 
 from dataset.manage_smx_datasets import prepare_smx_datasets
@@ -36,7 +38,7 @@ def ts_mask_ex():
     ds_device, model_device = 'cpu', 'cpu'
 
     task_config = {'ts': 'univariate', 'ts_mask': True, 'use_ex': True, 'dynamic_padding': True}
-    seq, stride, horizon = 128, 128, 1 - 128  # input window is the output window
+    seq, stride, horizon = 1, 1, 1 - 1  # input window is the output window
     train_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_train', seq, seq, horizon, stride, device=ds_device, **task_config)
     val_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_val', seq, seq, horizon, stride, device=ds_device, **task_config)
     test_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_test', seq, seq, horizon, stride, device=ds_device, **task_config)
@@ -47,14 +49,51 @@ def ts_mask_ex():
     ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts + val_ds.ex_ts, None)
 
     modeler = {
-        'exddm-lstm': [ExDD, {'ex_model_cls': TimeSeriesRNN,
-                              'ex_model_args': {'rnn_cls': 'lstm', 'hidden_size': 128, 'num_layers': 1,
-                                                'bidirectional': False, 'dropout_rate': 0.05,
-                                                'decoder_way': 'mapping'}}],
-        'exddm-trans': [ExDD, {'ex_model_cls': Transformer,
-                               'ex_model_args': {'label_window_size': seq, 'd_model': 512, 'num_heads': 8,
-                                                 'num_encoder_layers': 6, 'num_decoder_layers': 6,
-                                                 'dim_ff': 2048, 'dropout_rate': 0., 'activation': 'gelu'}}],
+        'exddm-ar': [ExDD, {'ex_model_cls': AR, 'ex_model_args': {'activation': 'linear'}}],
+        'exddm-gar': [ExDD, {'ex_model_cls': GAR, 'ex_model_args': {'activation': 'linear'}}],
+        'exddm-var': [ExDD, {'ex_model_cls': VAR, 'ex_model_args': {'activation': 'relu'}}],
+        'exddm-ann': [ExDD, {'ex_model_cls': ANN,
+                             'ex_model_args': {'layer_norm': 'LN', 'hidden_sizes': [64], 'activation': 'linear'}}],
+        'exddm-nlinear': [ExDD, {'ex_model_cls': NLinear, 'ex_model_args': {'mapping': 'ar'}}],
+        'exddm-dlinear': [ExDD, {'ex_model_cls': DLinear, 'ex_model_args': {'kernel_size': 7}}],
+        'exddm-rlinear': [ExDD, {'ex_model_cls': RLinear,
+                                 'ex_model_args': {'mapping': 'ar', 'd_model': 1024, 'use_instance_scale': True}}],
+        'exddm-std': [ExDD, {'ex_model_cls': STD,
+                             'ex_model_args': {'kernel_size': 19, 'd_model': 128, 'use_instance_scale': True}}],
+        'exddm-patchmlp': [ExDD, {'ex_model_cls': PatchMLP,
+                                  'ex_model_args': {'d_model': 256, 'use_instance_scale': True, 'num_encoder_layers': 1,
+                                                    'patch_lens': [64, 32]}}],
+        'exddm-cnnrnn': [ExDD, {'ex_model_cls': CNNRNN,
+                                'ex_model_args': {'cnn_out_channels': 64, 'cnn_kernel_size': 5, 'rnn_cls': 'gru',
+                                                  'rnn_hidden_size': 32, 'rnn_num_layers': 1, 'rnn_bidirectional': True,
+                                                  'dropout_rate': 0.0, 'decoder_way': 'mapping'}}],
+        'exddm-cnnrnnres': [ExDD, {'ex_model_cls': CNNRNNRes,
+                                   'ex_model_args': {'cnn_out_channels': 64, 'cnn_kernel_size': 5, 'rnn_cls': 'gru',
+                                                     'rnn_hidden_size': 32, 'rnn_num_layers': 1,
+                                                     'rnn_bidirectional': True, 'dropout_rate': 0.0,
+                                                     'decoder_way': 'mapping', 'residual_window_size': 1,
+                                                     'residual_ratio': 0.9}}],
+        'exddm-transformer': [ExDD, {'ex_model_cls': Transformer,
+                                     'ex_model_args': {'label_window_size': 128, 'd_model': 1024, 'num_heads': 8,
+                                                       'num_encoder_layers': 2, 'num_decoder_layers': 1, 'dim_ff': 4096,
+                                                       'dropout_rate': 0.05}}],
+        'exddm-tsmixer': [ExDD, {'ex_model_cls': TSMixer,
+                                 'ex_model_args': {'num_blocks': 1, 'block_hidden_size': 128, 'dropout_rate': 0.05,
+                                                   'use_instance_scale': True}}],
+        'exddm-coat': [ExDD, {'ex_model_cls': COAT,
+                              'ex_model_args': {'mode': 'sa', 'activation': 'relu', 'use_instance_scale': False,
+                                                'dropout_rate': 0.05}}],
+        'exddm-tcoat': [ExDD, {'ex_model_cls': TCOAT,
+                               'ex_model_args': {'rnn_hidden_size': 64, 'rnn_num_layers': 2, 'rnn_bidirectional': False,
+                                                 'residual_window_size': 16, 'residual_ratio': 0.9,
+                                                 'dropout_rate': 0.05}}],
+        'exddm-codr': [ExDD, {'ex_model_cls': CoDR, 'ex_model_args': {'horizon': -127, 'hidden_size': 32,
+                                                                      'use_window_fluctuation_extraction': True,
+                                                                      'dropout_rate': 0.05}}],
+        'exddm-ctrl': [ExDD, {'ex_model_cls': CTRL,
+                              'ex_model_args': {'rnn_hidden_size': 8, 'rnn_num_layers': 1, 'rnn_bidirectional': True,
+                                                'activation': 'linear', 'use_instance_scale': True,
+                                                'dropout_rate': 0.0}}]
     }
 
     plugin_cls, user_args = modeler['exddm-lstm']
@@ -83,7 +122,7 @@ def ts_mask_ex():
     logger.info(str(trainer))
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=True,
+                epoch_range=(1, 200), batch_size=32, shuffle=True,
                 verbose=2)
 
     if test_ds is not None:

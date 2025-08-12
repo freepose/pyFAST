@@ -77,7 +77,6 @@ class MMTDataset(data.Dataset):
     def index_dataset(self, ts_sources: TensorSequenceSources) -> np.ndarray:
         """
             Index the dataset by calculating the border tensors and the number of sliding windows.
-
         """
         with (tqdm(total=len(ts_sources), leave=False, file=sys.stdout) as pbar):
             pbar.set_description('Indexing')

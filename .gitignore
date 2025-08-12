@@ -2,6 +2,7 @@
 __pycache__/
 paper/
 script/
+experiment/
 log/
 .DS_Store
 .bashrc

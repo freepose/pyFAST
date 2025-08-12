@@ -19,8 +19,9 @@
 
     Some tips for benefiting from the codes:
 
-    (1) Device: the dataset device and model device can be the same or different, and they work well together.
+    (1) Device(s): the dataset device and model device can be the same or different, and they work well together.
         If they are different, the dataset will be moved to the model device before training.
+
         If the dataset is large, it is recommended to set the dataset device to 'cpu' and
             the model device to 'cuda' or 'mps'.
 
@@ -35,6 +36,7 @@ import torch
 import torch.optim as optim
 
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
+from fast.data import StandardScale, MinMaxScale, scaler_fit, scaler_transform
 from fast.metric import Evaluator, MSE
 from fast.stop import EarlyStop
 from fast.train import Trainer
@@ -51,8 +53,8 @@ from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TSMixer
 from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
 
 from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
-from dataset.manage_sst_datasets import prepare_sst_datasets
-from dataset.manage_smx_datasets import prepare_smx_datasets
+from dataset.manage_sst_datasets import prepare_sst_datasets, verify_sst_datasets
+from dataset.manage_smx_datasets import prepare_smx_datasets, verify_smt_datasets
 
 
 def main():
@@ -60,8 +62,7 @@ def main():
     torch_float_type = torch.float32
     ds_device, model_device = 'cpu', 'mps'
 
-    # Built-in dataset
-    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'
+    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
     # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
     train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
@@ -74,18 +75,18 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    # scaler = scaler_fit(StandardScale(), train_ds.ts)
-    # train_ds.ts = scaler_transform(scaler, train_ds.ts)
+    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts)
+    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
     # if val_ds is not None:
-    #     val_ds.ts = scaler_transform(scaler, val_ds.ts)
+    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
     # if test_ds is not None:
-    #     test_ds.ts = scaler_transform(scaler, test_ds.ts)
-    scaler = None
+    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
+    scaler = None # scaler_fit(StandardScale(), train_ds.ts)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -208,7 +209,7 @@ def main():
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
 
     criterion = MSE()
-    evaluator = Evaluator(['MSE', 'MAE', 'RMSE'])
+    evaluator = Evaluator(['MSE', 'MAE', 'RMSE', 'MRE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
@@ -234,4 +235,6 @@ if __name__ == '__main__':
     initial_seed(2025)
     initial_logger()
     main()
+
     # verify_sst_datasets()
+    # verify_smt_datasets()

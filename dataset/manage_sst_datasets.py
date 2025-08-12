@@ -16,7 +16,7 @@ sst_metadata = {
     # [Disease] Xiamen Center for Disease Control and Prevention (XMCDC): infectious disease surveillance data.
     # This is a built-in dataset in the pyFAST library.
     "XMCDC_1day": {
-        "path": "../../dataset/xmcdc/01_single_source/outpatients_2011_2020_1day.csv",
+        "path": "../../dataset/xmcdc/outpatients_2011_2020_1day.csv",
         "columns": {
             "names": ['Date', '平均温度', '最高温', '最低温', '平均降水', '最高露点', '平均露点', '最低露点',
                       '最高湿度(%)', '最低湿度(%)', '平均相对湿度(%)', '最高气压', '平均气压', '最低气压', '最高风速',
@@ -30,7 +30,7 @@ sst_metadata = {
         }
     },
     "XMCDC_1week": {
-        "path": "../../dataset/xmcdc/01_single_source/outpatients_2011_2020_1week.csv",
+        "path": "../../dataset/xmcdc/outpatients_2011_2020_1week.csv",
         "columns": {
             "names": ['Date', '平均温度', '最高温', '最低温', '平均降水', '最高露点', '平均露点', '最低露点',
                       '最高湿度(%)', '最低湿度(%)', '平均相对湿度(%)', '最高气压', '平均气压', '最低气压', '最高风速',
@@ -96,7 +96,7 @@ sst_metadata = {
     },
 
     "GreeceWPF": {
-        "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/power_{freq}.csv",
+        "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/Greece_power_{freq}.csv",
         "freq": ["1day"] + ["1hour", "6hour", "12hour", "1day"],
         "columns": {
             "time": "Date",

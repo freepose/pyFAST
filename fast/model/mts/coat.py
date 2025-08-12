@@ -121,7 +121,8 @@ class CoDR(nn.Module):
         https://doi.org/10.1016/j.jclepro.2024.143056
     """
 
-    def __init__(self, input_window_size: int, input_vars: int, output_window_size: int, output_vars: int,
+    def __init__(self, input_window_size: int, input_vars: int, output_window_size: int,
+                 # output_vars: int,
                  horizon: int = 1, hidden_size: int = 10,
                  use_window_fluctuation_extraction: bool = True, dropout_rate: float = 0.):
         super(CoDR, self).__init__()
@@ -129,8 +130,7 @@ class CoDR(nn.Module):
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
-        self.output_vars = output_vars
-
+        # self.output_vars = output_vars
         self.horizon = horizon
         self.hidden_size = hidden_size
 
@@ -240,6 +240,7 @@ class TCOAT(nn.Module):
         # Residual: short-term temporal patterns
         if self.residual_window_size > 0:
             self.residual = GAR(self.residual_window_size, self.output_window_size)
+            self.residual_fc = nn.Linear(self.input_vars, self.output_vars)
 
         self.d1 = nn.Dropout(dropout_rate)
 
@@ -269,7 +270,12 @@ class TCOAT(nn.Module):
         # Residual NN
         if self.residual_window_size > 0:
             z = x[:, -self.residual_window_size:, :]  # -> [batch_size, residual_window_size, input_vars]
-            res = self.residual(z) * self.residual_ratio  # -> [batch_size, output_window_size, output_vars]
+            res = self.residual(z)  # -> [batch_size, output_window_size, input_vars]
+            # TODO: HuYue
+            if self.input_vars != self.output_vars:
+                res = self.residual_fc(res)  # -> [batch_size, output_window_size, output_vars]
+            res *= self.residual_ratio  # -> [batch_size, output_window_size, output_vars]
+
             out = out + res  # -> [batch_size, output_window_size, output_vars]
 
         out = self.d1(out)
@@ -334,8 +340,11 @@ class CTRL(nn.Module):
         self.combination_size = self.input_vars * 4
         self.ar = GAR(self.input_window_size, self.output_window_size)
 
-        self.fc = MLP(self.combination_size, [self.combination_size, self.combination_size // 2], output_vars,
+        self.fc = MLP(self.combination_size, [self.combination_size, self.combination_size // 2], input_vars,
                       None, activation, dropout_rate)
+
+        self.fc1 = MLP(self.input_vars, [self.input_vars, self.input_vars // 2], output_vars,
+                       None, activation, dropout_rate)
 
         if self.use_instance_scale:
             self.inst_scaler = InstanceStandardScale(self.input_vars, 1e-5)
@@ -364,9 +373,11 @@ class CTRL(nn.Module):
 
         # Linearly mapping to outputs
         out = self.ar(out)  # => [batch_size, output_window_size, comb_size]
-        out = self.fc(out)  # => [batch_size, output_window_size, output_vars]
-
+        out = self.fc(out)  # => [batch_size, output_window_size, input_vars]
         if self.use_instance_scale:
             out = self.inst_scaler.inverse_transform(out)
+
+        if self.input_vars != self.output_vars:
+            out = self.fc1(out)  # => [batch_size, output_window_size, output_vars]
 
         return out

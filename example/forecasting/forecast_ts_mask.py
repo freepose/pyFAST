@@ -10,23 +10,27 @@
 
     (2) Multi-source single/multivariate time series forecasting with missing values.
 
+
     Some tips for benefiting from the codes:
 
-    (1) For irregular time series datasets, this supports models working on both fixed-length and
+    (1) For incomplete time series datasets, this supports models working on both fixed-length and
         vary-length input windows.
 
         The codes avoid the two problems:
-        (1.a) Relative time steps/points mis-alignment.
-        (1.b) Randomly dynamic padding on collected vary-length slicing windows.
+        (1.a) Relative time steps/points mis-alignment, such as irregular time series data.
+        (1.b) Randomly dynamic padding on collected vary-length slicing windows, such as irregular time series data.
 
     (2) Computation efficiency: ITSF can work well on personal computers (PC).
+        If dataset is large, it is recommended to load on main memory (RAM).
+        If model is large, it is recommended to train on GPU(s).
+        If both dataset and model are large, the datasets can be loaded on main memory (RAM) and the model
+         can be trained on GPU(s).
 
 """
-import logging
-import os
+
+import logging, os
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
@@ -53,22 +57,22 @@ def main():
 
     task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # Sparse long-sequence time series forecasting problems: sparse decomposition (OMP), shapelet representation/decomposition
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
     # fit scalers based on training and validation datasets
-    scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
-    train_ds.ts = scaler_transform(scaler, train_ds.ts, train_ds.ts_mask)
-    if val_ds is not None:
-        val_ds.ts = scaler_transform(scaler, val_ds.ts, val_ds.ts_mask)
-    if test_ds is not None:
-        test_ds.ts = scaler_transform(scaler, test_ds.ts, test_ds.ts_mask)
-    scaler = None
+    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
+    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
+    # if val_ds is not None:
+    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
+    # if test_ds is not None:
+    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
+    scaler = None # scaler_fit(StandardScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -107,7 +111,7 @@ def main():
                         "activation": 'linear', "use_instance_scale": True, "dropout_rate": 0.05}]
     }
 
-    model_cls, user_args = ts_modeler['ar']
+    model_cls, user_args = ts_modeler['transformer']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}

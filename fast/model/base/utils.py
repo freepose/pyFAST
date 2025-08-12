@@ -79,8 +79,7 @@ def collect_model_members(model_inst: nn.Module) -> Dict[str, Any]:
 
         if isinstance(value, (int, float, str, bool, list, tuple, dict)):
             ret_members[key] = value
-
-        if isinstance(value, type) and issubclass(value, nn.Module):
+        elif isinstance(value, type) and issubclass(value, nn.Module):
             ret_members[key] = value.__name__
 
     return ret_members
