@@ -62,7 +62,7 @@ sst_metadata = {
     },
     "SuzhouIPL_Sparse": {
         "path": "{root}/energy_electronic_power_load/Suzhou_industrial_park_2016_2021/" +
-                "01_single_source/Suzhou_ipl_has_nan_{freq}.csv",
+                "01_single_source/Suzhou_ipl_sparse_{freq}.csv",
         "freq": ["5min", "30min", "1hour"],
         "time_feature_freq": "5min",
         "columns": {
@@ -126,7 +126,7 @@ sst_metadata = {
     },
 
     "SDWPF_Sparse": {
-        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source/Patv_has_nan_{freq}.csv",
+        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source/Patv_sparse_{freq}.csv",
         "freq": ["10min"],
         "time_feature_freq": "10min",
         "columns": {
@@ -146,7 +146,7 @@ sst_metadata = {
         }
     },
     "WSTD2_Sparse": {
-        "path": "{root}/energy_wind/Zenodo_Wind_Spatio_Temporal_Dataset2_2010_2011/01_single_source/WSTD_has_nan_{freq}.csv",
+        "path": "{root}/energy_wind/Zenodo_Wind_Spatio_Temporal_Dataset2_2010_2011/01_single_source/WSTD_sparse_{freq}.csv",
         "freq": ["1hour", "6hour", "12hour", "1day"],
         "columns": {
             "time": "Date",
