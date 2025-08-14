@@ -61,8 +61,8 @@ def ts_mask():
     """
     task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
@@ -141,7 +141,7 @@ def ts_mask():
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
-    mask_tool = RandomMask(0.2)
+    mask_tool = RandomMask(0.2) # VariableMask(0.2) | BlockMask(12, 0.2)
 
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'MAE'])
