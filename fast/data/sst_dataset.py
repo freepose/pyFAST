@@ -211,13 +211,15 @@ class SSTDataset(data.Dataset):
         })
 
         if self.ts_mask is not None:
-            params['mask'] = True
+            density = self.ts_mask.sum() / (self.ts_mask.shape[0] * self.ts_mask.shape[1])
+            params['mask'] = round(float(density), 4)
 
         if self.ex_ts is not None:
             params['ex_vars'] = self.ex_vars
 
             if self.ex_ts_mask is not None:
-                params['ex_mask'] = True
+                ex_density = self.ex_ts_mask.sum() / (self.ex_ts_mask.shape[0] * self.ex_ts_mask.shape[1])
+                params['ex_mask'] = round(float(ex_density), 4)
 
         if self.ex_ts2 is not None:
             params['ex2_vars'] = self.ex2_vars

@@ -203,6 +203,7 @@ def prepare_smx_datasets(data_root: str,
                          split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
                          split_strategy: Literal['intra', 'inter'] = 'intra',
                          device: Union[Literal['cpu', 'mps', 'cuda'], str] = 'cpu',
+
                          **task_kwargs: Dict[str, Any]) -> Union[SMTDataset, List[SMTDataset]]:
     """
         Prepare several SMTDataset/SMDDataset for machine/incremental learning tasks.

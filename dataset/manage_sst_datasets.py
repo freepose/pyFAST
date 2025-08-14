@@ -326,6 +326,8 @@ def prepare_sst_datasets(data_root: str,
                             ``use_ex``: bool, whether to use exogenous variables, default is None.
                             ``ex_ts_mask``: bool, whether to mask the exogenous variables, default is False.
                             ``use_ex2``: bool, whether to use time features, default is False.
+                            ``random_mask``: type AbstractMask, the random mask generator, default is None.
+
         :return: the (split) datasets as SSTDataset objects.
     """
     assert dataset_name in sst_metadata, \

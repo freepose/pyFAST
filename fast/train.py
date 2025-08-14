@@ -19,8 +19,7 @@ from tqdm import tqdm
 from .model.base import to_string, init_weights
 from .metric import AbstractMetric, MSE
 from .metric import AbstractEvaluator, EmptyEvaluator
-from .data import AbstractScale, SSTDataset, SMTDataset
-
+from .data import AbstractScale, AbstractMask
 
 class Trainer:
     """
@@ -42,7 +41,8 @@ class Trainer:
         :param evaluator: the evaluator to be used. Default is ``EmptyEvaluator``, i.e., not evaluating.
         :param scaler: the scaler of time series of target variables. Default is ``None``.
         :param ex_scaler: the external scaler of time series of exogenous variables. Default is ``None``.
-
+        :param impute_mask: the mask for missing values imputation. Default is ``None``.
+                            Use this when pretrain/train the model with missing values imputation.
     """
 
     def __init__(self, device: torch.device,
@@ -53,6 +53,10 @@ class Trainer:
 
         self.device = device
 
+        self.model = model
+        self.is_initial_weights = is_initial_weights
+        self.is_compile = is_compile
+
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.stopper = stopper
@@ -62,10 +66,6 @@ class Trainer:
 
         self.scaler = scaler
         self.ex_scaler = ex_scaler
-
-        self.model = model
-        self.is_initial_weights = is_initial_weights
-        self.is_compile = is_compile
 
         if self.is_initial_weights:
             model.apply(init_weights)
@@ -104,7 +104,9 @@ class Trainer:
 
     def run_epoch(self, dataloader,
                   mode: Literal['train', 'val', 'online'] = 'train',
-                  progress_status: str = None):
+                  progress_status: str = None,
+                  forcast_mask: AbstractMask = None,
+                  impute_mask: AbstractMask = None) -> Dict[str, float]:
 
         self.model.train() if mode in ['train', 'online'] else self.model.eval()
 
@@ -130,6 +132,16 @@ class Trainer:
                 # Prepare for target model device
                 batch_inputs = [x.to(self.device) for x in batch_inputs]
                 batch_outputs = [y.to(self.device) for y in batch_outputs]
+
+            # Dynamic mask strategy
+            if num_x == 2 and mode in ['train']:
+                if forcast_mask is not None:    # forecasting task
+                    batch_inputs[1] = forcast_mask.generate(batch_inputs[1])
+                elif impute_mask is not None:   # imputation task
+                    intersection_mask = impute_mask.generate(batch_inputs[1])
+                    batch_inputs[1] = intersection_mask
+                    # This should guarantee that inputs and outputs are consistent.
+                    batch_outputs[1] = batch_outputs[1] & (~intersection_mask)
 
             batch_y_hat = self.model(*batch_inputs)
             batch_loss = self.criterion(batch_y_hat, *batch_outputs)
@@ -185,6 +197,8 @@ class Trainer:
             batch_size: int = 32, shuffle: bool = False,
             checkpoint_interval: int = 0,
             collate_fn: Callable = None,
+            forecast_mask: AbstractMask = None,
+            impute_mask: AbstractMask = None,
             verbose: Literal[0, 1, 2] = 2) -> List[List[Union[str, float]]]:
 
         """
@@ -206,7 +220,7 @@ class Trainer:
             message = [epoch_status, self.optimizer.param_groups[0]['lr']]
 
             progress_status = ('training ' + epoch_status) if verbose == 2 else None
-            train_results = self.run_epoch(train_dataloader, 'train', progress_status)
+            train_results = self.run_epoch(train_dataloader, 'train', progress_status, forecast_mask, impute_mask)
             message.extend([*train_results.values()])
 
             if self.lr_scheduler is not None:

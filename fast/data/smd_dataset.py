@@ -20,7 +20,6 @@ class SMDDataset(data.Dataset):
 
         Previous methods, mainly focused on padding (a batch of) sequences.
         ``SMDDataset`` focuses on padding subsequences / windows in overall level.
-
         ``SMDDataset`` pads zero values while the selected (part) of sequence/subsequence is **shorter** than a window.
 
         (1) It supports both fixed-length and vary-length input windows.

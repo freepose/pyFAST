@@ -49,7 +49,7 @@ class MinMaxScale(AbstractScale):
         :param feature_range: the range of normalized data. Default is ``[0, 1]``.
     """
 
-    def __init__(self, feature_range: tuple or list = (0.0, 1.0)):
+    def __init__(self, feature_range: Tuple[float, float] = (0.0, 1.0)):
         self.feature_range = feature_range
 
         self.min = None
@@ -65,6 +65,7 @@ class MinMaxScale(AbstractScale):
 
         self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [seq_len, num_features]
         self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values  # -> [seq_len, num_features]
+
         self.range = self.max - self.min
 
         return self

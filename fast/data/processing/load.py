@@ -13,6 +13,7 @@ import torch
 
 from pathlib import Path
 from typing import Literal, List, Tuple, Union, Dict, Any, Type
+
 from tqdm import tqdm
 from tqdm.contrib.concurrent import thread_map
 
@@ -89,8 +90,7 @@ def load_sst_datasets(filename: str,
     sst_args['ts'] = target_tensor
 
     if mask_variables:
-        mask_target_array = ~np.isnan(target_array)
-        mask_target_tensor = torch.tensor(mask_target_array, dtype=torch.bool, device=device)
+        mask_target_tensor = ~torch.isnan(target_tensor)
         sst_args['ts_mask'] = mask_target_tensor
 
     if ex_variables is not None:
@@ -100,8 +100,7 @@ def load_sst_datasets(filename: str,
         sst_args['ex_ts'] = ex_tensor
 
         if mask_ex_variables:
-            mask_ex_array = ~np.isnan(ex_array)
-            mask_ex_tensor = torch.tensor(mask_ex_array, dtype=torch.bool, device=device)
+            mask_ex_tensor = ~torch.isnan(ex_tensor)
             sst_args['ex_ts_mask'] = mask_ex_tensor
 
     if ex2_variables is not None:
@@ -173,8 +172,7 @@ def get_smt_args(filenames: List[str],
         smt_args['ts'].append(target_tensor)
 
         if mask_variables:
-            mask_target_array = ~np.isnan(target_array)
-            mask_target_tensor = torch.tensor(mask_target_array, dtype=torch.bool, device=device)
+            mask_target_tensor = ~torch.isnan(target_tensor)
             smt_args['ts_mask'].append(mask_target_tensor)
 
         if ex_variables is not None:
@@ -184,8 +182,7 @@ def get_smt_args(filenames: List[str],
             smt_args['ex_ts'].append(ex_tensor)
 
             if mask_ex_variables:
-                mask_ex_array = ~np.isnan(ex_array)
-                mask_ex_tensor = torch.tensor(mask_ex_array, dtype=torch.bool, device=device)
+                mask_ex_tensor = ~torch.isnan(ex_tensor)
                 smt_args['ex_ts_mask'].append(mask_ex_tensor)
 
         if ex2_variables is not None:

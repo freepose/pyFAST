@@ -19,6 +19,8 @@ from .scale import scaler_fit, scaler_transform
 
 from .patch import PatchMaker
 
+from .mask import AbstractMask, RandomMask, BlockMask, VariableMask
+
 from .sst_dataset import SSTDataset, multi_step_ahead_split, train_test_split
 from .smt_dataset import SMTDataset
 from .mmt_dataset import MMTDataset

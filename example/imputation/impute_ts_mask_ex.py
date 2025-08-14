@@ -40,8 +40,8 @@ def ts_mask_ex():
     task_config = {'ts': 'univariate', 'ts_mask': True, 'use_ex': True, 'dynamic_padding': True}
     seq, stride, horizon = 1, 1, 1 - 1  # input window is the output window
     train_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_train', seq, seq, horizon, stride, device=ds_device, **task_config)
-    val_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_val', seq, seq, horizon, stride, device=ds_device, **task_config)
-    test_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_test', seq, seq, horizon, stride, device=ds_device, **task_config)
+    val_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_val', seq, seq, horizon, seq, device=ds_device, **task_config)
+    test_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_test', seq, seq, horizon, seq, device=ds_device, **task_config)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
