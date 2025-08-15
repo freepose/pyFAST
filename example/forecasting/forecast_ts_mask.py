@@ -10,6 +10,8 @@
 
     (2) Multi-source single/multivariate time series forecasting with missing values.
 
+    (3) Global static mask and training dynamic mask.
+
 
     Some tips for benefiting from the codes:
 
@@ -60,24 +62,25 @@ def ts_mask():
         Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation
     """
     task_config = {'ts': 'multivariate', 'ts_mask': True}
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
     """
-        Global static mask uses to sparse time series forecasting task, may be not fit for time series imputation task.
+        Global static mask
     """
     train_ds.ts_mask = RandomMask(0.9).generate(train_ds.ts_mask)
     # train_ds.ts_mask = BlockMask(12, 0.2).generate(train_ds.ts_mask)
     # train_ds.ts_mask = VariableMask(0.2).generate(train_ds.ts_mask)
 
     """
-        Overwrite the time series data using scalers or a given factor.
-        Meanwhile, use dynamic scaling during training or evaluation.
+        Overwritable scalers and dynamic scalers. 
     """
     # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
     # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
@@ -141,19 +144,19 @@ def ts_mask():
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
-    mask_tool = RandomMask(0.2) # VariableMask(0.2) | BlockMask(12, 0.2)
+    dynamic_mask = RandomMask(0.9) # RandomMask(0.2) ｜ VariableMask(0.2) | BlockMask(12, 0.2)
 
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'MAE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
-                      optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=None,  # stopper,
+                      optimizer=optimizer, lr_scheduler=lr_scheduler, # stopper=stopper,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler)
     loger.info(str(trainer))
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=True, forecast_mask=mask_tool,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True, #forecast_mask=dynamic_mask,
                 verbose=2)
 
     if test_ds is not None:

@@ -84,9 +84,9 @@ class Trainer:
             self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.1)
 
     def initialize_device(self):
-        """ Initialize accelerator. """
+        """ Initialize model accelerator. """
 
-        if self.device is not None:
+        if self.device is not None: # reset all the model parameters to the device
             self.model = self.model.to(self.device)
 
         if self.device.type == 'cpu':
@@ -107,6 +107,25 @@ class Trainer:
                   progress_status: str = None,
                   forcast_mask: AbstractMask = None,
                   impute_mask: AbstractMask = None) -> Dict[str, float]:
+        """
+            Execute one training/validation epoch.
+
+            Note:
+                - Automatic data scaling is applied if scalers are configured
+                - Device transfer is handled automatically
+                - Dynamic masking only applies during training mode
+
+            :param dataloader: DataLoader containing batched data
+            :param mode: Execution mode - 'train' enables gradients, 'val'/'online' for evaluation
+            :param progress_status: Description text for progress bar, None disables progress bar
+            :param forcast_mask: Dynamic mask strategy for **forecasting** tasks during training
+            :param impute_mask: Dynamic mask strategy for **imputation** tasks during training
+
+            :return: Dict containing epoch metrics like loss and evaluation scores
+
+            :raises RuntimeError: If model forward pass fails
+                    ValueError: If incompatible mask strategies are provided
+        """
 
         self.model.train() if mode in ['train', 'online'] else self.model.eval()
 
@@ -118,23 +137,23 @@ class Trainer:
         self.criterion.reset()
         self.evaluator.reset()
         for batch_inputs, batch_outputs in dataloader:
-            num_x = len(batch_outputs)
-            num_ex = len(batch_inputs) - num_x
+            num_target_vars = len(batch_outputs)    # number of target variables
+            num_exogenous_vars = len(batch_inputs) - num_target_vars    # number of exogenous variables
 
             if self.scaler is not None:
-                batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_x])
-                batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_x])
+                batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_target_vars])
+                batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_target_vars])
 
-            if num_ex > 0 and (self.ex_scaler is not None):
-                batch_inputs[num_x] = self.ex_scaler.transform(batch_inputs[num_x])
+            if num_exogenous_vars > 0 and (self.ex_scaler is not None):
+                batch_inputs[num_target_vars] = self.ex_scaler.transform(batch_inputs[num_target_vars])
 
             if self.device.type != dataloader.dataset.device:
                 # Prepare for target model device
                 batch_inputs = [x.to(self.device) for x in batch_inputs]
                 batch_outputs = [y.to(self.device) for y in batch_outputs]
 
-            # Dynamic mask strategy
-            if num_x == 2 and mode in ['train']:
+            # Dynamic mask strategy: only applies during training mode
+            if num_target_vars == 2 and mode in ['train']:
                 if forcast_mask is not None:    # forecasting task
                     batch_inputs[1] = forcast_mask.generate(batch_inputs[1])
                 elif impute_mask is not None:   # imputation task
@@ -163,7 +182,7 @@ class Trainer:
                     batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
 
                 batch_y_hat = self.scaler.inverse_transform(batch_y_hat)  # NOTE
-                batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_x])
+                batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_target_vars])
 
             self.evaluator.update(batch_y_hat, *batch_outputs)
 

@@ -15,7 +15,7 @@ import copy
 import torch
 import torch.nn as nn
 
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Optional
 from abc import abstractmethod, ABC
 from .smt_dataset import TensorSequence
 
@@ -26,20 +26,22 @@ class AbstractScale(ABC):
     """
 
     @abstractmethod
-    def fit(self, x, x_mask=None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None) -> 'AbstractScale':
+        """ Fit the scaler to the data and return self for method chaining. """
         return self
 
     @abstractmethod
-    def transform(self, x, x_mask=None) -> torch.Tensor:
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """ Transform data using fitted parameters with zero-division protection. """
         return x
 
-    def fit_transform(self, x, x_mask=None) -> torch.Tensor:
+    def fit_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         self.fit(x, x_mask)
         normalized_x = self.transform(x, x_mask)
         return normalized_x
 
     @abstractmethod
-    def inverse_transform(self, x, x_mask=None) -> torch.Tensor:
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         return x
 
 
@@ -63,8 +65,8 @@ class MinMaxScale(AbstractScale):
 
         nan_mask = torch.isnan(x) if x_mask is None else ~x_mask  # -> [seq_len, num_features]
 
-        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [seq_len, num_features]
-        self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values  # -> [seq_len, num_features]
+        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [..., num_features]
+        self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values  # -> [..., num_features]
 
         self.range = self.max - self.min
 

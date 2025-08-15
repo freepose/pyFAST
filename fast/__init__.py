@@ -30,8 +30,7 @@ def initial_seed(seed: int = 10):
     torch.backends.cudnn.deterministic = True
 
 
-def initial_logger(file: str = 'stdout',
-                   level: int = logging.INFO) -> logging.Logger:
+def initial_logger(file: str = 'stdout', level: int = logging.INFO) -> logging.Logger:
     """
     Initialize logger to manage log output, either to console or to a file.
 

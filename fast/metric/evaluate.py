@@ -6,7 +6,7 @@
 """
 
 import torch
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Optional
 from abc import ABC, abstractmethod
 
 from .metric import MSE, MAE, MRE, RMSE, MAPE, CVRMSE, SMAPE, PCC, RAE, RSE, R2
@@ -38,9 +38,15 @@ class AbstractEvaluator(ABC):
 
 class EmptyEvaluator(AbstractEvaluator):
     """
-        An evaluator that does nothing. Useful for debugging or disabling evaluation.
+        No-operation evaluator for debugging or disabling evaluation.
 
-        Do nothing.
+        This evaluator implements the AbstractEvaluator interface but performs no actual evaluation operations.
+        Useful for:
+            - Debugging scenarios where evaluation should be skipped
+            - Performance testing without evaluation overhead
+            - Placeholder during development
+
+        All methods are no-ops and return empty results.
     """
     def __init__(self):
         super().__init__()
@@ -67,7 +73,8 @@ class Evaluator(AbstractEvaluator):
                               {'PCC': {'bias': 0.001}}.
     """
 
-    def __init__(self, metrics: Union[List[str], Tuple[str, ...]] = None, metric_params: dict = None):
+    def __init__(self, metrics: Union[List[str], Tuple[str, ...]] = None,
+                 metric_params: Optional[Dict[str, Dict]] = None):
         super().__init__()
 
         self.available_metrics = {

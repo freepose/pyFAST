@@ -28,11 +28,20 @@ from abc import abstractmethod, ABC
 
 class AbstractMask(ABC):
     """
-        AbstractMask class.
+        Abstract base class for time series masking strategies.
+
+        This class defines the interface for generating masks that can be applied
+        to time series data for various purposes such as data augmentation,
+        missing value simulation, or self-supervised learning.
+
+        The mask generation should follow these principles:
+        1. Respect the original data validity mask
+        2. Support both static (T, D) and dynamic (B, T, D) masking
+        3. Enable composable masking strategies
     """
 
     @abstractmethod
-    def generate(self, mask: torch.Tensor):
+    def generate(self, mask: torch.Tensor) -> torch.Tensor:
         """
             Apply the mask strategy to the dataset.
 
@@ -62,6 +71,11 @@ class RandomMask(AbstractMask):
             :return: A boolean mask tensor of the same shape as the input
         """
 
+        # if mask is None:
+        #     raise ValueError("Input mask cannot be None")
+        # if mask.dtype != torch.bool:
+        #     raise TypeError(f"Expected mask to be bool tensor, got {mask.dtype}")
+
         random_mask = torch.rand(mask.shape, device=mask.device) < self.keep_ratio
         random_mask &= mask
 
@@ -90,8 +104,13 @@ class BlockMask(AbstractMask):
             blocks_needed = max(1, total_true_needed // (self.block_size * D))
 
             starts = torch.randint(0, T - self.block_size + 1, (blocks_needed,), device=device)
-            for start in starts:
-                block_mask[start:start + self.block_size, :] = True
+            # for start in starts:
+            #     block_mask[start:start + self.block_size, :] = True
+
+            t_idx = torch.arange(self.block_size, device=device).unsqueeze(0)  # (1, block_size)
+            block_starts = starts.unsqueeze(1) + t_idx  # (blocks_needed, block_size)
+            block_starts = block_starts.clamp(max=T - 1).flatten()  # 展平并限制范围
+            block_mask[block_starts, :] = True
 
         elif len(shape) == 3:  # (B, T, D)
             B, T, D = shape
@@ -106,8 +125,15 @@ class BlockMask(AbstractMask):
             starts_expanded = starts.unsqueeze(-1) + t_idx  # (B, blocks_needed, block_size)
             starts_expanded = starts_expanded.clamp(max=T - 1)
 
-            for b in range(B):
-                block_mask[b, starts_expanded[b].reshape(-1), :] = True
+            # for b in range(B):
+            #     block_mask[b, starts_expanded[b].reshape(-1), :] = True
+
+            b_idx = torch.arange(B, device=device).unsqueeze(1).unsqueeze(1).expand(B, blocks_needed, self.block_size)
+            t_idx = starts_expanded
+            batch_indices = b_idx.reshape(-1)
+            time_indices = t_idx.reshape(-1)
+            block_mask[batch_indices, time_indices, :] = True
+
         else:
             raise ValueError("Shape must be (T, D) or (B, T, D).")
 
