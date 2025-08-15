@@ -129,7 +129,7 @@ def ts_mask():
                         "activation": 'linear', "use_instance_scale": True, "dropout_rate": 0.05}]
     }
 
-    model_cls, user_args = ts_modeler['ar']
+    model_cls, user_args = ts_modeler['coat']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}

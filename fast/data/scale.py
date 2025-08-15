@@ -59,24 +59,24 @@ class MinMaxScale(AbstractScale):
         self.range = None
         self.given_range = self.feature_range[1] - self.feature_range[0]
 
-    def fit(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """ x shape is [..., num_features]. """
         assert x.ndim > 1, "The input tensor must be at least 2D."
 
-        nan_mask = torch.isnan(x) if x_mask is None else ~x_mask  # -> [seq_len, num_features]
+        nan_mask = torch.isnan(x) if x_mask is None else ~x_mask  # -> [..., num_features]
 
-        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [..., num_features]
-        self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values  # -> [..., num_features]
+        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [num_features]
+        self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values  # -> [num_features]
 
         self.range = self.max - self.min
 
         return self
 
-    def transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         normalized_x = (x - self.min) / self.range * self.given_range + self.feature_range[0]
         return normalized_x
 
-    def inverse_transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         recovered_x = (x - self.feature_range[0]) * self.range / self.given_range + self.min
         return recovered_x
 
@@ -87,7 +87,7 @@ class MaxScale(AbstractScale):
     def __init__(self):
         self.max = None
 
-    def fit(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """ x shape is [..., num_features]. """
         assert x.ndim > 1, "The input tensor must be at least 2D."
 
@@ -96,11 +96,11 @@ class MaxScale(AbstractScale):
 
         return self
 
-    def transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         normalized_x = x / self.max
         return normalized_x
 
-    def inverse_transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         recovered_x = x * self.max
         return recovered_x
 
@@ -113,7 +113,7 @@ class MeanScale(AbstractScale):
     def __init__(self):
         self.mean = None
 
-    def fit(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """ x shape is [..., num_features]. """
         assert x.ndim > 1, "The input tensor must be at least 2D."
 
@@ -128,11 +128,11 @@ class MeanScale(AbstractScale):
         self.mean = x.mean(dim=0)
         return self
 
-    def transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         normalized_x = x / self.mean
         return normalized_x
 
-    def inverse_transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         recovered_x = x * self.mean
         return recovered_x
 
@@ -144,7 +144,7 @@ class StandardScale(AbstractScale):
         self.miu = None
         self.sigma = None
 
-    def fit(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """ x shape is [..., num_features]. """
 
         assert x.ndim > 1, "The input tensor must be at least 2D."
@@ -162,11 +162,11 @@ class StandardScale(AbstractScale):
         self.sigma = x.var(dim=0).sqrt()
         return self
 
-    def transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         normalized_x = (x - self.miu) / self.sigma
         return normalized_x
 
-    def inverse_transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         recovered_x = x * self.sigma + self.miu
         return recovered_x
 
@@ -176,13 +176,13 @@ class LogScale(AbstractScale):
         Logarithmic normalization.
     """
 
-    def fit(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         return self
 
-    def transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         return torch.log(x + 1)
 
-    def inverse_transform(self, x: torch.Tensor, x_mask: torch.Tensor = None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         return torch.exp(x) - 1
 
 
@@ -191,27 +191,27 @@ class LogScale(AbstractScale):
 """
 
 
-class InstanceScale(nn.Module):
+class InstanceScale(nn.Module, ABC):
     """ Base class of instance normalization. """
 
     def __init__(self):
         super(InstanceScale, self).__init__()
 
     @abstractmethod
-    def fit(self, x, mask=None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         return self
 
     @abstractmethod
-    def transform(self, x, mask=None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         return x
 
-    def fit_transform(self, x, mask=None):
-        self.fit(x, mask)
-        normalized_x = self.transform(x, mask)
+    def fit_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
+        self.fit(x, x_mask)
+        normalized_x = self.transform(x, x_mask)
         return normalized_x
 
     @abstractmethod
-    def inverse_transform(self, x, mask=None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         return x
 
 
@@ -239,11 +239,11 @@ class InstanceStandardScale(InstanceScale):
             self.affine_weight = nn.Parameter(torch.ones(self.num_features))
             self.affine_bias = nn.Parameter(torch.zeros(self.num_features))
 
-    def fit(self, x: torch.Tensor, mask: torch.Tensor = None):
+    def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """
             Fit the instance normalization parameters.
             :param x: the input tensor, shape is [..., num_features].
-            :param mask: the mask tensor, shape is [..., num_features].
+            :param x_mask: the mask tensor, shape is [..., num_features].
             :return: self, the fitted scaler.
         """
 
@@ -251,9 +251,9 @@ class InstanceStandardScale(InstanceScale):
 
         dim2reduce = tuple(range(1, x.ndim-1))
 
-        if mask is not None:
-            assert x.shape == mask.shape, 'x and mask must have the same shape.'
-            nan_mask = ~mask
+        if x_mask is not None:
+            assert x.shape == x_mask.shape, 'x and mask must have the same shape.'
+            nan_mask = ~x_mask
             valid_counts = (~nan_mask).sum(dim=dim2reduce, keepdim=True).float()
 
             # if valid_counts.min() == 0:
@@ -275,14 +275,14 @@ class InstanceStandardScale(InstanceScale):
         self.sigma = (x.var(dim=dim2reduce, keepdim=True, unbiased=False) + self.epsilon).sqrt().detach()
         return self
 
-    def transform(self, x: torch.Tensor, mask: torch.Tensor = None):
+    def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """ Normalization """
         t = (x - self.miu) / self.sigma  # -> [..., num_features]
         if self.num_features > 0:
             t = (t * self.affine_weight) + self.affine_bias
         return t
 
-    def inverse_transform(self, x: torch.Tensor, mask: torch.Tensor = None):
+    def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
         """ De-normalize.  """
         if self.num_features > 0:
             x = (x - self.affine_bias) / (self.affine_weight + self.epsilon ** 2)
