@@ -5,14 +5,12 @@ __version__ = '0.0.1'
 
 import os, random, sys, inspect, logging, platform, re
 import numpy as np
-
 import torch
 
 from typing import Any, Dict, Union, Callable, TextIO
 
 
 # Uncomment the following lines to enable multi-GPU support
-
 # os.environ['KMP_DUPLICATE_OK'] = 'True'   # the cause reason maybe mixing use of 'pip3 install' and 'conda install'
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 

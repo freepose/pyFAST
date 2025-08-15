@@ -47,7 +47,7 @@ class PatchMaker:
         if self.padding > 0:
             x = self.padding_layer(x)   # -> (..., n_vars, seq_len + padding)
 
-        ## -> (..., n_vars, patch_num, patch_len)
+        ## The ``unfold`` method is not used here because it does not support padding in some devices (e.g., MPS).
         # patches = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_stride)
 
         start_indices = torch.arange(0, self.patch_num * self.patch_stride, self.patch_stride, device=x.device)

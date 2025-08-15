@@ -2,13 +2,13 @@
 # encoding: utf-8
 
 """
-    Data normalization techniques.
+    Data normalization (or scaling) techniques.
 
     (1) Scaler applies to the whole (trainable part of) time series.
 
     (2) Instance scaler normalized batch input data of a model.
 
-    (3) The scalers work with mask tensor to ignore missing values or padding values of a real (target) tensor.
+    (3) The scalers work with mask tensor to ignore missing values (or padding values) of a real (target) tensor.
 """
 
 import copy
