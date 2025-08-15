@@ -5,6 +5,9 @@
 
     Mask strategy for Datasets.
 
+    The word 'masker' is used to avoid confusion with 'mask' (indicator), and is used as a suffix of class names.
+
+
     (1) Static mask strategy: generate masks based on the original mask provided by the datasets (T, D).
 
     (2) Dynamic mask strategy: generate masks based on the original mask provided by the datasets (B, T, D).
@@ -24,9 +27,11 @@
 import torch
 
 from abc import abstractmethod, ABC
+from typing import Union, List, Tuple
+from .smt_dataset import TensorSequence
 
 
-class AbstractMask(ABC):
+class AbstractMasker(ABC):
     """
         Abstract base class for time series masking strategies.
 
@@ -51,7 +56,7 @@ class AbstractMask(ABC):
         raise NotImplementedError("This method should be overridden by subclasses.")
 
 
-class RandomMask(AbstractMask):
+class RandomMasker(AbstractMasker):
     """
         ``RandomMask`` class generates a random point mask based on the provided ratio and shape.
 
@@ -82,65 +87,44 @@ class RandomMask(AbstractMask):
         return random_mask
 
 
-class BlockMask(AbstractMask):
+class BlockMasker(AbstractMasker):
     """
-    Faster BlockMask: generates continuous blocks along time axis with vectorized operations.
+    BlockMask: generates continuous blocks along time-axis using vectorized ops.
     """
 
     def __init__(self, block_size: int, keep_ratio: float):
-        assert 0 < block_size, "Block size must be positive."
-        assert 0.0 <= keep_ratio <= 1.0, "keep_ratio must be in [0.0, 1.0]"
+        assert block_size > 0, "block_size must be > 0"
+        assert 0.0 <= keep_ratio <= 1.0, "keep_ratio must be in [0, 1]"
         self.block_size = block_size
         self.keep_ratio = keep_ratio
 
-    def generate(self, mask: torch.Tensor):
+    def generate(self, mask: torch.Tensor) -> torch.Tensor:
         device = mask.device
         shape = mask.shape
         block_mask = torch.zeros_like(mask, dtype=torch.bool)
 
         if len(shape) == 2:  # (T, D)
             T, D = shape
-            total_true_needed = int(self.keep_ratio * T * D)
-            blocks_needed = max(1, total_true_needed // (self.block_size * D))
-
-            starts = torch.randint(0, T - self.block_size + 1, (blocks_needed,), device=device)
-            # for start in starts:
-            #     block_mask[start:start + self.block_size, :] = True
-
-            t_idx = torch.arange(self.block_size, device=device).unsqueeze(0)  # (1, block_size)
-            block_starts = starts.unsqueeze(1) + t_idx  # (blocks_needed, block_size)
-            block_starts = block_starts.clamp(max=T - 1).flatten()  # 展平并限制范围
-            block_mask[block_starts, :] = True
+            num_blocks = max(1, int((T * self.keep_ratio) // self.block_size))
+            starts = torch.randint(0, T - self.block_size + 1, (num_blocks,), device=device)
+            time_idx = (starts[:, None] + torch.arange(self.block_size, device=device)).flatten()
+            block_mask[time_idx.clamp(max=T - 1), :] = True
 
         elif len(shape) == 3:  # (B, T, D)
             B, T, D = shape
-            total_true_needed = int(self.keep_ratio * T * D)
-            blocks_needed = max(1, total_true_needed // (self.block_size * D))
-
-            # 向量化生成所有 batch 的起始位置
-            starts = torch.randint(0, T - self.block_size + 1, (B, blocks_needed), device=device)
-
-            # 用广播一次性赋值
-            t_idx = torch.arange(self.block_size, device=device).view(1, 1, -1)
-            starts_expanded = starts.unsqueeze(-1) + t_idx  # (B, blocks_needed, block_size)
-            starts_expanded = starts_expanded.clamp(max=T - 1)
-
-            # for b in range(B):
-            #     block_mask[b, starts_expanded[b].reshape(-1), :] = True
-
-            b_idx = torch.arange(B, device=device).unsqueeze(1).unsqueeze(1).expand(B, blocks_needed, self.block_size)
-            t_idx = starts_expanded
-            batch_indices = b_idx.reshape(-1)
-            time_indices = t_idx.reshape(-1)
-            block_mask[batch_indices, time_indices, :] = True
+            num_blocks = max(1, int((T * self.keep_ratio) // self.block_size))
+            starts = torch.randint(0, T - self.block_size + 1, (B, num_blocks), device=device)
+            time_idx = (starts[..., None] + torch.arange(self.block_size, device=device)).clamp(max=T - 1)
+            b_idx = torch.arange(B, device=device)[:, None, None].expand_as(time_idx)
+            block_mask[b_idx.reshape(-1), time_idx.reshape(-1), :] = True
 
         else:
-            raise ValueError("Shape must be (T, D) or (B, T, D).")
+            raise ValueError("mask shape must be (T, D) or (B, T, D)")
 
         return block_mask & mask
 
 
-class VariableMask(AbstractMask):
+class VariableMasker(AbstractMasker):
     """
     Faster VariableMask: masks entire feature columns (variables) with vectorized operations.
     """
@@ -172,3 +156,23 @@ class VariableMask(AbstractMask):
             raise ValueError("Shape must be (T, D) or (B, T, D).")
 
         return variable_mask & mask
+
+
+def masker_generate(masker: AbstractMasker,
+                    ts_mask: Union[torch.Tensor, TensorSequence]) -> Union[torch.Tensor, TensorSequence]:
+    """
+        Generate a mask using the provided mask instance.
+
+        :param masker: An instance of AbstractMask or its subclasses.
+        :param ts_mask: The original mask tensor or tensor list to combine with the generated mask.
+
+        :return: A boolean tensor representing the generated mask.
+    """
+
+    generated_ts_mask = None
+    if isinstance(ts_mask, torch.Tensor):
+        generated_ts_mask = masker.generate(ts_mask)
+    elif isinstance(ts_mask, List) or isinstance(ts_mask, Tuple):
+        generated_ts_mask = [masker.generate(mask) for mask in ts_mask]
+
+    return generated_ts_mask

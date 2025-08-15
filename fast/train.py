@@ -6,20 +6,20 @@
     Single computer/server version.
 """
 
-import logging
-import os, sys, platform
-from typing import Literal, Tuple, List, Union, Dict, Callable
+import os, sys, platform, logging
 
 import torch
 import torch.nn as nn
 import torch.utils.data as data
 
+from typing import Literal, Tuple, List, Union, Dict, Callable, Optional
 from tqdm import tqdm
 
 from .model.base import to_string, init_weights
 from .metric import AbstractMetric, MSE
 from .metric import AbstractEvaluator, EmptyEvaluator
-from .data import AbstractScale, AbstractMask
+from .data import AbstractScale, AbstractMasker
+
 
 class Trainer:
     """
@@ -86,7 +86,7 @@ class Trainer:
     def initialize_device(self):
         """ Initialize model accelerator. """
 
-        if self.device is not None: # reset all the model parameters to the device
+        if self.device is not None:  # reset all the model parameters to the device
             self.model = self.model.to(self.device)
 
         if self.device.type == 'cpu':
@@ -105,8 +105,8 @@ class Trainer:
     def run_epoch(self, dataloader,
                   mode: Literal['train', 'val', 'online'] = 'train',
                   progress_status: str = None,
-                  forcast_mask: AbstractMask = None,
-                  impute_mask: AbstractMask = None) -> Dict[str, float]:
+                  forcast_mask: Optional[AbstractMasker] = None,
+                  impute_mask: Optional[AbstractMasker] = None) -> Dict[str, float]:
         """
             Execute one training/validation epoch.
 
@@ -137,8 +137,8 @@ class Trainer:
         self.criterion.reset()
         self.evaluator.reset()
         for batch_inputs, batch_outputs in dataloader:
-            num_target_vars = len(batch_outputs)    # number of target variables
-            num_exogenous_vars = len(batch_inputs) - num_target_vars    # number of exogenous variables
+            num_target_vars = len(batch_outputs)  # number of target variables
+            num_exogenous_vars = len(batch_inputs) - num_target_vars  # number of exogenous variables
 
             if self.scaler is not None:
                 batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_target_vars])
@@ -154,9 +154,9 @@ class Trainer:
 
             # Dynamic mask strategy: only applies during training mode
             if num_target_vars == 2 and mode in ['train']:
-                if forcast_mask is not None:    # forecasting task
+                if forcast_mask is not None:  # forecasting task
                     batch_inputs[1] = forcast_mask.generate(batch_inputs[1])
-                elif impute_mask is not None:   # imputation task
+                elif impute_mask is not None:  # imputation task
                     intersection_mask = impute_mask.generate(batch_inputs[1])
                     batch_inputs[1] = intersection_mask
                     # This should guarantee that inputs and outputs are consistent.
@@ -166,7 +166,7 @@ class Trainer:
             batch_loss = self.criterion(batch_y_hat, *batch_outputs)
 
             if getattr(self.model, 'additional_loss', None) is not None:
-                batch_loss += self.model.additional_loss    # KL-Divergence loss or other regularization loss
+                batch_loss += self.model.additional_loss  # KL-Divergence loss or other regularization loss
 
             if mode in ['train', 'online']:
                 self.optimizer.zero_grad()  # clear gradients for next train
@@ -211,13 +211,13 @@ class Trainer:
         return 'epoch\t' + '\t'.join(['{:^10}'.format(s) for s in header])
 
     def fit(self, train_dataset: data.Dataset,
-            val_dataset: data.Dataset = None,
+            val_dataset: Optional[data.Dataset] = None,
             epoch_range: Tuple[int, int] = (1, 10),
             batch_size: int = 32, shuffle: bool = False,
             checkpoint_interval: int = 0,
-            collate_fn: Callable = None,
-            forecast_mask: AbstractMask = None,
-            impute_mask: AbstractMask = None,
+            collate_fn: Optional[Callable] = None,
+            forecast_mask: Optional[AbstractMasker] = None,
+            impute_mask: Optional[AbstractMasker] = None,
             verbose: Literal[0, 1, 2] = 2) -> List[List[Union[str, float]]]:
 
         """
@@ -272,7 +272,7 @@ class Trainer:
 
         return performance_history_list
 
-    def evaluate(self, val_dataset: data.Dataset, batch_size: int = 32, collate_fn=None,
+    def evaluate(self, val_dataset: data.Dataset, batch_size: int = 32, collate_fn: Optional[Callable] = None,
                  show_progress: bool = True, is_online: bool = False) -> Dict[str, float]:
         """
             Evaluate the model using ``val_dataset``. Design for evaluation, not for common prediction.

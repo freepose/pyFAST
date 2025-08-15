@@ -249,7 +249,7 @@ class InstanceStandardScale(InstanceScale):
 
         assert x.ndim > 2, "The input tensor must be at least 3D."
 
-        dim2reduce = tuple(range(1, x.ndim-1))
+        dim2reduce = tuple(range(1, x.ndim - 1))
 
         if x_mask is not None:
             assert x.shape == x_mask.shape, 'x and mask must have the same shape.'
@@ -262,7 +262,8 @@ class InstanceStandardScale(InstanceScale):
             x_copy = x.clone()
             x_copy[nan_mask] = 0
 
-            self.miu = x_copy.sum(dim=dim2reduce, keepdim=True) / (valid_counts + self.epsilon) # avoid division by zero
+            self.miu = x_copy.sum(dim=dim2reduce, keepdim=True) / (
+                        valid_counts + self.epsilon)  # avoid division by zero
             self.sigma = (x_copy.var(dim=dim2reduce, unbiased=False, keepdim=True) + self.epsilon).sqrt()
 
             if self.num_features > 0:
@@ -325,28 +326,28 @@ def scaler_fit(scaler: AbstractScale,
 
 def scaler_transform(scaler: AbstractScale,
                      ts: Union[torch.Tensor, TensorSequence],
-                     mask: Union[torch.Tensor, TensorSequence] = None) -> torch.Tensor:
+                     ts_mask: Union[torch.Tensor, TensorSequence] = None) -> Union[torch.Tensor, TensorSequence]:
     """
         Transform the time series data using the fitted scaler.
 
         :param scaler: the fitted scaler.
         :param ts: time series tenor, or a list of time series tensors.
-        :param mask: mask tensor or a list of mask tensors.
+        :param ts_mask: mask tensor or a list of mask tensors.
         :return: the transformed time series tensor.
     """
-    if mask is not None:
+    if ts_mask is not None:
         if isinstance(ts, torch.Tensor):
-            assert ts.shape == mask.shape, 'ts and mask must have the same shape.'
+            assert ts.shape == ts_mask.shape, 'ts and mask must have the same shape.'
         elif isinstance(ts, (Tuple, List)):
-            assert len(ts) == len(mask), 'ts and mask must have the same length.'
+            assert len(ts) == len(ts_mask), 'ts and mask must have the same length.'
 
     normalized_ts = None
     if isinstance(ts, torch.Tensor):
-        normalized_ts = scaler.transform(ts, mask)
+        normalized_ts = scaler.transform(ts, ts_mask)
     elif isinstance(ts, (Tuple, List)):
         normalized_ts = []
         for i in range(len(ts)):
-            normalized_ts.append(scaler.transform(ts[i], mask[i] if mask is not None else None))
+            normalized_ts.append(scaler.transform(ts[i], ts_mask[i] if ts_mask is not None else None))
 
     return normalized_ts
 

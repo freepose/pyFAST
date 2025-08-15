@@ -36,8 +36,8 @@ import torch
 import torch.optim as optim
 
 from fast import initial_seed, initial_logger, get_device, get_common_kwargs
-from fast.data import StandardScale, MinMaxScale, scaler_fit, scaler_transform, VariableMask
-from fast.data import RandomMask, BlockMask
+from fast.data import StandardScale, MinMaxScale, scaler_fit, scaler_transform
+from fast.data import RandomMasker, BlockMasker, VariableMasker, masker_generate
 from fast.train import Trainer
 from fast.stop import EarlyStop
 from fast.metric import Evaluator, MSE
@@ -64,25 +64,23 @@ def ts_mask():
     task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
     """
-        Global static mask
+        Global **static mask**
     """
-    train_ds.ts_mask = RandomMask(0.9).generate(train_ds.ts_mask)
-    # train_ds.ts_mask = BlockMask(12, 0.2).generate(train_ds.ts_mask)
-    # train_ds.ts_mask = VariableMask(0.2).generate(train_ds.ts_mask)
+    train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
 
     """
         Overwritable scalers and dynamic scalers. 
     """
-    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
+    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
     # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
     # if val_ds is not None:
     #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
@@ -90,7 +88,7 @@ def ts_mask():
     #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
 
     # Dynamic scaling while training or evaluation.
-    scaler = None # scaler_fit(StandardScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
+    scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -144,7 +142,7 @@ def ts_mask():
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
-    dynamic_mask = RandomMask(0.9) # RandomMask(0.2) ｜ VariableMask(0.2) | BlockMask(12, 0.2)
+    dynamic_mask = BlockMasker(12, 0.9) # RandomMask(0.2) ｜ VariableMask(0.2) | BlockMask(12, 0.2)
 
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'MAE'])
@@ -156,7 +154,7 @@ def ts_mask():
     loger.info(str(trainer))
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=True, #forecast_mask=dynamic_mask,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True, forecast_mask=dynamic_mask,
                 verbose=2)
 
     if test_ds is not None:
