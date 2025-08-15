@@ -81,7 +81,7 @@ def main():
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
     # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts)
-    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
+    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts) 。
     # if val_ds is not None:
     #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
     # if test_ds is not None:
@@ -234,7 +234,7 @@ def main():
 if __name__ == '__main__':
     initial_seed(2025)
     initial_logger()
-    # main()
+    main()
 
-    verify_sst_datasets()
+    # verify_sst_datasets()
     # verify_smt_datasets()
