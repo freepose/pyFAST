@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from typing import Literal
+from typing import Literal, Union, Tuple, List
 from matplotlib import pyplot as plt
 
 plt.rcParams['figure.max_open_warning'] = 300
@@ -15,8 +15,10 @@ plt.rcParams['figure.max_open_warning'] = 300
 # font_prop = fm.FontProperties(fname=font_path)
 # rcParams['font.family'] = font_prop.get_name()
 
+ArraySequence = Union[List[np.ndarray], Tuple[np.ndarray, ...]]
 
-def plot_in_line_chart(time_series: np.ndarray, ts_names: list[str] = None,
+
+def plot_in_line_chart(time_series: np.ndarray, ts_names: List[str] = None,
                        x_label: str = None, y_label: str = None, title: str = None):
     """
         Plot several **equal-length** time series data in **one** line chart.
@@ -45,8 +47,8 @@ def plot_in_line_chart(time_series: np.ndarray, ts_names: list[str] = None,
     plt.show()
 
 
-def plot_jagged_ts_in_line_chart(uts: tuple[np.array] or list[np.ndarray], ts_names: list[str] = None,
-                                 uts2: tuple[np.array] or list[np.ndarray] = None, ts2_names: list[str] = None,
+def plot_jagged_ts_in_line_chart(uts: ArraySequence, ts_names: List[str] = None,
+                                 uts2: ArraySequence = None, ts2_names: List[str] = None,
                                  title: str = None):
     """
         Plot several **unequal-length** (a.k.a. jagged) time series data in one figure of several line charts.
@@ -88,7 +90,7 @@ def plot_jagged_ts_in_line_chart(uts: tuple[np.array] or list[np.ndarray], ts_na
 
 
 def plot_comparable_line_charts(real_ts: np.ndarray, preds_ts: np.ndarray,
-                                title: str = None, x_label_names: list[str] = None, y_label_names: list[str] = None):
+                                title: str = None, x_label_names: List[str] = None, y_label_names: List[str] = None):
     """
         Plot several sub-figures in a figure.
         Each sub-figure is a line chart of comparable real and predicted time series data.

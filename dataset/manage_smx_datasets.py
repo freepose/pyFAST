@@ -85,11 +85,9 @@ smt_metadata = {
     "GreeceWPF": {
         "paths": ["{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/02_multi_source/{freq}"],
         "freq": ["1hour", "6hour", "12hour", "1day"],
-        "time_feature_freq": "h",
         "columns": {
-            "time": "Date",
-            "univariate": ["power(MW)"],
-            "multivariate": ["power(MW)"],  # univariate and multivariate are the same, change it if needed.
+            "univariate": ["Wind energy (MW)"],
+            "multivariate": ["Wind energy (MW)"],  # univariate and multivariate are the same, change it if needed.
             "exogenous": ["airTemperature", "cloudCover", "gust", "humidity", "precipitation", "pressure",
                           "visibility", "windDirection", "windSpeed"]
         }
@@ -97,9 +95,7 @@ smt_metadata = {
 
     "GreeceWPF_1day": {
         "paths": ["{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/02_multi_source/1day"],
-        "time_feature_freq": "D",
         "columns": {
-            "time": "Date",
             "univariate": ["power(MW)"],
             "multivariate": ["power(MW)"],  # univariate and multivariate are the same, change it if needed.
             "exogenous": ["airTemperature", "cloudCover", "gust", "humidity", "precipitation", "pressure",
@@ -111,7 +107,6 @@ smt_metadata = {
         "paths": ["{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/02_multi_source_szw/{freq}"],
         "freq": ["1day"] + ["10min", "30min", "1hour", "6hour", "12hour", "1day"],
         "columns": {
-            "time": "Date",
             "univariate": ["Patv"],
             "multivariate": ["Patv"],
             "exogenous": ["Wspd", "Wdir", "Etmp", "Itmp", "Ndir", "Pab1", "Pab2", "Pab3", "Prtv"]
@@ -121,7 +116,6 @@ smt_metadata = {
     "SDWPF_1day": {
         "paths": ["{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/02_multi_source_szw/1day"],
         "columns": {
-            "time": "Date",
             "univariate": ["Patv"],
             "multivariate": ["Patv"],
             "exogenous": ["Wspd", "Wdir", "Etmp", "Itmp", "Ndir", "Pab1", "Pab2", "Pab3", "Prtv"]
@@ -132,7 +126,6 @@ smt_metadata = {
         "paths": ["{root}/energy_wind/Zenodo_Wind_Spatio_Temporal_Dataset2_2010_2011/02_multi_source/{freq}"],
         "freq": ["1hour", "6hour", "12hour", "1day"],
         "columns": {
-            "time": "Date",
             "univariate": ["Power"],
             "multivariate": ["Power"],
         }
