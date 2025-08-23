@@ -126,13 +126,13 @@ sst_metadata = {
     },
 
     "SDWPF_Sparse": {
-        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source/Patv_sparse_{freq}.csv",
+        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source_sparse/10min/[sparse]KDD22_wind_turbine_{freq}.csv",
         "freq": ["10min"],
         "time_feature_freq": "10min",
         "columns": {
             "time": "Date",
-            "univariate": ["134"],
-            "multivariate": slice("1", "134"),
+            "univariate": ["134_Patv"],
+            "multivariate": slice("1_Patv", "134_Patv"),
         }
     },
 

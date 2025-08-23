@@ -73,22 +73,22 @@ def ts_mask():
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
     """
-        Global **static mask**
+        Global **static mask**. This simulates the missing mechanism of real world.
     """
     train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
 
     """
         Overwritable scalers and dynamic scalers. 
     """
-    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
-    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
-    # if val_ds is not None:
-    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
-    # if test_ds is not None:
-    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
+    overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
+    train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
+    if val_ds is not None:
+        val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
+    if test_ds is not None:
+        test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
 
     # Dynamic scaling while training or evaluation.
-    scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
+    scaler = None # scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -142,8 +142,7 @@ def ts_mask():
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
-    dynamic_mask = BlockMasker(12, 0.9) # RandomMask(0.2) ｜ VariableMask(0.2) | BlockMask(12, 0.2)
-
+    dynamic_mask = RandomMasker(0.2) # RandomMask(0.2) ｜ VariableMasker(0.2) | BlockMasker(12, 0.2)
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'MAE'])
 
