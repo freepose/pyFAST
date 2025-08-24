@@ -112,32 +112,6 @@ View benchmarks on [Google Sheets](https://docs.google.com/spreadsheets/d/1y_mhU
 You can also download the local Excel: [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
 Datasets available at [Zenodo](https://zenodo.org/communities/fast/).
 
-### Performance Highlights (from asset/benchmarks_20250824.xlsx)
-
-UTS (Univariate) Best Models by Dataset
-
-| Dataset | Best Model | Avg MSE | Avg MAE |
-|---|---|---:|---:|
-| ETTh1 | LSTNet | 5.220 | 1.711 |
-| ETTh2 | TimeXer | 24.028 | 3.598 |
-| ETTm1 | LSTNet | 2.900 | 1.179 |
-| ETTm2 | LSTNet | 12.617 | 2.322 |
-| ExchangeRate | CoDR | 119.569 | 7.679 |
-| Weather mpi_roof_2010a | CTRL | 212.221 | 9.087 |
-| Japan ILI | CNNRNNRes | 0.296 | 0.356 |
-| US ILI | CTRL | 285.259 | 9.861 |
-
-MTS (Multivariate) Best Models by Dataset
-
-| Dataset | Best Model | Avg MSE | Avg MAE |
-|---|---|---:|---:|
-| ETTh1 | Triformer | 9.452 | 1.628 |
-| ETTh2 | iTransformer | 11.012 | 2.077 |
-| ETTm1 | TCOAT | 8.334 | 1.510 |
-| ETTm2 | CTRL | 7.798 | 1.757 |
-| ExchangeRate | iTransformer | 125.905 | 6.133 |
-| Electricity | FiLM | 252.073 | 1.917 |
-| Traffic | iTransformer | 7.331 | 1.224 |
 
 ## License
 
