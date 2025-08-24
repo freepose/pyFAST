@@ -1,6 +1,6 @@
 # pyFAST: Flexible, Advanced Framework for Multi-source and Sparse Time Series Analysis in PyTorch
 
-[![Software Overview Figure](overview.svg)](overview.svg)
+[![Software Overview Figure](asset/overview.svg)](asset/overview.svg)
 
 [pyFAST](https://github.com/freepose/pyFAST) (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
 
@@ -106,129 +106,15 @@ pyFAST is designed to handle various time series data structures:
     *   **Exogenous Variable Integration:** Seamlessly incorporate external factors (exogenous variables) to enrich your time series models.
     *   **Variable-Length Sequence Support:**  Utilizes dynamic padding to efficiently process time series with varying lengths within batches, optimizing training and inference.
 
-## Benchmarking Performance
+Benchmarking Performance
 
 pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets. Our comprehensive experimental evaluation demonstrates the framework's capabilities across diverse forecasting scenarios.
 
-### 📊 **Complete Experimental Results**
+## Benchmarking Performance
 
-**🔗 [View All Benchmark Results in Google Sheets](https://docs.google.com/spreadsheets/d/your-sheet-id/edit?usp=sharing)**
-
-*Our comprehensive benchmarking results are maintained in a live Google Sheets document containing detailed performance metrics, experimental configurations, and comparative analysis across all tested models and datasets.*
-
----
-
-### **Benchmarking Methodology**
-
-**📈 Evaluation Framework:**
-*   **Datasets:** Comprehensive evaluation on standard benchmarks including:
-    - **ETT-small/ETT-h1/ETT-h2/ETT-m1/ETT-m2** (Electricity Transforming Temperature - long-term forecasting)
-    - **Electricity Load Diagrams** (UCI ML Repository)
-    - **Traffic Dataset** (real-world traffic occupancy rates)
-    - **Weather Dataset** (meteorological measurements)
-    - **Exchange Rate** (currency exchange rates)
-    - **XMCDC** (Xiamen disease surveillance data - our proprietary dataset)
-    - **Protein Sequences** (sparse biological data)
-
-*   **Baseline Models:** Rigorous comparison against state-of-the-art baselines:
-    - **Classical:** ARIMA, VAR, Linear models
-    - **Deep Learning:** LSTM, GRU, TCN, DeepAR
-    - **Transformer-based:** Informer, Autoformer, FEDformer, PatchTST, iTransformer
-    - **Graph-based:** GraphWaveNet, STID, AGCRN
-    - **Recent SOTA:** TimesNet, TimeMixer, TimeXer, TSMixer
-
-*   **Evaluation Metrics:** Multi-dimensional performance assessment:
-    - **Accuracy:** MSE, MAE, RMSE, MAPE, sMAPE
-    - **Statistical:** R², Pearson Correlation Coefficient (PCC)
-    - **Relative:** RAE (Relative Absolute Error), RSE (Root Squared Error)
-    - **Specialized:** CV-RMSE for sparse data scenarios
-
-*   **Experimental Setup:**
-    - **Hardware:** NVIDIA RTX 4090, Intel i9-13900K, 64GB RAM
-    - **Software:** PyTorch 2.1+, CUDA 12.1
-    - **Reproducibility:** Fixed seeds, standardized data splits, consistent hyperparameters
-
----
-
-### **Key Performance Highlights**
-
-🏆 **pyFAST models demonstrate competitive or superior performance across multiple scenarios:**
-
-#### **Univariate Time Series Forecasting**
-*Prediction horizons: 96, 192, 336, 720 steps*
-
-| Dataset | Best pyFAST Model | MSE ↓ | MAE ↓ | Improvement vs. Best Baseline |
-|---------|-------------------|-------|-------|-------------------------------|
-| ETT-h1  | **PatchTST**     | 0.384 | 0.400 | **+12.3%** vs. Informer     |
-| ETT-h2  | **iTransformer** | 0.278 | 0.336 | **+8.7%** vs. Autoformer    |
-| Weather | **TimesNet**     | 0.172 | 0.220 | **+15.2%** vs. FEDformer    |
-| Traffic | **COAT** (Ours)  | 0.395 | 0.249 | **+18.5%** vs. PatchTST     |
-
-#### **Multivariate Time Series Forecasting**
-*Multiple variables, complex dependencies*
-
-| Dataset | Best pyFAST Model | MSE ↓ | MAE ↓ | Key Advantage |
-|---------|-------------------|-------|-------|---------------|
-| ETT-m1  | **TimeMixer**    | 0.294 | 0.343 | Efficient channel mixing |
-| ETT-m2  | **TCOAT** (Ours) | 0.187 | 0.270 | **Sparse attention mechanism** |
-| Electricity | **GraphWaveNet** | 0.126 | 0.222 | Spatial-temporal modeling |
-| Exchange | **Transformer** | 0.089 | 0.197 | Long-range dependencies |
-
-#### **Sparse Time Series Forecasting**
-*Handling missing values and exogenous variables*
-
-| Dataset | Best pyFAST Model | MSE ↓ | MAE ↓ | Sparsity Level |
-|---------|-------------------|-------|-------|----------------|
-| XMCDC Disease | **GAIN** (Ours) | 0.156 | 0.298 | **~30% missing** |
-| Protein Sequences | **DRED** (Ours) | 0.203 | 0.341 | **~45% missing** |
-| Industrial IoT | **CTRL** (Ours) | 0.178 | 0.267 | **~25% missing** |
-
-#### **Multi-source Fusion Datasets**
-*Leveraging exogenous variables and heterogeneous data sources*
-
-| Scenario | Best pyFAST Model | MSE ↓ | MAE ↓ | Data Sources |
-|----------|-------------------|-------|-------|--------------|
-| Disease + Weather | **GAINGE** | 0.142 | 0.234 | Medical + Meteorological |
-| Energy + Economic | **DGDR** | 0.167 | 0.289 | Power + Financial indicators |
-| Traffic + Events | **MvT** | 0.198 | 0.312 | Transportation + Social media |
-
----
-
-### **Computational Efficiency**
-
-⚡ **Performance Benchmarks** (Average training time per epoch):
-
-| Model Category | pyFAST Implementation | Baseline Libraries | Speedup |
-|----------------|----------------------|-------------------|---------|
-| **Transformer Models** | 2.3s | 4.1s (HuggingFace) | **1.8x faster** |
-| **Graph Neural Networks** | 1.7s | 3.2s (PyG) | **1.9x faster** |
-| **Classical Models** | 0.4s | 0.8s (statsmodels) | **2.0x faster** |
-| **Sparse Models** | 3.1s | 6.8s (Custom impl.) | **2.2x faster** |
-
-**Memory Efficiency:**
-- **Dynamic Padding:** Up to 40% memory reduction for variable-length sequences
-- **Sparse Tensor Operations:** 60% memory savings for sparse data scenarios
-- **Batch Processing:** Optimized tensor operations reduce memory fragmentation
-
----
-
-### **Research Impact & Validation**
-
-📚 **Publications & Recognition:**
-- **Peer-reviewed papers:** 3 accepted publications featuring pyFAST models
-- **Benchmark datasets:** XMCDC dataset contributed to the community
-- **Open-source adoption:** 500+ GitHub stars, 50+ forks
-- **Industry applications:** Deployed in healthcare, energy, and finance sectors
-
-🔬 **Novel Contributions:**
-- **COAT/TCOAT:** Attention mechanisms for sparse time series
-- **GAIN:** Graph-based imputation for multivariate data
-- **DRED:** Deep residual networks for irregular sequences
-- **Multi-source fusion:** LLM-inspired architectures for heterogeneous data
-
----
-
-*For detailed experimental configurations, hyperparameter settings, statistical significance tests, and additional results, please refer to our [comprehensive benchmark results](https://docs.google.com/spreadsheets/d/your-sheet-id/edit?usp=sharing).*
+pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.
+View all benchmark details and results in [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
+Those datasets are publicly available at [FAST](https://zenodo.org/communities/fast/) community.
 
 ## License
 
