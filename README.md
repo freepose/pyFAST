@@ -1,7 +1,6 @@
 # pyFAST: Flexible, Advanced Framework for Multi-source and Sparse Time Series Analysis in PyTorch
 
-[![Software Overview Figure](overview.svg)](overview.svg) 
-
+[![Software Overview Figure](overview.svg)](overview.svg)
 
 [pyFAST](https://github.com/freepose/pyFAST) (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
 
