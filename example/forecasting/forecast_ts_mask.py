@@ -49,6 +49,7 @@ from fast.model.mts import CNNRNN, CNNRNNRes
 from fast.model.mts import Transformer, TSMixer, Timer
 from fast.model.mts import COAT, TCOAT, CoDR, CTRL
 
+from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
 from dataset.manage_sst_datasets import prepare_sst_datasets
 from dataset.manage_smx_datasets import prepare_smx_datasets
 
@@ -61,14 +62,16 @@ def ts_mask():
     """
         Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation
     """
-    task_config = {'ts': 'multivariate', 'ts_mask': True}
+    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
+    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, True, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
@@ -76,6 +79,10 @@ def ts_mask():
         Global **static mask**. This simulates the missing mechanism of real world.
     """
     train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
+    if val_ds is not None:
+        val_ds.ts_mask = masker_generate(RandomMasker(0.8), val_ds.ts_mask)
+    if test_ds is not None:
+        test_ds.ts_mask = masker_generate(RandomMasker(0.8), test_ds.ts_mask)
 
     """
         Overwritable scalers and dynamic scalers. 

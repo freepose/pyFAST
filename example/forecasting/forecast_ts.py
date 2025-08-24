@@ -63,7 +63,7 @@ def main():
     ds_device, model_device = 'cpu', 'mps'
 
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
-    # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
     # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'univariate'}
@@ -75,7 +75,7 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GreeceWPF', 7 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GreeceWPF', 7 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)

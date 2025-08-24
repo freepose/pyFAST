@@ -1,6 +1,6 @@
 # pyFAST: Flexible, Advanced Framework for Multi-source and Sparse Time Series Analysis in PyTorch
 
-[![Software Overview Figure](overview.svg)](overview.svg)
+[![Software Overview Figure](asset/overview.svg)](asset/overview.svg)
 
 [pyFAST](https://github.com/freepose/pyFAST) (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
 
@@ -106,31 +106,15 @@ pyFAST is designed to handle various time series data structures:
     *   **Exogenous Variable Integration:** Seamlessly incorporate external factors (exogenous variables) to enrich your time series models.
     *   **Variable-Length Sequence Support:**  Utilizes dynamic padding to efficiently process time series with varying lengths within batches, optimizing training and inference.
 
+Benchmarking Performance
+
+pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets. Our comprehensive experimental evaluation demonstrates the framework's capabilities across diverse forecasting scenarios.
+
 ## Benchmarking Performance
 
 pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.
-
-**Benchmarking Highlights:**
-
-*   **Datasets:** Evaluated on ETT-small (long-term forecasting), Electricity Load, and Traffic (real-world outpatient) datasets.
-*   **Baselines:** Compared against strong baselines including Informer, PatchTST, and GluonTS (DeepAR, Transformer).
-*   **Metrics:** Performance assessed using MSE, MAE, RMSE, and MAPE.
-*   **Results:**  pyFAST models, especially Transformer-based architectures, demonstrate **competitive or superior performance** in forecasting accuracy while maintaining **computational efficiency** due to optimized implementations and modular design.
-
-### Univariate Time Series Forecasting
-
-**Example Benchmarking Results (Table 1 from Paper):**
-
-### Multivariate Time Series Forecasting
-
-
-### Sparse Time Series Forecasting (using Exogenous Variables)
-
-Protein dataset
-
-### Fusible Time Series Datasets
-
-Example Benchmarking Results (Table 1 from TCOAT/GAIN paper):
+View all benchmark details and results in [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
+Those datasets are publicly available at [FAST](https://zenodo.org/communities/fast/) community.
 
 ## License
 
