@@ -108,9 +108,9 @@ pyFAST is designed to handle various time series data structures:
 ## Benchmarking Performance
 
 pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.
-View all benchmark details and results in [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
-Also available on [Google Sheets](https://docs.google.com/spreadsheets/d/1y_mhUeWeEBOW88UoXv7_r9Cyyf2q2DKz/edit?usp=sharing&ouid=118431230685867986241&rtpof=true&sd=true)
-Those datasets are publicly available at [FAST](https://zenodo.org/communities/fast/) community.
+View benchmarks on [Google Sheets](https://docs.google.com/spreadsheets/d/1y_mhUeWeEBOW88UoXv7_r9Cyyf2q2DKz/edit?usp=sharing&ouid=118431230685867986241&rtpof=true&sd=true).
+You can also download the local Excel: [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
+Datasets available at [Zenodo](https://zenodo.org/communities/fast/).
 
 ### Performance Highlights (from asset/benchmarks_20250824.xlsx)
 
