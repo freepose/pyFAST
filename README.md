@@ -105,16 +105,39 @@ pyFAST is designed to handle various time series data structures:
     *   **Sparse Data Ready:**  Models and metrics are designed to effectively work with sparse time series data and missing values, utilizing masks for accurate computations.
     *   **Exogenous Variable Integration:** Seamlessly incorporate external factors (exogenous variables) to enrich your time series models.
     *   **Variable-Length Sequence Support:**  Utilizes dynamic padding to efficiently process time series with varying lengths within batches, optimizing training and inference.
-
-Benchmarking Performance
-
-pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets. Our comprehensive experimental evaluation demonstrates the framework's capabilities across diverse forecasting scenarios.
-
 ## Benchmarking Performance
 
 pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.
 View all benchmark details and results in [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
+Also available on [Google Sheets](https://docs.google.com/spreadsheets/d/1y_mhUeWeEBOW88UoXv7_r9Cyyf2q2DKz/edit?usp=sharing&ouid=118431230685867986241&rtpof=true&sd=true)
 Those datasets are publicly available at [FAST](https://zenodo.org/communities/fast/) community.
+
+### Performance Highlights (from asset/benchmarks_20250824.xlsx)
+
+UTS (Univariate) Best Models by Dataset
+
+| Dataset | Best Model | Avg MSE | Avg MAE |
+|---|---|---:|---:|
+| ETTh1 | LSTNet | 5.220 | 1.711 |
+| ETTh2 | TimeXer | 24.028 | 3.598 |
+| ETTm1 | LSTNet | 2.900 | 1.179 |
+| ETTm2 | LSTNet | 12.617 | 2.322 |
+| ExchangeRate | CoDR | 119.569 | 7.679 |
+| Weather mpi_roof_2010a | CTRL | 212.221 | 9.087 |
+| Japan ILI | CNNRNNRes | 0.296 | 0.356 |
+| US ILI | CTRL | 285.259 | 9.861 |
+
+MTS (Multivariate) Best Models by Dataset
+
+| Dataset | Best Model | Avg MSE | Avg MAE |
+|---|---|---:|---:|
+| ETTh1 | Triformer | 9.452 | 1.628 |
+| ETTh2 | iTransformer | 11.012 | 2.077 |
+| ETTm1 | TCOAT | 8.334 | 1.510 |
+| ETTm2 | CTRL | 7.798 | 1.757 |
+| ExchangeRate | iTransformer | 125.905 | 6.133 |
+| Electricity | FiLM | 252.073 | 1.917 |
+| Traffic | iTransformer | 7.331 | 1.224 |
 
 ## License
 
