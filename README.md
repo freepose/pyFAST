@@ -112,6 +112,30 @@ View benchmarks on [Google Sheets](https://docs.google.com/spreadsheets/d/1y_mhU
 You can also download the local Excel: [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
 Datasets available at [FAST](https://zenodo.org/communities/fast/) community in ZENODO.
 
+## Citation
+
+If you find this work useful in your research, please use the following citation formats:
+
+**BibTeX:**
+
+```bibtex
+@article{corr2025/Wang,
+    author    = {Wang, Zhijin and Wu, Senzhen and Hu, Yue and Liu, Xiufeng},
+    title     = {pyFAST: A Modular PyTorch Framework for Time Series Modeling with Multi-source and Sparse Data},
+    journal   = {arXiv preprint},
+    year      = {2025},
+    url       = {https://arxiv.org/abs/2508.18891},
+}
+```
+
+**APA/Plain Text:**
+
+Zhijin Wang, Senzhen Wu, Yue Hu, Xiufeng Liu. 2025. pyFAST: A Modular PyTorch Framework for Time Series Modeling with Multi-source and Sparse Data. arXiv
+preprint arXiv:2508.18891. https://arxiv.org/abs/2508.18891
+
+## Contact
+
+If you have any questions or suggestions, please feel free to contact me at [zhijin@jmu.edu.cn](zhijin@jmu.edu.cn).
 
 ## License
 
