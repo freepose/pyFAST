@@ -114,9 +114,7 @@ Datasets available at [FAST](https://zenodo.org/communities/fast/) community in 
 
 ## Citation
 
-If you find this work useful in your research, please use the following citation formats:
-
-**BibTeX:**
+**BibTeX format**
 
 ```bibtex
 @article{corr2025/Wang,
@@ -128,14 +126,14 @@ If you find this work useful in your research, please use the following citation
 }
 ```
 
-**APA/Plain Text:**
+**APA/Plain format**
 
 Zhijin Wang, Senzhen Wu, Yue Hu, Xiufeng Liu. 2025. pyFAST: A Modular PyTorch Framework for Time Series Modeling with Multi-source and Sparse Data. arXiv
 preprint arXiv:2508.18891. https://arxiv.org/abs/2508.18891
 
 ## Contact
 
-If you have any questions or suggestions, please feel free to contact me at [zhijin@jmu.edu.cn](zhijin@jmu.edu.cn).
+Please feel free to contact me at [zhijin@jmu.edu.cn](zhijin@jmu.edu.cn).
 
 ## License
 
