@@ -63,8 +63,8 @@ class CollaborationAmbientVariables(nn.Module):
 class Cabin(nn.Module):
     """
         Senzhen Wu, Yu Chen, Xinhao He, Zhijin Wang, Xiufeng Liu, Yonggang Fu
-
         Cabin: A Collaborative and Adaptive Framework for Wind Power Forecasting Integrating Ambient Variables
+        Energy 2025 (335), https://doi.org/10.1016/j.energy.2025.137753
 
         :param input_window_size: input sequence length.
         :param input_vars: number of input variables (channels).
