@@ -36,31 +36,32 @@ def main():
     ds_device, model_device = 'cpu', 'mps'
 
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv'
-    # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
-    train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'multivariate', 'use_ex': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 8 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GFM', 5, 3, 1, 3, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    # overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
-    overwrite_ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts, train_ds.ex_ts_mask) if train_ds.ex_ts is not None else None
-    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
+    # overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts)
+    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
+    overwrite_ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts) if train_ds.ex_ts is not None else None
     # if val_ds is not None:
-    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
-    #     val_ds.ex_ts = scaler_transform(overwrite_ex_scaler, val_ds.ex_ts, val_ds.ex_ts_mask) if val_ds.ex_ts is not None else None
+        # val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
+        # val_ds.ex_ts = scaler_transform(overwrite_ex_scaler, val_ds.ex_ts) if val_ds.ex_ts is not None else None
     # if test_ds is not None:
-    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
-    #     test_ds.ex_ts = scaler_transform(overwrite_ex_scaler, test_ds.ex_ts, test_ds.ex_ts_mask) if test_ds.ex_ts is not None else None
+        # test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
+        # test_ds.ex_ts = scaler_transform(overwrite_ex_scaler, test_ds.ex_ts) if test_ds.ex_ts is not None else None
 
     scaler, ex_scaler = None, overwrite_ex_scaler
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
     modeler = {
-        'arx': [ARX, {'ex_retain_window_size': train_ds.input_window_size // 2}],
+        'arx': [ARX, {'ex_retain_window_size': train_ds.input_window_size}],
         'narx-mlp': [NARXMLP, {'ex_retain_window_size': train_ds.input_window_size // 2,
                                'hidden_units': [32], 'activation': 'linear'}],
         'narx-rnn': [NARXRNN, {'rnn_cls': 'rnn', 'hidden_size': 64, 'num_layers': 1,
@@ -79,7 +80,7 @@ def main():
                         'use_instance_scale': True}],
     }
 
-    model_cls, user_args = modeler['dgr']
+    model_cls, user_args = modeler['narx-rnn']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
@@ -102,15 +103,16 @@ def main():
                       scaler=scaler, ex_scaler=ex_scaler)
     logging.getLogger().info(f"{trainer}")
 
+    batch_size = 512
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 200), batch_size=32, shuffle=True,
+                epoch_range=(1, 200), batch_size=batch_size, shuffle=True,
                 verbose=2)
 
     if test_ds is not None:
-        results = trainer.evaluate(test_ds, 32, None, False, is_online=False)
+        results = trainer.evaluate(test_ds, batch_size, None, False, is_online=False)
         print('test {}'.format(results))
     elif val_ds is not None:
-        results = trainer.evaluate(val_ds, 32, None, False, is_online=False)
+        results = trainer.evaluate(val_ds, batch_size, None, False, is_online=False)
         print('val {}'.format(results))
 
     print('Good luck!')

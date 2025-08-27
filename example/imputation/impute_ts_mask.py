@@ -48,12 +48,13 @@ def ts_mask():
     """
     task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 48, 1 - 48, 48, (0.7, 0.1, 0.2), ds_device, **task_config)
+
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 48, 1 - 48, 48, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 24 * 6, 1 - 24 * 6, 24 * 6, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 2880, 2880, 1 - 2880, 2880, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 2880, 2880, 1 - 2880, 2880, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 3000, 1 - 3000, 3000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 745, 1 - 745, 745, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 745, 1 - 745, 745, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
     """
         Global **static mask**. This simulates the missing mechanism of real world.
@@ -61,7 +62,7 @@ def ts_mask():
     train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
 
     """
-        Overwritable scalers and dynamic scalers. 
+        Overwritable (static) scalers and dynamic scalers. 
     """
     overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
     train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)

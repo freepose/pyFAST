@@ -8,6 +8,8 @@ from typing import Literal
 
 class MSL(nn.Module):
     """
+        MSL. Multivariate Shapelet Learning.
+
         Wang, Zhijin, Cai, Bing.
         COVID-19 cases prediction in multiple areas via shapelet learning.
         Applied Intelligence 52, 595–606 (2022).

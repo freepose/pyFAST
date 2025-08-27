@@ -167,6 +167,10 @@ class MRE(AbstractMetric):
     """
         Mean Relative Error (MRE). This class supports both element-wise evaluation,
         and batch-wise aggregated evaluation on large-scale dataset (prediction values and real values).
+
+        Division by zero is not explicitly handled; users should ensure real values are non-zero.
+        This metric is not fitted for datasets with zero or near-zero real values.
+
     """
 
     def __init__(self):

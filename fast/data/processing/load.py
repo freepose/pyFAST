@@ -387,7 +387,7 @@ def load_smx_datasets(filenames: List[str],
     else:  # split_strategy == 'inter'
         filename_num = len(filenames)
         for i, (s, e) in enumerate(zip(cum_split_ratios[:-1], cum_split_ratios[1:])):
-            start, end = int(filename_num * s), int(filename_num * e)
+            start, end = int(filename_num * round(s, 10)), int(filename_num * round(e, 10))
             split_filenames = filenames[start:end]
             smt_args = get_smt_args_parallel(split_filenames, variables, mask_variables, ex_variables,
                                              mask_ex_variables, ex2_variables, float_type=float_type,

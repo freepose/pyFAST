@@ -184,6 +184,20 @@ smt_metadata = {
             "exogenous": [str(i) for i in range(480)]
         }
     },
+
+    "GFM": {
+        "paths": ["{root}/simulation/gfm_sim_abc_simple/"],
+        "columns": {
+            "names": ["simTime", "Vgq", "Vgd", "Pinertia", "Pdamping", "SCR", "XbyR", "IsOvercurrent",
+                      "GridMag", "GridFreq", "GridPhase", "Pref_real", "Qref_real", "VolRef", "Qload",
+                      "Igd", "Igq", "Ia", "Ib", "Ic", "Va", "Vb", "Vc"],
+            "univariate": ["Vgd", "Vgq", "Igd", "Igq"],
+            "multivariate": ["Vgd", "Vgq", "Igd", "Igq", "Pinertia", "Pdamping", "IsOvercurrent"],
+            "exogenous": ["SCR", "XbyR", "GridMag", "GridFreq", "GridPhase",
+                          "Pref_real", "Qref_real", "VolRef", "Qload"],
+            "exogenous2": ["simTime"],
+        }
+    }
 }
 
 
@@ -196,7 +210,6 @@ def prepare_smx_datasets(data_root: str,
                          split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
                          split_strategy: Literal['intra', 'inter'] = 'intra',
                          device: Union[Literal['cpu', 'mps', 'cuda'], str] = 'cpu',
-
                          **task_kwargs: Dict[str, Any]) -> Union[SMTDataset, List[SMTDataset]]:
     """
         Prepare several SMTDataset/SMDDataset for machine/incremental learning tasks.

@@ -80,12 +80,12 @@ def main():
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts)
-    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
-    # if val_ds is not None:
-    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
-    # if test_ds is not None:
-    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
+    overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts)
+    train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
+    if val_ds is not None:
+        val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
+    if test_ds is not None:
+        test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
     scaler = None # scaler_fit(StandardScale(), train_ds.ts)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
