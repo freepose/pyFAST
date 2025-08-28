@@ -133,7 +133,7 @@ preprint arXiv:2508.18891. https://arxiv.org/abs/2508.18891
 
 ## Contact
 
-Please feel free to contact me at [zhijin@jmu.edu.cn](zhijin@jmu.edu.cn).
+Please feel free to contact Zhijin Wang ([zhijin@jmu.edu.cn](zhijin@jmu.edu.cn)).
 
 ## License
 
