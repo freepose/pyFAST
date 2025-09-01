@@ -34,7 +34,7 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 *   **`metric/` package:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
 *   **`generative/` package:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
 
-**Currently Supported Models**
+**Supported Models**
 
 | Exogenous\Target Variables    | Dense            | Sparse                |
 |-------------------------------|------------------|-----------------------|
