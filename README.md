@@ -36,7 +36,7 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 
 **Currently Supported Models**
 
-| Variables                     | Time Series      | Sparse Time Series    |
+| Exogenous\Target Variables    | Dense            | Sparse                |
 |-------------------------------|------------------|-----------------------|
 | wo Exogenous                  | ✅ ts             | ✅ ts_mask             |
 | Exogenous                     | ✅ ts_ex          | ✅ ts_mask_ex          |
@@ -46,7 +46,10 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 | Exogenous sparse + Exogenous2 | ✅ ts_ex_mask_ex2 | ✅ ts_mask_ex_mask_ex2 |
 | Static                        | ❌ ts_static      | ❌ ts_mask_static      |
 
-Symbols: ✅ = supports / typically adaptable, ❌ = does not natively support
+Symbols: ✅ = supports / typically adaptable, ❌ = does not natively support.
+``ts_ex_mask`` indicates the target time series is dense, but the exogenous variables are sparse.
+``ts_mask_ex2`` indicates the target time series is sparse, with preknown exogenous variables.
+``ts_mask_ex_mask`` indicates both target and exogenous variables are sparse.
 
 ## Installation
 
