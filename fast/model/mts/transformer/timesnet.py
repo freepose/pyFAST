@@ -91,7 +91,9 @@ class TimesBlock(nn.Module):
             # padding
             if (self.input_window_size + self.output_window_size) % period != 0:
                 padding_length = (((self.input_window_size + self.output_window_size) // period) + 1) * period
-                padding = torch.zeros([x.shape[0], (padding_length - (self.input_window_size + self.output_window_size)), x.shape[2]]).to(x.device)
+                padding = torch.zeros(
+                    [x.shape[0], (padding_length - (self.input_window_size + self.output_window_size)), x.shape[2]]).to(
+                    x.device)
                 out = torch.cat([x, padding], dim=1)
             else:
                 padding_length = (self.input_window_size + self.output_window_size)
@@ -142,7 +144,9 @@ class TimesNet(nn.Module):
         :param num_kernels: number of convolution kernels.
         :param top_k: the k value of TimesNet.
     """
-    def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1, output_vars: int = 1,
+
+    def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
+                 output_vars: int = 1,
                  d_model: int = 512,
                  num_encoder_layers: int = 1,
                  dim_ff: int = 2048,
@@ -177,12 +181,17 @@ class TimesNet(nn.Module):
 
         self.inst_scale = InstanceStandardScale() if use_instance_scale else InstanceScale()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
         """
             :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x_mask: shape is (batch_size, input_window_size), optional.
+            :return: shape is (batch_size, output_window_size, output_vars).
         """
 
         norm_x = self.inst_scale.fit_transform(x)
+
+        if x_mask is not None:
+            x[~x_mask] = 0.
 
         x_embedding = self.encoder_embedding(norm_x) + self.encoder_pe(norm_x)  # -> (batch_size, input_window_size, d_model)
 
@@ -194,7 +203,8 @@ class TimesNet(nn.Module):
             encoder_out = self.encoder[i](encoder_out)
             encoder_out = self.layer_norm(encoder_out)
 
-        decoder_out = self.projection(encoder_out)  # -> (batch_size, input_window_size + output_window_size, output_vars)
+        decoder_out = self.projection(
+            encoder_out)  # -> (batch_size, input_window_size + output_window_size, output_vars)
 
         out = self.inst_scale.inverse_transform(decoder_out)
         out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, input_vars)

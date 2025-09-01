@@ -6,9 +6,9 @@ from typing import Literal
 import torch
 import torch.nn as nn
 
-from ....data import PatchMaker
-from ...base import MLP
-from ...mts.transformer.embedding import PositionalEncoding
+from fast.data import PatchMaker
+from fast.model.base import MLP
+from fast.model.mts.transformer.embedding import PositionalEncoding
 
 
 class nconv(nn.Module):

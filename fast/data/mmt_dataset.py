@@ -24,7 +24,7 @@ class MMTDataset(data.Dataset):
 
         (3) Support exogenous time series modeling, a.k.a., modeling with exogenous variables.
 
-        (4) Support data missing situations, both sparse target time series and sparse exogenous time series.
+        (4) Support data missing situations, both sparse_fusion target time series and sparse_fusion exogenous time series.
         A.k.a., time series imputation, incomplete time series forecasting.
 
         (5) Support multiple prediction objects, and multiple exogenous data.
@@ -173,7 +173,7 @@ class MMTDataset(data.Dataset):
             params['ex_vars_list'] = self.ex_vars_list
 
             if self.ex_ts_mask is not None:
-                params['ex_mask'] = True
+                params['ex'] = True
 
         params_str = ', '.join([f'{key}={value}' for key, value in params.items()])
         params_str = 'MMTDataset({})'.format(params_str)

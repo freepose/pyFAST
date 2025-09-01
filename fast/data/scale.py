@@ -191,7 +191,7 @@ class LogScale(AbstractScale):
 """
 
 
-class InstanceScale(nn.Module, ABC):
+class InstanceScale(nn.Module):
     """ Base class of instance normalization. """
 
     def __init__(self):

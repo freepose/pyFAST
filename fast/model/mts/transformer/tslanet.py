@@ -90,7 +90,7 @@ class AdaptiveSpectralBlock(nn.Module):
 
         return adaptive_mask
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Apply FFT along the time dimension
         x_fft = torch.fft.rfft(x, dim=1, norm='ortho')
 

@@ -14,11 +14,10 @@ from .tspt import TSPT
 
 from .temporalcausalnet import TemporalCausalNet
 
-# Dense target variable + sparse exogenous variables
-from .sparse.sparse_narx import SparseNARXRNN
+# Dense target variable + sparse_fusion exogenous variables
+from fast.model.sparse import SparseNARXRNN
 
 # Sparse target variable + dense exogenous variables + pre-known exogenous variables (e.g., time)
-from .sparse.tpatchgnn import TPatchGNN
 
 # Plugins
 from .fusion_plugin import DataFirstPlugin, LearningFirstPlugin, ExogenousDataDrivenPlugin

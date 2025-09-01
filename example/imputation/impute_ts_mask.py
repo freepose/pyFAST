@@ -44,7 +44,7 @@ def ts_mask():
     ds_device, model_device = 'cpu', 'mps'
 
     """
-        Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation
+        Sparse long-sequence time series forecasting problems: sparse_fusion decomposition, shapelet representation
     """
     task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 48, 1 - 48, 48, (0.7, 0.1, 0.2), ds_device, **task_config)

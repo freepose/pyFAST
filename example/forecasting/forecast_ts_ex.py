@@ -36,7 +36,7 @@ def main():
     ds_device, model_device = 'cpu', 'mps'
 
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv'
-    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
     # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'multivariate', 'use_ex': True}
@@ -46,7 +46,7 @@ def main():
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
     train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GFM', 5, 3, 1, 3, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    # overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts)
+    overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts)
     # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
     overwrite_ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts) if train_ds.ex_ts is not None else None
     # if val_ds is not None:
@@ -56,7 +56,7 @@ def main():
         # test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
         # test_ds.ex_ts = scaler_transform(overwrite_ex_scaler, test_ds.ex_ts) if test_ds.ex_ts is not None else None
 
-    scaler, ex_scaler = None, overwrite_ex_scaler
+    scaler, ex_scaler = None, overwrite_ex_scaler # overwrite_ex_scaler
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 

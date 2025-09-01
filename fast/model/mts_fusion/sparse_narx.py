@@ -6,7 +6,7 @@ from typing import Literal
 
 import torch
 import torch.nn as nn
-from ...mts.rnn import MinLSTM
+from fast.model.mts.rnn import MinLSTM
 
 
 class SparseNARXRNN(nn.Module):

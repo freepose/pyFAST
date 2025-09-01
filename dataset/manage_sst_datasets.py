@@ -126,7 +126,7 @@ sst_metadata = {
     },
 
     "SDWPF_Sparse": {
-        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source_sparse/10min/[sparse]KDD22_wind_turbine_{freq}.csv",
+        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source_sparse/10min/[sparse_fusion]KDD22_wind_turbine_{freq}.csv",
         "freq": ["10min"],
         "time_feature_freq": "10min",
         "columns": {
@@ -373,7 +373,7 @@ def verify_sst_datasets():
 
     ds_names = list(sst_metadata.keys())
     for i, name in enumerate(ds_names):
-        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex_mask': True, 'use_ex2': True}
+        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex': True, 'use_ex2': True}
         # task_config = {'ts': 'multivariate'}
         print(i, end='\t')
         sst_datasets = prepare_sst_datasets(data_root, name, 48, 24, 1, 1, (0.7, 0.1, 0.2), **task_config)

@@ -83,7 +83,7 @@ class SSTDataset(data.Dataset):
         (2) Support input data == output data for autoencoders or generative models.
             ``horizon`` == 1 - ``output_window_size``.
         (3) Support exogenous time series data.
-        (4) Support sparse time series data: target, exogenous, and both.
+        (4) Support sparse_fusion time series data: target, exogenous, and both.
         (5) Support split for machine learning or incremental learning.
 
         The default device is the same as ``ts`` device.
@@ -219,7 +219,7 @@ class SSTDataset(data.Dataset):
 
             if self.ex_ts_mask is not None:
                 ex_density = self.ex_ts_mask.sum() / (self.ex_ts_mask.shape[0] * self.ex_ts_mask.shape[1])
-                params['ex_mask'] = round(float(ex_density), 4)
+                params['ex'] = round(float(ex_density), 4)
 
         if self.ex_ts2 is not None:
             params['ex2_vars'] = self.ex2_vars

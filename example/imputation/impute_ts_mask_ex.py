@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    Examples on **multiple sources** incomplete (sparse) time series imputation using (dense) exogenous data.
+    Examples on **multiple sources** incomplete (sparse_fusion) time series imputation using (dense) exogenous data.
 
     This is an example incomplete time series forecasting using exogenous data.
 

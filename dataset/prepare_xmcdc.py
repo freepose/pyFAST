@@ -131,9 +131,9 @@ def load_xmcdc_as_sst(filename: str = '../../dataset/xmcdc/outpatients_2011_2020
 
         :param filename: the CSV filename.
         :param variables: names of the target variables, and can be one or more variables in the list.
-        :param mask_variables: whether to mask the target variables. This uses for sparse time series.
+        :param mask_variables: whether to mask the target variables. This uses for sparse_fusion time series.
         :param ex_categories: categories of the exogenous variables.
-        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse_fusion exogenous time series.
         :param input_window_size: input window size of the transformed supervised data. A.k.a., lookback window size.
         :param output_window_size: output window size of the transformed supervised data. A.k.a., prediction length.
         :param horizon: the distance between input and output windows of a sample.
@@ -182,9 +182,9 @@ def load_xmcdc_as_smt(filename: str = '../../dataset/xmcdc/outpatients_2011_2020
 
         :param filename: the CSV filename.
         :param variables: names of the target variables, and can be one or more variables in the list.
-        :param mask_variables: whether to mask the target variables. This uses for sparse time series
+        :param mask_variables: whether to mask the target variables. This uses for sparse_fusion time series
         :param ex_categories: categories of the exogenous variables.
-        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse_fusion exogenous time series.
         :param input_window_size: input window size of the transformed supervised data
                             A.k.a., lookback window size.
         :param output_window_size: output window size of the transformed supervised data

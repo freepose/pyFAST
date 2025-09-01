@@ -24,7 +24,7 @@ class SMTDataset(data.Dataset):
         (2) Support alignment-free time series dataset.
         (3) Support input data == output data for autoencoders or generative models.
         (4) Support **exogenous** time series data.
-        (5) Support **sparse** time series data: target, exogenous, and both.
+        (5) Support **sparse_fusion** time series data: target, exogenous, and both.
         (6) Support datasets splitting for machine / incremental learning.
 
         :param ts: list of univariate/multivariate time series dataset.
@@ -191,7 +191,7 @@ class SMTDataset(data.Dataset):
             params['ex_vars'] = self.ex_vars
 
             if self.ex_ts_mask is not None:
-                params['ex_mask'] = True
+                params['ex'] = True
 
         if self.ex_ts2 is not None:
             params['ex2_vars'] = self.ex2_vars

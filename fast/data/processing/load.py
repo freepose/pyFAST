@@ -47,9 +47,9 @@ def load_sst_datasets(filename: str,
 
         :param filename: csv filename.
         :param variables: names of the target variables, and can be one or more variables in the list.
-        :param mask_variables: whether to mask the target variables. This uses for sparse time series.
+        :param mask_variables: whether to mask the target variables. This uses for sparse_fusion time series.
         :param ex_variables: names of the exogenous variables.
-        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse_fusion exogenous time series.
         :param ex2_variables: names of the second exogenous variables. This is used for pre-known features,
                                 such as time features, forecasted weather factors, etc.
         :param input_window_size: input window size of the transformed supervised data. A.k.a., lookback window size.
@@ -138,9 +138,9 @@ def get_smt_args(filenames: List[str],
 
         :param filenames: list of CSV filenames.
         :param variables: names of the target variables, and can be one or more variables in the list.
-        :param mask_variables: whether to mask the target variables. This uses for sparse time series
+        :param mask_variables: whether to mask the target variables. This uses for sparse_fusion time series
         :param ex_variables: names of the exogenous variables.
-        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse_fusion exogenous time series.
         :param ex2_variables: names of the exogenous variables.
         :param float_type: the data type of the time series data, default is ``np.float32``.
         :param device: the device to load the data, default is 'cpu'.
@@ -214,9 +214,9 @@ def get_smt_args_parallel(filenames: List[str],
 
         :param filenames: list of CSV filenames.
         :param variables: names of the target variables, and can be one or more variables in the list.
-        :param mask_variables: whether to mask the target variables. This uses for sparse time series
+        :param mask_variables: whether to mask the target variables. This uses for sparse_fusion time series
         :param ex_variables: names of the exogenous variables.
-        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse exogenous time series.
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse_fusion exogenous time series.
         :param ex2_variables: names of the exogenous variables.
         :param float_type: the data type of the time series data, default is ``np.float32``.
         :param device: the device to load the data, default is 'cpu'.
@@ -313,9 +313,9 @@ def load_smx_datasets(filenames: List[str],
 
         :param filenames: list of CSV filenames.
         :param variables: names of the target variables, and can be one or more variables in the list.
-        :param mask_variables: whether to mask the target variables. This uses for sparse time series
+        :param mask_variables: whether to mask the target variables. This uses for sparse_fusion time series
         :param ex_variables: names of the exogenous variables.
-        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse
+        :param mask_ex_variables: whether to mask the exogenous variables. This uses for sparse_fusion
             exogenous time series.
         :param ex2_variables: names of the second exogenous variables.
                             This is used for pre-known features, such as time features, forecasted weather factors, etc.

@@ -14,6 +14,8 @@ class Amplifier(nn.Module):
         Jingru Fei, Kun Yi, Wei Fan, Qi Zhang, Zhendong Niu.
         https://arxiv.org/abs/2501.17216
 
+        Authors' implementation: https://github.com/aikunyi/Amplifier
+
         This model has been changed to support both odd and even input/output window sizes.
 
         The ``output_window_size`` === ``input_window_size``.
@@ -116,6 +118,8 @@ class Amplifier(nn.Module):
 
         # Energy Restoration Block
         out_amplifier_fft = torch.fft.rfft(out_amplifier, dim=1)
+
+        # x_inverse_fft = self.freq_linear(x_inverse_fft.permute(0, 2, 1)).permute(0, 2, 1)
 
         real_out = self.freq_linear_real(x_inverse_fft.real.permute(0, 2, 1)).permute(0, 2, 1)
         imag_out = self.freq_linear_imag(x_inverse_fft.imag.permute(0, 2, 1)).permute(0, 2, 1)

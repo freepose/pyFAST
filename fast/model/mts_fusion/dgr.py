@@ -78,16 +78,17 @@ class DGR(nn.Module):
                    or [batch_size, output_window_size, ex_vars],
         """
 
+        # x = torch.softmax(x, dim=0)
+        out = self.gru_x(x)       # -> [batch_size, output_window_size, input_size]
+
         out_ex = ex[:, -self.ex_retain_window_size:]
         out_ex = out_ex * self.weight + self.bias
         out_ex = out_ex.softmax(dim=0)    # -> [batch_size, ex_retain_window_size, ex_vars]
 
         out_ex = self.gru_ex(out_ex)       # -> [batch_size, output_window_size, ex_vars]
 
-        # y = torch.softmax(y, dim=0)
-        out_x = self.gru_x(x)       # -> [batch_size, output_window_size, input_size]
+        out = torch.cat([out_ex, out], dim=2)   # ->[batch_size, output_window_size, input_size + ex_vars]
 
-        out = torch.cat([out_ex, out_x], dim=2)   # ->[batch_size, output_window_size, input_size + ex_vars]
         # r_xy = torch.softmax(r_xy, dim=2)
 
         out = self.l1(out)

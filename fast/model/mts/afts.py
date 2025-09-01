@@ -57,7 +57,6 @@ class AFTS(nn.Module):
     def forward(self, x: torch.Tensor):
         """
             :param x: shape is ``(batch_size, input_window_size, input_vars)``
-
         """
 
         out = self.ed(x)

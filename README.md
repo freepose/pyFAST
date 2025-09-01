@@ -28,11 +28,29 @@
 
 As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` library is structured into five core modules, ensuring a cohesive and versatile framework:
 
-*   **`data/` Module:**  Handles data loading, preprocessing, and dataset creation for SST, SMT, MMT, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
-*   **`model/` Module:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
+*   **`data/` package:**  Handles data loading, preprocessing, and dataset creation for SST, SMT, MMT, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
+*   **`model/` package:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
 *   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
-*   **`metric/` Module:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
-*   **`generative/` Module:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
+*   **`metric/` package:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
+*   **`generative/` package:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
+
+**Currently Supported Models**
+
+| Variables                     | Time Series      | Sparse Time Series    |
+|-------------------------------|------------------|-----------------------|
+| wo Exogenous                  | ✅ ts             | ✅ ts_mask             |
+| Exogenous                     | ✅ ts_ex          | ✅ ts_mask_ex          |
+| Exogenous sparse              | ✅ ts_ex_mask     | ✅ ts_mask_ex_mask     |
+| Exogenous2                    | ✅ ts_ex2         | ✅ ts_mask_ex2         |
+| Exogenous + Exogenous2        | ✅ ts_ex_ex2      | ✅ ts_mask_ex_ex2      |
+| Exogenous sparse + Exogenous2 | ✅ ts_ex_mask_ex2 | ✅ ts_mask_ex_mask_ex2 |
+| Static                        | ❌ ts_static      | ❌ ts_mask_static      |
+
+Symbols:
+
+- ✅ = supports / typically adaptable
+- ❌ = does not natively support
+- ✶ = sparse (sparsely observed targets or exogenous features)
 
 ## Installation
 

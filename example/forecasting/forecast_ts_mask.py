@@ -3,8 +3,8 @@
 
 """
 
-    Examples on incomplete (sparse) time series forecasting (ITSF).
-    The incomplete (sparse) time series data is represented by a dense tensor and a mask (indicator) tensor.
+    Examples on incomplete (sparse_fusion) time series forecasting (ITSF).
+    The incomplete (sparse_fusion) time series data is represented by a dense tensor and a mask (indicator) tensor.
 
     (1) Single-source single/multivariate time series forecasting with missing values.
 
@@ -60,7 +60,7 @@ def ts_mask():
     ds_device, model_device = 'cpu', 'mps'
 
     """
-        Sparse long-sequence time series forecasting problems: sparse decomposition, shapelet representation
+        Sparse long-sequence time series forecasting problems: sparse_fusion decomposition, shapelet representation
     """
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
     train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, True, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
@@ -78,21 +78,21 @@ def ts_mask():
     """
         Global **static mask**. This simulates the missing mechanism of real world.
     """
-    train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
-    if val_ds is not None:
-        val_ds.ts_mask = masker_generate(RandomMasker(0.8), val_ds.ts_mask)
-    if test_ds is not None:
-        test_ds.ts_mask = masker_generate(RandomMasker(0.8), test_ds.ts_mask)
+    # train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
+    # if val_ds is not None:
+    #     val_ds.ts_mask = masker_generate(RandomMasker(0.8), val_ds.ts_mask)
+    # if test_ds is not None:
+    #     test_ds.ts_mask = masker_generate(RandomMasker(0.8), test_ds.ts_mask)
 
     """
         Overwritable scalers and dynamic scalers. 
     """
-    overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
-    train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
-    if val_ds is not None:
-        val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
-    if test_ds is not None:
-        test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
+    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
+    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
+    # if val_ds is not None:
+    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
+    # if test_ds is not None:
+    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
 
     # Dynamic scaling while training or evaluation.
     scaler = None # scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
@@ -125,7 +125,7 @@ def ts_mask():
                           'activation': 'relu', 'dropout_rate': 0.}],
         'tsmixer': [TSMixer, {'num_blocks': 2, 'block_hidden_size': 2048, 'dropout_rate': 0.05,
                               'use_instance_scale': True}],  # TMLR 2023
-        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': False, 'dropout_rate': 0.}],
+        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': True, 'dropout_rate': 0.}],
         "tcoat": [TCOAT, {"rnn_hidden_size": 8, "rnn_num_layers": 2, "rnn_bidirectional": True,
                           "residual_window_size": 240, "residual_ratio": 0.5, "dropout_rate": 0.05}],
         "codr": [CoDR, {"horizon": 1, "hidden_size": 179,
@@ -134,7 +134,7 @@ def ts_mask():
                         "activation": 'linear', "use_instance_scale": True, "dropout_rate": 0.05}]
     }
 
-    model_cls, user_args = ts_modeler['coat']
+    model_cls, user_args = ts_modeler['dlinear']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
@@ -149,18 +149,18 @@ def ts_mask():
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
     stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
-    dynamic_mask = RandomMasker(0.2) # RandomMask(0.2) ｜ VariableMasker(0.2) | BlockMasker(12, 0.2)
+    dynamic_mask = RandomMasker(0.95) # RandomMask(0.95) ｜ VariableMasker(0.95) | BlockMasker(12, 0.95)
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'MAE'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
-                      optimizer=optimizer, lr_scheduler=lr_scheduler, # stopper=stopper,
+                      optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
                       criterion=criterion, evaluator=evaluator,
                       scaler=scaler)
     loger.info(str(trainer))
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=True, forecast_mask=dynamic_mask,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True, # forecast_mask=dynamic_mask,
                 verbose=2)
 
     if test_ds is not None:

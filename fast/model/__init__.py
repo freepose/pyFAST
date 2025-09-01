@@ -81,7 +81,7 @@ ts_model_classes = {
 
 """
     Time series forecasting using target variables and exogenous variables.
-    Both target variable and exogenous variables are dense data (i.e., not sparse time series).
+    Both target variable and exogenous variables are dense data (i.e., not sparse_fusion time series).
 """
 
 ts_ex_model_classes = {

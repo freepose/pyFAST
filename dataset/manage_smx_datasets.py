@@ -55,7 +55,7 @@ smt_metadata = {
                           'Insulin dose s.c. id:0 dosage', 'Insulin dose s.c. id:1 dosage',
                           'Non-insulin id:0 dosage', 'Non-insulin id:1 dosage', 'Non-insulin id:2 dosage',
                           'Insulin dose i.v. id:0 dosage', 'Insulin dose i.v. id:1 dosage',
-                          'Insulin dose i.v. id:2 dosage']  # these features are sparse
+                          'Insulin dose i.v. id:2 dosage']  # these features are sparse_fusion
         }
     },
 
@@ -151,11 +151,11 @@ smt_metadata = {
     "phmd_2d_549_train": {
         "paths": ["{root}/protein_pKa/phmd_2d_549_sparse/train/"],
         "columns": {
-            "names":[
+            "names": [
                 "PDB ID", "chain", "amino acid", "Res Name", "Res ID", "Titration", "Target_pKa", "model_pKa",
                 "pKa shift", "res_name", *[str(i) for i in range(480)]
             ],
-            "univariate": ["pKa_shift"],    # mask variable is 'Res Name'
+            "univariate": ["pKa_shift"],  # mask variable is 'Res Name'
             "multivariate": ["pKa_shift"],
             "exogenous": [str(i) for i in range(480)]
         }
@@ -186,7 +186,10 @@ smt_metadata = {
     },
 
     "GFM": {
-        "paths": ["{root}/simulation/gfm_sim_abc_simple/"],
+        "paths": [
+            "{root}/simulation/gfm_sim_abc/",
+            # "{root}/simulation/gfm_sim_abc_simple/",
+        ],
         "columns": {
             "names": ["simTime", "Vgq", "Vgd", "Pinertia", "Pdamping", "SCR", "XbyR", "IsOvercurrent",
                       "GridMag", "GridFreq", "GridPhase", "Pref_real", "Qref_real", "VolRef", "Qload",
@@ -253,7 +256,7 @@ def prepare_smx_datasets(data_root: str,
     task_ts = task_kwargs.get('ts', 'univariate')
     task_ts_mask = task_kwargs.get('ts_mask', False)
     task_use_ex = task_kwargs.get('use_ex', False)
-    task_ex_mask = task_kwargs.get('ex_mask', False)
+    task_ex_mask = task_kwargs.get('ex', False)
     task_ex2 = task_kwargs.get('use_ex2', False)
     task_dynamic_padding = task_kwargs.get('dynamic_padding', False)
 
@@ -310,9 +313,9 @@ def verify_smt_datasets():
 
     ds_names = list(smt_metadata.keys())
     for i, name in enumerate(ds_names):
-        # task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex_mask': True, 'use_ex2': True}
+        # task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True0 , 'ex': True, 'use_ex2': True}
         # task_config = {'ts': 'multivariate'}
-        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex_mask': True,
+        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex': True,
                        'dynamic_padding': False}
         print(i, end='\t')
         smt_datasets = prepare_smx_datasets(data_root, name, 10, 2, 1, 1, **task_config)

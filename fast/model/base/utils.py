@@ -173,7 +173,7 @@ def init_parameter_fn(parameter: torch.Tensor, fn_key, *args, **kwargs):
     elif fn_key == "orthogonal":
         # nn.init.orthogonal_(tensor, gain=1)
         nn.init.orthogonal_(parameter, *args, **kwargs)
-    elif fn_key == "sparse":
+    elif fn_key == "sparse_fusion":
         # nn.init.sparse_(tensor, sparsity, std=0.01)
         nn.init.sparse_(parameter, *args, **kwargs)
     elif fn_key == "zeros":

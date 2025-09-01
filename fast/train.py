@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 """
-    This package supports training all models, which includes sparse data and mask models in terms of uts and mts.
+    This package supports training all models, which includes sparse_fusion data and mask models in terms of uts and mts.
     Single computer/server version.
 """
 

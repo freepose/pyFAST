@@ -26,7 +26,7 @@ class DirectionalRepresentation(nn.Module):
 
         self.dropout = nn.Dropout(dropout_rate)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
             :param x: [batch_size, window_size, input_size]
         """

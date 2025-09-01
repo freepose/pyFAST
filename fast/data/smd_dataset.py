@@ -241,7 +241,7 @@ class SMDDataset(data.Dataset):
             params['ex_vars'] = self.ex_vars
 
             if self.ex_ts_mask is not None:
-                params['ex_mask'] = True
+                params['ex'] = True
 
         if self.ex_ts2 is not None:
             params['ex2_vars'] = self.ex2_vars
