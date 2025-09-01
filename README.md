@@ -2,31 +2,31 @@
 
 [![Software Overview Figure](asset/overview.svg)](asset/overview.svg)
 
-[pyFAST](https://github.com/freepose/pyFAST) (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
+[pyFAST](https://github.com/freepose/pyFAST) (Forecasting And time-Series in PyTorch) is a modular Python framework for time series analysis, with particular focus on multi-source and sparse data scenarios. Built on PyTorch, pyFAST provides a unified platform for forecasting, imputation, and generative modeling, integrating LLM-inspired architectures, Variational Autoencoders, and classical time series models.
 
-**Unlock the Power of pyFAST for:**
+**Use Cases:**
 
-*   **Alignment-Free Multi-source Time Series Analysis:**  Process and fuse data from diverse sources without the need for strict temporal alignment, inspired by Large Language Model principles.
-*   **Native Sparse Time Series Forecasting:**  Effectively handle and forecast sparse time series data with specialized metrics and loss functions, addressing a critical gap in existing libraries.
-*   **Rapid Research Prototyping:**  Experiment and prototype novel time series models and techniques with unparalleled flexibility and modularity.
-*   **Seamless Customization and Extensibility:**  Tailor and extend the library to your specific research or application needs with its component-based modular design.
-*   **High Performance and Scalability:**  Benefit from optimized PyTorch implementations and multi-device acceleration for efficient handling of large datasets and complex models.
+*   **Alignment-Free Multi-source Time Series Analysis:** Process and fuse data from diverse sources without requiring strict temporal alignment, using Large Language Model principles.
+*   **Sparse Time Series Forecasting:** Handle and forecast sparse time series data with specialized metrics and loss functions.
+*   **Research Prototyping:** Experiment with time series models and techniques using flexible, modular components.
+*   **Customization and Extension:** Adapt the library to specific research or application needs through component-based design.
+*   **Large-scale Processing:** Handle large datasets and complex models with optimized PyTorch implementations and multi-device support.
 
-**Key Capabilities:**
+**Key Features:**
 
-*   **Pioneering LLM-Inspired Models:** First-of-its-kind adaptations of Large Language Models specifically for alignment-free multi-source time series forecasting.
-*   **Native Sparse Data Support:** Comprehensive support for sparse time series, including specialized metrics, loss functions, and efficient data handling.
-*   **Flexible Multi-source Data Fusion:**  Integrate and analyze time series data from diverse, potentially misaligned sources.
-*   **Extensive Model Library:**  Includes a broad range of classical, deep learning (Transformers, RNNs, CNNs, GNNs), and generative time series models for both multivariate (MTS) and univariate (UTS) data.
-*   **Modular and Extensible Architecture:**  Component-based design enables easy customization, extension, and combination of modules.
-*   **Streamlined Training Pipeline:** `Trainer` class simplifies model training with built-in validation, early stopping, checkpointing, and multi-device support.
-*   **Comprehensive Evaluation Suite:** Includes a wide array of standard and sparse-specific evaluation metrics via the `Evaluator` class.
-*   **Built-in Generative Modeling:** Dedicated module for time series Variational Autoencoders (VAEs), including Transformer-based VAEs.
-*   **Reproducibility Focus:** Utilities like `initial_seed()` ensure experiment reproducibility.
+*   **LLM-Inspired Models:** Adaptations of Large Language Models for alignment-free multi-source time series forecasting.
+*   **Sparse Data Support:** Comprehensive support for sparse time series, including specialized metrics, loss functions, and efficient data handling.
+*   **Multi-source Data Fusion:** Integrate and analyze time series data from diverse, potentially misaligned sources.
+*   **Model Library:** Includes classical, deep learning (Transformers, RNNs, CNNs, GNNs), and generative time series models for both multivariate (MTS) and univariate (UTS) data.
+*   **Modular Architecture:** Component-based design enables customization, extension, and combination of modules.
+*   **Training Pipeline:** `Trainer` class simplifies model training with built-in validation, early stopping, checkpointing, and multi-device support.
+*   **Evaluation Suite:** Includes standard and sparse-specific evaluation metrics via the `Evaluator` class.
+*   **Generative Modeling:** Dedicated module for time series Variational Autoencoders (VAEs), including Transformer-based VAEs.
+*   **Reproducibility:** Utilities like `initial_seed()` ensure experiment reproducibility.
 
-**Explore the Core Modules (See Figure Above):**
+**Core Modules:**
 
-As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` library is structured into five core modules, ensuring a cohesive and versatile framework:
+The pyFAST `fast/` library is structured into five core modules:
 
 *   **`data/` package:**  Handles data loading, preprocessing, and dataset creation for SST, SMT, MMT, and BDP data scenarios.  Key features include efficient sparse data handling, multi-source data integration, scaling methods, patching, and data splitting utilities.
 *   **`model/` package:**  Houses a diverse collection of time series models, categorized into `uts/` (univariate), `mts/` (multivariate), and `base/` (building blocks) submodules. Includes classical models, deep learning architectures (CNNs, RNNs, Transformers, GNNs), fusion models, and generative models.
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 ### Basic Usage Example
 
-Jumpstart your time series projects with pyFAST using this basic example:
+Here's a basic example to get started with pyFAST:
 
 ```python
 import torch
@@ -120,12 +120,12 @@ pyFAST is designed to handle various time series data structures:
     *   For datasets focusing on single-variable sequences, often processed in batches for efficiency.
 
 *   **Advanced Data Handling:**
-    *   **Sparse Data Ready:**  Models and metrics are designed to effectively work with sparse time series data and missing values, utilizing masks for accurate computations.
-    *   **Exogenous Variable Integration:** Seamlessly incorporate external factors (exogenous variables) to enrich your time series models.
-    *   **Variable-Length Sequence Support:**  Utilizes dynamic padding to efficiently process time series with varying lengths within batches, optimizing training and inference.
+    *   **Sparse Data Support:** Models and metrics work with sparse time series data and missing values, using masks for accurate computations.
+    *   **Exogenous Variable Integration:** Incorporate external factors (exogenous variables) into time series models.
+    *   **Variable-Length Sequence Support:** Uses dynamic padding to process time series with varying lengths within batches.
 ## Benchmarking Performance
 
-pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.
+pyFAST has been evaluated against established time series libraries and models on benchmark datasets.
 View benchmarks on [Google Sheets](https://docs.google.com/spreadsheets/d/1y_mhUeWeEBOW88UoXv7_r9Cyyf2q2DKz/edit?usp=sharing&ouid=118431230685867986241&rtpof=true&sd=true).
 You can also download the local Excel: [benchmarks.xlsx](asset/benchmarks_20250824.xlsx).
 Datasets available at [FAST](https://zenodo.org/communities/fast/) community in ZENODO.
@@ -151,7 +151,7 @@ preprint arXiv:2508.18891. https://arxiv.org/abs/2508.18891
 
 ## Contact
 
-Please feel free to contact me at [zhijin@jmu.edu.cn](zhijin@jmu.edu.cn).
+Please feel free to contact Zhijin Wang ([zhijin@jmu.edu.cn](zhijin@jmu.edu.cn)).
 
 ## License
 
