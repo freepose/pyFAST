@@ -73,12 +73,12 @@ class Cabin(nn.Module):
         :param ex_retain_window_size: input window size of exogenous variable.
         :param ex_vars: number of exogenous variables.
         :param hidden_size: the hidden size of CAV layers.
-        :param use_activation: whether use ReLU as activation.
+        :param use_activation: whether to use ReLU as activation.
         :param dropout_rate: dropout rate.
         :param mode: the fusion mode.
-        :param use_temporal_softmax: whether use temporal softmax.
-        :param use_feature_wise_softmax: whether use feature wise softmax.
-        :param use_sample_softmax: whether use sample wise softmax.
+        :param use_temporal_softmax: whether to use temporal softmax.
+        :param use_feature_wise_softmax: whether to use feature wise softmax.
+        :param use_sample_softmax: whether to use sample wise softmax.
     """
 
     def __init__(self, input_window_size: int = 0, input_vars: int = 0,
@@ -144,8 +144,8 @@ class Cabin(nn.Module):
 
     def forward(self, x: torch.Tensor, e: torch.Tensor = None):
         """
-            :param e: shape is [batch_size, ex_input_window_size, ex_input_size]
             :param x: shape is [batch_size, input_window_size, input_size]
+            :param e: shape is [batch_size, ex_input_window_size, ex_input_size]
             :return:  shape is [batch_size, output_window_size, output_size]
         """
 

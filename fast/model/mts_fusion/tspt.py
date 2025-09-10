@@ -10,9 +10,11 @@ from ..mts import GAR
 
 class TSPT(nn.Module):
     """
-        Temporal Structure Preserving Transformer (TSPT).
+        Senzhen Wu, Zhijin Wang, Xiufeng Liu, Yuan Zhao, Yue Hu, Yaohui Huang.
+        Temporal structure-preserving transformer for industrial load forecasting (TSPT).
+        Neural Networks 2025 (192), https://doi.org/10.1016/j.neunet.2025.107887
 
-        Author: Senzhen Wu, 20240315
+        Implemented by Senzhen Wu, 20240315
 
         :param input_window_size: input window size.
         :param input_vars: number of input variables.

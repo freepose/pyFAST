@@ -30,7 +30,7 @@ class linear(nn.Module):
 
     def forward(self, x):
         # x (B, F, N, M)
-        out = self.mlp(x)   # -> (B, F', N, M)
+        out = self.mlp(x)  # -> (B, F', N, M)
         return out
 
 
@@ -57,7 +57,7 @@ class gcn(nn.Module):
                 x1 = x2
 
         h = torch.cat(out, dim=1)  # concat x and x_conv
-        h = self.mlp(h) # -> (B, F', N, M)
+        h = self.mlp(h)  # -> (B, F', N, M)
         return torch.relu(h)
 
 
@@ -106,7 +106,7 @@ class TPatchGNN(nn.Module):
                  ex_vars: int, ex2_vars: int,
                  patch_len: int = None, patch_stride: int = None,
                  time_embedding_dim: int = 20,
-                 hidden_dim:int = 64,
+                 hidden_dim: int = 64,
                  num_layers: int = 1,
                  transformer_nhead: int = 2,
                  transformer_num_layers: int = 2,
@@ -152,7 +152,8 @@ class TPatchGNN(nn.Module):
         filter_input_dim = self.time_embedding_dim + 1
         self.ttcn_dim = self.hidden_dim - 1
 
-        self.filter_generators = MLP(filter_input_dim, [self.ttcn_dim, self.ttcn_dim], filter_input_dim * self.ttcn_dim, None, 'relu')
+        self.filter_generators = MLP(filter_input_dim, [self.ttcn_dim, self.ttcn_dim], filter_input_dim * self.ttcn_dim,
+                                     None, 'relu')
         self.T_bias = nn.Parameter(torch.randn(1, self.ttcn_dim), requires_grad=True)
 
         """
@@ -172,7 +173,7 @@ class TPatchGNN(nn.Module):
         self.node_vec_gate2 = nn.ModuleList()
 
         self.supports = [] if supports is None else supports
-        self.support_len = len(self.supports) + 1   # Default as 1
+        self.support_len = len(self.supports) + 1  # Default as 1
         self.gcn_hop = gcn_hop
         self.gcn_layers = nn.ModuleList()
 
@@ -265,7 +266,7 @@ class TPatchGNN(nn.Module):
 
         batch_size, input_vars, patch_num, patch_len = x.shape
 
-        x = x.flatten(0, 2).unsqueeze(-1)    # -> (batch_size * input_vars * patch_num, patch_len, 1)
+        x = x.flatten(0, 2).unsqueeze(-1)  # -> (batch_size * input_vars * patch_num, patch_len, 1)
         x_mask = x_mask.flatten(0, 2).unsqueeze(-1)  # -> (batch_size * input_vars * patch_num, patch_len, 1)
 
         x_time_emb = self.continuous_time_embedding(x)  # -> (batch_size * input_vars * patch_num, te_dim)
@@ -305,10 +306,10 @@ class TPatchGNN(nn.Module):
             product = torch.relu(product)
             product = product.softmax(dim=3)
 
-            supports = self.supports + [product]    # Adjacency matrix
-            x = self.gcn_layers[i](x.permute(0, 3, 1, 2), supports)   # -> (bs, hidden_dim, input_vars, patch_num)
+            supports = self.supports + [product]  # Adjacency matrix
+            x = self.gcn_layers[i](x.permute(0, 3, 1, 2), supports)  # -> (bs, hidden_dim, input_vars, patch_num)
 
-            x = x.permute(0, 2, 3, 1)   # -> (batch_size, input_vars, patch_num, hidden_dim)
+            x = x.permute(0, 2, 3, 1)  # -> (batch_size, input_vars, patch_num, hidden_dim)
 
         if self.aggregation == 'linear':
             h = x.flatten(2, 3)  # -> (batch_size, input_vars, hidden_dim * patch_num)
@@ -316,24 +317,25 @@ class TPatchGNN(nn.Module):
         else:
             h = x.flatten(0, 1).permute(0, 2, 1)  # -> (batch_size * input_vars, hidden_dim, patch_num)
             h = self.temporal_agg(h).squeeze(2)  # -> (batch_size * input_vars, hidden_dim)
-            h = h.unflatten(0, (batch_size, input_vars))    # -> (batch_size, input_vars, hidden_dim)
+            h = h.unflatten(0, (batch_size, input_vars))  # -> (batch_size, input_vars, hidden_dim)
 
         # Decoder
         ex2_input_window_size = ex2.shape[1]
 
         h = h.unsqueeze(2).repeat(1, 1, ex2_input_window_size, 1)
-        upcoming_time = ex2     # -> (batch_size, ex2_input_window_size, ex2_vars)
+        upcoming_time = ex2  # -> (batch_size, ex2_input_window_size, ex2_vars)
 
         upcoming_time = upcoming_time.unsqueeze(1)  # -> (batch_size, 1, ex2_input_window_size, ex2_vars)
-        upcoming_time = upcoming_time.repeat(1, input_vars, 1, 1)   # -> (batch_size, input_vars, ex2_input_window_size, ex2_vars)
+        upcoming_time = upcoming_time.repeat(1, input_vars, 1,
+                                             1)  # -> (batch_size, input_vars, ex2_input_window_size, ex2_vars)
 
-        upcoming_time = self.ex2_linear1(upcoming_time) # -> (..., 1)
-        upcoming_time_embedding = self.continuous_time_embedding(upcoming_time) # (..., time_embedding_dim)
+        upcoming_time = self.ex2_linear1(upcoming_time)  # -> (..., 1)
+        upcoming_time_embedding = self.continuous_time_embedding(upcoming_time)  # (..., time_embedding_dim)
 
         ret = torch.cat([h, upcoming_time_embedding], dim=3)  # -> (..., hidden_dim + time_embedding_dim)
 
         ret = self.decoder(ret)  # -> (batch_size, input_vars, ex2_input_window_size, 1)
-        ret = ret.squeeze(3).permute(0, 2, 1) # -> (batch_size, ex2_input_window_size, input_vars)
+        ret = ret.squeeze(3).permute(0, 2, 1)  # -> (batch_size, ex2_input_window_size, input_vars)
 
         ret = ret[:, -self.output_window_size:, :]
 

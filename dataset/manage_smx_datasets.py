@@ -62,8 +62,8 @@ smt_metadata = {
     "PhysioNet": {
         "paths": [
             "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-a",
-            # "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-b",
-            # "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-c"
+            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-b",
+            "{root}/disease/PhysioNet_Challenge_2012/02_multi_source_sparse/set-c"
         ],
         "columns": {
             "names": ['RecordID', 'Age', 'Gender', 'Height', 'Weight', 'ICUType', 'Albumin', 'ALP', 'ALT', 'AST',

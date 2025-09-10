@@ -62,16 +62,18 @@ def ts_mask():
     """
         Sparse long-sequence time series forecasting problems: sparse_fusion decomposition, shapelet representation
     """
-    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
-    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, True, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
-    # task_config = {'ts': 'multivariate', 'ts_mask': True}
+
+    # xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
+    # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, True, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+
+    task_config = {'ts': 'multivariate', 'ts_mask': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
@@ -87,12 +89,12 @@ def ts_mask():
     """
         Overwritable scalers and dynamic scalers. 
     """
-    # overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
-    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
-    # if val_ds is not None:
-    #     val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
-    # if test_ds is not None:
-    #     test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
+    overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
+    train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
+    if val_ds is not None:
+        val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
+    if test_ds is not None:
+        test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
 
     # Dynamic scaling while training or evaluation.
     scaler = None # scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)

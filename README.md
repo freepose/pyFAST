@@ -47,9 +47,10 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 | Static                        | ❌ ts_static      | ❌ ts_mask_static      |
 
 Symbols: ✅ = supports / typically adaptable, ❌ = does not natively support.
+For example, ``ts`` indicates the target time series is dense without exogenous variables.
+``ts_ex`` indicates the target time series is dense with dense exogenous variables.
 ``ts_ex_mask`` indicates the target time series is dense, but the exogenous variables are sparse.
 ``ts_mask_ex2`` indicates the target time series is sparse, with preknown exogenous variables.
-``ts_mask_ex_mask`` indicates both target and exogenous variables are sparse.
 
 ## Installation
 

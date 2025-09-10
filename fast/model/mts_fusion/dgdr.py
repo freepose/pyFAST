@@ -54,17 +54,19 @@ class DGDR(nn.Module):
         """
             :param x: slicing window of the target variable. [batch_size, input_window_size, input_vars]
             :param ex: slicing window of exogenous variables. [batch_size, input_window_size, ex_vars]
+
+            :return: output of the target variable. [batch_size, output_window_size, output_vars]
         """
         target_out0 = self.target_t0(x)     # => [batch_size, input_window_size, input_vars]
         target_out1 = self.target_t1(x)     # => [batch_size, input_window_size, input_vars]
         target_out2 = self.target_t2(x)     # => [batch_size, input_window_size, input_vars]
 
-        ex_out0 = self.ex_t0(ex)     # => [batch_size, input_window_size, ex_input_size]
-        ex_out1 = self.ex_t1(ex)     # => [batch_size, input_window_size, ex_input_size]
-        ex_out2 = self.ex_t2(ex)     # => [batch_size, input_window_size, ex_input_size]
+        ex_out0 = self.ex_t0(ex)     # => [batch_size, input_window_size, ex_input_vars]
+        ex_out1 = self.ex_t1(ex)     # => [batch_size, input_window_size, ex_input_vars]
+        ex_out2 = self.ex_t2(ex)     # => [batch_size, input_window_size, ex_input_vars]
 
         out = torch.cat([ex_out0, ex_out1, ex_out2, ex, target_out0, target_out1, target_out2, x], dim=2)
         out = self.ar(out)
-        out = self.l1(out)
+        out = self.l1(out)  # -> (batch_size, output_window_size, input_vars)
 
         return out
