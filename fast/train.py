@@ -39,10 +39,9 @@ class Trainer:
         :param stopper: the early stopper to be used. If None, no early stopping will be used.
         :param criterion: the loss function to be used. Default is ``MSE``.
         :param evaluator: the evaluator to be used. Default is ``EmptyEvaluator``, i.e., not evaluating.
-        :param scaler: the scaler of time series of target variables. Default is ``None``.
+        :param scaler: the scaler of time series of target variables. Default is ``None``,
+                       dynamic scaler while online/offline training/evaluation.
         :param ex_scaler: the external scaler of time series of exogenous variables. Default is ``None``.
-        :param impute_mask: the mask for missing values imputation. Default is ``None``.
-                            Use this when pretrain/train the model with missing values imputation.
     """
 
     def __init__(self, device: torch.device,
@@ -105,8 +104,8 @@ class Trainer:
     def run_epoch(self, dataloader,
                   mode: Literal['train', 'val', 'online'] = 'train',
                   progress_status: str = None,
-                  forcast_mask: Optional[AbstractMasker] = None,
-                  impute_mask: Optional[AbstractMasker] = None) -> Dict[str, float]:
+                  forecast_masker: Optional[AbstractMasker] = None,
+                  impute_masker: Optional[AbstractMasker] = None) -> Dict[str, float]:
         """
             Execute one training/validation epoch.
 
@@ -118,8 +117,8 @@ class Trainer:
             :param dataloader: DataLoader containing batched data
             :param mode: Execution mode - 'train' enables gradients, 'val'/'online' for evaluation
             :param progress_status: Description text for progress bar, None disables progress bar
-            :param forcast_mask: Dynamic mask strategy for **forecasting** tasks during training
-            :param impute_mask: Dynamic mask strategy for **imputation** tasks during training
+            :param forecast_masker: Dynamic mask strategy for **forecasting** tasks during training
+            :param impute_masker: Dynamic mask strategy for **imputation** tasks during training
 
             :return: Dict containing epoch metrics like loss and evaluation scores
 
@@ -129,76 +128,91 @@ class Trainer:
 
         self.model.train() if mode in ['train', 'online'] else self.model.eval()
 
-        pbar = None
-        if progress_status is not None:
-            pbar = tqdm(total=len(dataloader), leave=False, file=sys.stdout)
-            pbar.set_description(progress_status)
-
         self.criterion.reset()
         self.evaluator.reset()
-        for batch_inputs, batch_outputs in dataloader:
-            num_target_vars = len(batch_outputs)  # number of target variables
-            num_exogenous_vars = len(batch_inputs) - num_target_vars  # number of exogenous variables
 
-            if self.scaler is not None:
-                batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_target_vars])
-                batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_target_vars])
+        with tqdm(total=len(dataloader), leave=False, file=sys.stdout, disable=progress_status is None) as pbar:
+            pbar.set_description(progress_status)
 
-            if num_exogenous_vars > 0 and (self.ex_scaler is not None):
-                batch_inputs[num_target_vars] = self.ex_scaler.transform(batch_inputs[num_target_vars])
+            for batch_inputs, batch_outputs in dataloader:
+                num_target_vars = len(batch_outputs)  # number of target variables
+                num_exogenous_vars = len(batch_inputs) - num_target_vars  # number of exogenous variables
 
-            if self.device.type != dataloader.dataset.device:
-                # Prepare for target model device
-                batch_inputs = [x.to(self.device) for x in batch_inputs]
-                batch_outputs = [y.to(self.device) for y in batch_outputs]
+                if self.scaler is not None:
+                    batch_inputs[0] = self.scaler.transform(*batch_inputs[:num_target_vars])
+                    batch_outputs[0] = self.scaler.transform(*batch_outputs[:num_target_vars])
 
-            # Dynamic mask strategy: only applies during training mode
-            if num_target_vars == 2 and mode in ['train']:
-                if forcast_mask is not None:  # forecasting task
-                    batch_inputs[1] = forcast_mask.generate(batch_inputs[1])
-                elif impute_mask is not None:  # imputation task
-                    intersection_mask = impute_mask.generate(batch_inputs[1])
-                    batch_inputs[1] = intersection_mask
-                    # This should guarantee that inputs and outputs are consistent.
-                    batch_outputs[1] = batch_outputs[1] & (~intersection_mask)
+                if num_exogenous_vars > 0 and (self.ex_scaler is not None):
+                    batch_inputs[num_target_vars] = self.ex_scaler.transform(batch_inputs[num_target_vars])
 
-            batch_y_hat = self.model(*batch_inputs)
-            batch_loss = self.criterion(batch_y_hat, *batch_outputs)
-
-            if getattr(self.model, 'additional_loss', None) is not None:
-                batch_loss += self.model.additional_loss  # KL-Divergence loss or other regularization loss
-
-            if mode in ['train', 'online']:
-                self.optimizer.zero_grad()  # clear gradients for next train
-                batch_loss.backward()
-                self.optimizer.step()
-
-            self.criterion.update(batch_y_hat, *batch_outputs)
-
-            if self.scaler is not None:
                 if self.device.type != dataloader.dataset.device:
-                    # Prepare for dataset device
-                    batch_outputs = [y.to(dataloader.dataset.device) for y in batch_outputs]
-                    batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
+                    # Prepare for target model device
+                    batch_inputs = [x.to(self.device) for x in batch_inputs]
+                    batch_outputs = [y.to(self.device) for y in batch_outputs]
 
-                batch_y_hat = self.scaler.inverse_transform(batch_y_hat)  # NOTE
-                batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_target_vars])
+                # Dynamic mask strategy: only applies during training mode
+                if num_target_vars == 2 and mode in ['train']:
+                    if forecast_masker is not None:  # forecasting task
+                        batch_inputs[1] = forecast_masker.generate(batch_inputs[1])
+                        batch_outputs[1] = forecast_masker.generate(batch_outputs[1])   # try as the same on output mask
+                    elif impute_masker is not None:  # imputation task
+                        intersection_mask = impute_masker.generate(batch_inputs[1])
+                        batch_inputs[1] = intersection_mask
+                        # This should guarantee that inputs and outputs (evals and evals_mask) are consistent.
+                        # batch_outputs[1] = batch_outputs[1] & (~intersection_mask)
 
-            self.evaluator.update(batch_y_hat, *batch_outputs)
+                # Extract dynamic window sizes from padded batch
+                batch_size, input_window_size, input_vars = batch_inputs[0].shape
+                _, output_window_size, output_vars = batch_outputs[0].shape
 
-            if progress_status is not None:
+                # this would greatly affect the model performance if not handled properly in most occasions
+                # if mode in ['train', 'online']:
+                #     if input_window_size > output_window_size:
+                #         continue
+
+                # Update model's window size attributes (if model has them)
+                if hasattr(self.model, 'input_window_size'):
+                    self.model.input_window_size = input_window_size
+                if hasattr(self.model, 'output_window_size'):
+                    self.model.output_window_size = output_window_size
+
+                batch_y_hat = self.model(*batch_inputs)
+                batch_loss = self.criterion(batch_y_hat, *batch_outputs)
+
+                if getattr(self.model, 'input_aware_loss', None) is not None:
+                    # KL-Divergence loss or other regularization loss
+                    batch_loss += self.model.input_aware_loss
+
+                if getattr(self.model, 'output_aware_loss_fn', None) is not None:
+                    batch_loss += self.model.output_aware_loss_fn(batch_y_hat, *batch_outputs)
+
+                if mode in ['train', 'online']:
+                    self.optimizer.zero_grad()  # clear gradients for next train
+                    batch_loss.backward()
+                    self.optimizer.step()
+
+                self.criterion.update(batch_y_hat, *batch_outputs)
+
+                if self.scaler is not None:
+                    if self.device.type != dataloader.dataset.device:
+                        # Prepare for dataset device
+                        batch_outputs = [y.to(dataloader.dataset.device) for y in batch_outputs]
+                        batch_y_hat = batch_y_hat.to(dataloader.dataset.device)
+
+                    batch_y_hat = self.scaler.inverse_transform(batch_y_hat)  # NOTE
+                    batch_outputs[0] = self.scaler.inverse_transform(*batch_outputs[:num_target_vars])
+
+                self.evaluator.update(batch_y_hat, *batch_outputs)
+
                 pbar.set_postfix(batch_loss='{:.6f}'.format(batch_loss.detach().item()))
                 pbar.update(1)
 
         loss = self.criterion.compute()
         metrics = self.evaluator.compute()
 
-        if progress_status is not None:
-            pbar.clear()
-
         return {'loss': loss, **metrics}
 
-    def message_header(self, has_val_dataset: bool = False):
+    def message_header(self, has_val_dataset: bool = False, verbose: int = 0) -> str:
         """
             :return: message header.
         """
@@ -208,6 +222,9 @@ class Trainer:
             header += ['val_{}'.format(k) for k in metric_names]
         header = ['lr'] + header
 
+        if verbose == 2 and self.stopper is not None:
+            header += ['stopper']
+
         return 'epoch\t' + '\t'.join(['{:^10}'.format(s) for s in header])
 
     def fit(self, train_dataset: data.Dataset,
@@ -216,8 +233,8 @@ class Trainer:
             batch_size: int = 32, shuffle: bool = False,
             checkpoint_interval: int = 0,
             collate_fn: Optional[Callable] = None,
-            forecast_mask: Optional[AbstractMasker] = None,
-            impute_mask: Optional[AbstractMasker] = None,
+            forecast_masker: Optional[AbstractMasker] = None,
+            impute_masker: Optional[AbstractMasker] = None,
             verbose: Literal[0, 1, 2] = 2) -> List[List[Union[str, float]]]:
 
         """
@@ -229,7 +246,7 @@ class Trainer:
         train_dataloader = data.DataLoader(train_dataset, batch_size, shuffle=shuffle, collate_fn=collate_fn)
         logger = logging.getLogger()
 
-        message_header = self.message_header(val_dataset is not None)
+        message_header = self.message_header(val_dataset is not None, verbose=verbose)
         if verbose > 0:
             logger.info(message_header)
 
@@ -239,7 +256,7 @@ class Trainer:
             message = [epoch_status, self.optimizer.param_groups[0]['lr']]
 
             progress_status = ('training ' + epoch_status) if verbose == 2 else None
-            train_results = self.run_epoch(train_dataloader, 'train', progress_status, forecast_mask, impute_mask)
+            train_results = self.run_epoch(train_dataloader, 'train', progress_status, forecast_masker, impute_masker)
             message.extend([*train_results.values()])
 
             if self.lr_scheduler is not None:
@@ -265,10 +282,14 @@ class Trainer:
                         logger.info('Early stopping at epoch {}, best loss {:.6f}'.format(epoch, self.stopper.best_score))
                         break
 
-            performance_history_list.append(message)
+            if verbose == 2:
+                if self.stopper is not None:
+                    message.append(str(self.stopper))
 
             if verbose > 0:
                 logger.info(to_string(*message))
+
+            performance_history_list.append(message)
 
         return performance_history_list
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from typing import Literal
 
 import torch
 import torch.nn as nn
+
+from typing import Literal, Optional
 
 from .embedding import TokenEmbedding, PositionalEncoding
 
@@ -24,23 +25,28 @@ class Transformer(nn.Module):
         :param num_decoder_layers: number of decoder layers.
         :param dim_ff: feed forward dimension.
         :param dropout_rate: dropout rate.
+        :param norm_first: whether to use pre-norm transformer.
     """
 
-    def __init__(self, input_vars: int, output_window_size: int = 96, output_vars: int = 1,
-                 label_window_size: int = 0,
+    def __init__(self, input_vars: int, output_vars: int = 1,
+                 label_window_size: Optional[int] = None,
                  d_model: int = 512,
                  num_heads: int = 8,
                  num_encoder_layers: int = 1,
                  num_decoder_layers: int = 1,
                  dim_ff: int = 2048,
                  dropout_rate: float = 0.,
-                 activation: Literal['relu', 'gelu'] = 'relu'):
+                 activation: Literal['relu', 'gelu'] = 'relu',
+                 norm_first: bool = False):
         super(Transformer, self).__init__()
-        assert 0 <= label_window_size, 'Invalid window parameters.'
+
+        if label_window_size is not None:
+            assert 0 < label_window_size, 'Invalid window parameters.'
         assert dim_ff % num_heads == 0, 'dim_ff should be divided by num_heads.'
 
         self.input_vars = input_vars
-        self.output_window_size = output_window_size
+        self.input_window_size = None  # to be set/update in forward()
+        self.output_window_size = None  # to be set/update in forward()
         self.output_vars = output_vars
         self.label_window_size = label_window_size
 
@@ -50,18 +56,24 @@ class Transformer(nn.Module):
         self.num_decoder_layers = num_decoder_layers
         self.dim_ff = dim_ff
         self.activation = activation
+        self.norm_first = norm_first
 
-        self.encoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
-        self.encoder_pe = PositionalEncoding(self.d_model)
+        self.encoder_value_embedding = TokenEmbedding(self.input_vars, self.d_model)
+        self.encoder_position_embedding = PositionalEncoding(self.d_model)
         self.encoder_dropout = nn.Dropout(dropout_rate)
 
-        self.decoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
-        self.decoder_pe = PositionalEncoding(self.d_model)
+        self.decoder_value_embedding = TokenEmbedding(self.input_vars, self.d_model)
+        self.decoder_position_embedding = PositionalEncoding(self.d_model)
         self.decoder_dropout = nn.Dropout(dropout_rate)
 
         self.transformer = nn.Transformer(self.d_model, self.num_heads,
                                           self.num_encoder_layers, self.num_decoder_layers, self.dim_ff,
-                                          dropout_rate, batch_first=True)
+                                          dropout_rate, batch_first=True, norm_first=self.norm_first)
+
+        # When using pre-norm, disable the nested tensor fast path of the encoder to avoid warnings
+        encoder = getattr(self.transformer, 'encoder', None)
+        if self.norm_first and encoder is not None and hasattr(encoder, 'enable_nested_tensor'):
+            encoder.enable_nested_tensor = False
 
         self.fc = nn.Linear(self.d_model, self.output_vars)
 
@@ -72,26 +84,32 @@ class Transformer(nn.Module):
             :return: output window time series,
                      shape is (batch, output_window_size <= input_window_size, output_vars == input_vars).
         """
+
+        self.label_window_size = self.input_window_size
+
         xe = x
         if x_mask is not None:
-            xe[~x_mask] = 0    # set nan values to zeros.
+            xe[~x_mask] = 0  # set nan values to zeros.
 
-        x_embedding = self.encoder_embedding(xe) + self.encoder_pe(xe)  # -> (batch_size, input_window_size, d_model)
+        x_embedding = self.encoder_value_embedding(xe) + self.encoder_position_embedding(xe)
+        # -> (batch_size, input_window_size, d_model)
+
         x_embedding = self.encoder_dropout(x_embedding)
 
-        # provide context to the decoder
+        # target -> (batch_size, label_window_size + output_window_size, input_vars)
         batch_size, seq_len, input_vars = x.shape
-        target_shape = (batch_size, self.label_window_size + seq_len, input_vars)
+        target_shape = (batch_size, self.label_window_size + self.output_window_size, input_vars)
         target = torch.zeros(*target_shape, dtype=x.dtype, device=x.device)
-        target[:, :self.label_window_size, :] = xe[:, seq_len-self.label_window_size:, :]  # intersection (label) window
+        target[:, :self.label_window_size, :] = xe[:, -self.label_window_size:, :]  # intersection (label) window
 
-        # -> (batch_size, label_window_size + output_window_size, d_model)
-        target_embedding = self.decoder_embedding(target) + self.decoder_pe(target)
+        # target_embedding -> (batch_size, label_window_size + output_window_size, d_model)
+        target_embedding = self.decoder_value_embedding(target) + self.decoder_position_embedding(target)
         target_embedding = self.decoder_dropout(target_embedding)
 
         out = self.transformer(src=x_embedding, tgt=target_embedding)
+        # -> (batch_size, label_window_size + output_window_size, d_model)
 
-        out = self.fc(out)  # -> (batch_size, label_window_size + output_window_size, d_model)
-        out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, input_vars)
+        out = self.fc(out)  # -> (batch_size, label_window_size + output_window_size, output_vars)
+        out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, output_vars)
 
         return out

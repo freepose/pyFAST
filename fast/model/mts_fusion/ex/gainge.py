@@ -4,8 +4,8 @@
 import torch
 import torch.nn as nn
 
-from ..mts import GAR
-from ..mts.gnn.gain import GAT
+from ....model.mts import GAR
+from ....model.mts.gnn.gain import GAT
 
 
 class GAINGE(nn.Module):

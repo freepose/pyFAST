@@ -7,8 +7,8 @@
 import torch
 import torch.nn as nn
 
-from ..base.dr import DirectionalRepresentation
-from ..mts import GAR
+from ....model.base.dr import DirectionalRepresentation
+from ....model.mts import GAR
 
 
 class DGDR(nn.Module):
@@ -52,8 +52,8 @@ class DGDR(nn.Module):
 
     def forward(self, x: torch.Tensor, ex: torch.Tensor):
         """
-            :param x: slicing window of the target variable. [batch_size, input_window_size, input_vars]
-            :param ex: slicing window of exogenous variables. [batch_size, input_window_size, ex_vars]
+            :param x: sliding window of the target variable. [batch_size, input_window_size, input_vars]
+            :param ex: sliding window of exogenous variables. [batch_size, input_window_size, ex_vars]
 
             :return: output of the target variable. [batch_size, output_window_size, output_vars]
         """

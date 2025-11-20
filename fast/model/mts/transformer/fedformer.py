@@ -972,13 +972,13 @@ class FEDformer(nn.Module):
         self.decompose_series = DecomposeSeries(moving_avg)
 
         # encoder embedding
-        self.encoder_embedding = TokenEmbedding(input_vars, d_model)
-        self.encoder_pe = PositionalEncoding(d_model)
+        self.encoder_value_embedding = TokenEmbedding(input_vars, d_model)
+        self.encoder_position_embedding = PositionalEncoding(d_model)
         self.encoder_dropout = nn.Dropout(dropout_rate)
 
         # decoder embedding
-        self.decoder_embedding = TokenEmbedding(input_vars, d_model)
-        self.decoder_pe = PositionalEncoding(d_model)
+        self.decoder_value_embedding = TokenEmbedding(input_vars, d_model)
+        self.decoder_position_embedding = PositionalEncoding(d_model)
         self.decoder_dropout = nn.Dropout(dropout_rate)
 
         # attention
@@ -1022,22 +1022,20 @@ class FEDformer(nn.Module):
 
     def forward(self, x: torch.Tensor):
         """ x -> (batch_size, input_window_size, input_vars) """
-        mean = torch.mean(x, dim=1).unsqueeze(1).repeat(1, self.output_window_size,
-                                                        1)  # -> (batch_size, input_window_size, input_vars)
+        mean = torch.mean(x, dim=1).unsqueeze(1).repeat(1, self.output_window_size, 1)  # -> (batch_size, input_window_size, input_vars)
         seasonal_init, trend_init = self.decompose_series(x)
 
         # -> (batch_size, label_window_size + input_window_size, input_vars)
         trend_init = torch.cat([trend_init[:, -self.label_window_size:, :], mean], dim=1)
         seasonal_init = F.pad(seasonal_init[:, -self.label_window_size:, :], (0, 0, 0, self.output_window_size))
 
-        x_embedding = self.encoder_embedding(x) + self.encoder_pe(x)  # -> (batch_size, input_window_size, d_model)
-        target_embedding = self.decoder_embedding(seasonal_init) + self.decoder_pe(
-            seasonal_init)  # -> (batch_size, label_window_size + input_window_size, d_model)
-        encoder_out, attns = self.encoder(x_embedding)
+        x_embedding = self.encoder_value_embedding(x) + self.encoder_position_embedding(x)  # -> (batch_size, input_window_size, d_model)
+        target_embedding = self.decoder_value_embedding(seasonal_init) + self.decoder_position_embedding(seasonal_init)  # -> (batch_size, label_window_size + input_window_size, d_model)
 
+        encoder_out, attns = self.encoder(x_embedding)
         seasonal_part, trend_part = self.decoder(target_embedding, encoder_out, trend=trend_init)
 
         out = trend_part + seasonal_part
-        out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, input_vars)
+        out = out[:, -self.output_window_size:, :]  # -> (batch_size, output_window_size, output_vars)
 
         return out

@@ -9,22 +9,23 @@ import torch
 import torch.nn as nn
 
 from typing import Literal, Union, List, Tuple
-from ..base import get_activation_cls
+from ..base import get_activation_cls, ActivationName
 from ..base import MLP
 
 
 class GAR(nn.Module):
     """
-         Global autoregression.
-         Note: the target dimension is equal to the input dimension, input_vars === output_vars.
+        Global autoregression.
+        Note: the target dimension is equal to the input dimension, input_vars === output_vars.
+
         :param input_window_size: input window size.
         :param output_window_size: output window size.
         :param bias: if True, adds a learnable bias to the output.
-        :param activation: type str, the activation function.
+        :param activation: type str, one in ['linear', 'relu', 'gelu', 'elu', 'selu', 'tanh', 'sigmoid', 'silu', 'sin'].
     """
 
     def __init__(self, input_window_size: int, output_window_size: int = 1, bias: bool = True,
-                 activation: str = 'linear'):
+                 activation: ActivationName = 'linear'):
         super(GAR, self).__init__()
         self.input_window_size = input_window_size
         self.output_window_size = output_window_size
@@ -60,11 +61,11 @@ class AR(nn.Module):
         :param input_window_size: input window size.
         :param input_vars: number of input variables.
         :param output_window_size: output window size.
-        :param activation: type str, the activation function.
+        :param activation: type str, one in ['linear', 'relu', 'gelu', 'elu', 'selu', 'tanh', 'sigmoid', 'silu', 'sin'].
     """
 
     def __init__(self, input_window_size: int, input_vars: int, output_window_size: int = 1,
-                 activation: str = 'linear'):
+                 activation: ActivationName = 'linear'):
         super(AR, self).__init__()
         self.input_window_size = input_window_size
         self.input_vars = input_vars
@@ -103,15 +104,16 @@ class VAR(nn.Module):
     """
         Vector Autoregressive model.
         The idea: the future events are linear combinations of past dataset points of all inputs.
+
         :param input_window_size: input window size.
         :param input_vars: number of input variables.
         :param output_window_size: output window size.
         :param output_vars: number of output variables.
-        :param activation: type str, the activation function.
+        :param activation: type str, one in ['linear', 'relu', 'gelu', 'elu', 'selu', 'tanh', 'sigmoid', 'silu', 'sin'].
     """
 
     def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1, output_vars: int = 1,
-                 bias: bool = True, activation: str = 'linear'):
+                 bias: bool = True, activation: ActivationName = 'linear'):
         super(VAR, self).__init__()
         self.input_window_size = input_window_size
         self.input_vars = input_vars
@@ -160,7 +162,7 @@ class ANN(nn.Module):
         :param hidden_sizes: hidden layer sizes, can be a single integer or a list of integers.
         :param layer_norm: type str, the layer normalization method, can be 'DyT' or 'LN'.
                            If None, no layer normalization is applied.
-        :param activation: type str, the activation function to use.
+        :param activation: type str, one in ['linear', 'relu', 'gelu', 'elu', 'selu', 'tanh', 'sigmoid', 'silu', 'sin'].
         :param dropout_rate: float in [0, 1), the dropout rate to apply after each layer.
                              If 0, no dropout is applied.
     """
@@ -168,7 +170,7 @@ class ANN(nn.Module):
     def __init__(self, input_window_size: int, output_window_size: int = 1,
                  hidden_sizes: Union[int, Tuple[int, ...], List[int]] = 64,
                  layer_norm: Literal['DyT', 'LN'] = None,
-                 activation: str = 'relu',
+                 activation: ActivationName = 'relu',
                  dropout_rate: float = 0.):
         super(ANN, self).__init__()
 

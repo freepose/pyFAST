@@ -24,11 +24,17 @@
 
 """
 
+import sys
 import torch
 
 from abc import abstractmethod, ABC
 from typing import Union, List, Tuple
+
+from tqdm import tqdm
+
 from .smt_dataset import TensorSequence
+
+TensorOrSequence = Union[torch.Tensor, TensorSequence]
 
 
 class AbstractMasker(ABC):
@@ -49,6 +55,7 @@ class AbstractMasker(ABC):
     def generate(self, mask: torch.Tensor) -> torch.Tensor:
         """
             Apply the mask strategy to the dataset.
+            The returned mask is the ** intersection ** of the original mask and the generated mask.
 
             If ``mask`` is None, a new mask will be generated based on the provided shape
             If ``mask`` is not None, it will be used to combine with the generated mask (**&** operation).
@@ -89,7 +96,7 @@ class RandomMasker(AbstractMasker):
 
 class BlockMasker(AbstractMasker):
     """
-    BlockMask: generates continuous blocks along time-axis using vectorized ops.
+        BlockMask: generates continuous blocks along time-axis using vectorized ops.
     """
 
     def __init__(self, block_size: int, keep_ratio: float):
@@ -99,8 +106,15 @@ class BlockMasker(AbstractMasker):
         self.keep_ratio = keep_ratio
 
     def generate(self, mask: torch.Tensor) -> torch.Tensor:
+        """
+            :param mask: An existing mask to be combined with the generated mask.
+                         True means keep, False means mask.
+                         The shape can be (T, D) or (B, T, D), and ``block_size`` should be less than T.
+            :return: A boolean mask tensor of the same shape as the input
+        """
         device = mask.device
         shape = mask.shape
+
         block_mask = torch.zeros_like(mask, dtype=torch.bool)
 
         if len(shape) == 2:  # (T, D)
@@ -126,7 +140,7 @@ class BlockMasker(AbstractMasker):
 
 class VariableMasker(AbstractMasker):
     """
-    Faster VariableMask: masks entire feature columns (variables) with vectorized operations.
+        Faster VariableMask: masks entire feature columns (variables) with vectorized operations.
     """
 
     def __init__(self, keep_ratio: float):
@@ -159,20 +173,74 @@ class VariableMasker(AbstractMasker):
 
 
 def masker_generate(masker: AbstractMasker,
-                    ts_mask: Union[torch.Tensor, TensorSequence]) -> Union[torch.Tensor, TensorSequence]:
+                    ts_mask: TensorOrSequence,
+                    inplace: bool = False) -> TensorOrSequence:
     """
         Generate a mask using the provided mask instance.
 
         :param masker: An instance of AbstractMask or its subclasses.
         :param ts_mask: The original mask tensor or tensor list to combine with the generated mask.
+        :param inplace: If True, modify the input mask in place. Default is False.
 
         :return: A boolean tensor representing the generated mask.
     """
 
     generated_ts_mask = None
     if isinstance(ts_mask, torch.Tensor):
-        generated_ts_mask = masker.generate(ts_mask)
+        if inplace:
+            ts_mask[:] = masker.generate(ts_mask)  # overwrite
+            generated_ts_mask = ts_mask
+        else:
+            generated_ts_mask = masker.generate(ts_mask)
+
     elif isinstance(ts_mask, List) or isinstance(ts_mask, Tuple):
-        generated_ts_mask = [masker.generate(mask) for mask in ts_mask]
+        if inplace:
+            for i in range(len(ts_mask)):
+                ts_mask[i] = masker.generate(ts_mask[i])
+            generated_ts_mask = ts_mask
+        else:
+            generated_ts_mask = [masker.generate(mask) for mask in ts_mask]
 
     return generated_ts_mask
+
+
+def masker_generate_for_imputation(masker: AbstractMasker,
+                                   ts_mask_input: TensorOrSequence,
+                                   ts_mask_output: TensorOrSequence,
+                                   inplace: bool = False,
+                                   show_progress: bool = True) -> Tuple[TensorOrSequence, TensorOrSequence]:
+    """
+        Generate masks for imputation tasks.
+    """
+
+    assert len(ts_mask_input) == len(ts_mask_output), "Input and output masks must have the same length."
+    assert type(ts_mask_input) == type(ts_mask_output), "Input and output masks must be of the same type."
+
+    generated_input_mask = None
+    generated_output_mask = None
+
+    if isinstance(ts_mask_input, torch.Tensor):
+        if inplace:
+            intersection_mask = masker.generate(ts_mask_input)
+            ts_mask_input[:] = intersection_mask
+            ts_mask_output[:] = ts_mask_output & (~intersection_mask)
+            generated_input_mask, generated_output_mask = ts_mask_input, ts_mask_output
+        else:
+            generated_input_mask = masker.generate(ts_mask_input)
+            generated_output_mask = ts_mask_output & (~generated_input_mask)
+    elif isinstance(ts_mask_input, (tuple, list)):
+        if inplace:
+            for i in tqdm(range(len(ts_mask_input)), desc="Masking", leave=False, file=sys.stdout, disable=not show_progress):
+                ts_mask_input[i] = masker.generate(ts_mask_input[i])
+                ts_mask_output[i] = ts_mask_output[i] & (~ts_mask_input[i])
+
+            generated_input_mask, generated_output_mask = ts_mask_input, ts_mask_output
+        else:
+            generated_input_mask, generated_output_mask = [], []
+            for i in tqdm(range(len(ts_mask_input)), desc="Masking", leave=False, file=sys.stdout, disable=not show_progress):
+                input_mask = masker.generate(ts_mask_input[i])
+                output_mask = ts_mask_output[i] & (~input_mask)
+                generated_input_mask.append(input_mask)
+                generated_output_mask.append(output_mask)
+
+    return generated_input_mask, generated_output_mask

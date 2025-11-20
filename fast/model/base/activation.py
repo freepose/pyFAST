@@ -6,28 +6,31 @@
 """
 
 import torch.nn as nn
-from torch.nn import ReLU, GELU, ELU, SELU, Tanh, Sigmoid, SiLU, Identity
+
+from typing import Literal, Type
+
+ActivationName = Literal['linear', 'relu', 'gelu', 'elu', 'selu', 'tanh', 'sigmoid', 'silu', 'sin']
 
 
 class Sin(nn.Module):
     """
         Sine activation function.
     """
+
     def forward(self, x):
         out = x.sin()
         return out
 
 
-def get_activation_cls(activation: str = 'linear'):
+def get_activation_cls(activation: ActivationName = 'linear') -> Type[nn.Module]:
     """
-    Get the activation class.
-
-    :param activation: The activation function to use.
-    :param params: inplace = True or False.
-
-    :return: The activation function.
+        Get activation function class by name.
+        :param activation: activation function name,
+                           can be one in ['linear', 'relu', 'gelu', 'elu', 'selu', 'tanh', 'sigmoid', 'silu', 'sin'].
+        :return: activation function class.
     """
     activation_dict = {
+        'linear': nn.Identity,
         'relu': nn.ReLU,
         'gelu': nn.GELU,
         'elu': nn.ELU,
@@ -35,7 +38,6 @@ def get_activation_cls(activation: str = 'linear'):
         'tanh': nn.Tanh,
         'sigmoid': nn.Sigmoid,
         'silu': nn.SiLU,
-        'linear': nn.Identity,
         'sin': Sin,
     }
 

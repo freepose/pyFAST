@@ -31,6 +31,7 @@ from .transformer.timer import Timer
 from .transformer.timexer import TimeXer
 from .transformer.timemixer import TimeMixer
 from .transformer.tslanet import TSLANet
+from .transformer.pathformer import Pathformer
 
 from .gnn.stid import STID
 from .gnn.stnorm import STNorm

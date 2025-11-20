@@ -11,12 +11,14 @@
     (3) The scalers work with mask tensor to ignore missing values (or padding values) of a real (target) tensor.
 """
 
-import copy
+import copy, sys
 import torch
 import torch.nn as nn
 
 from typing import Tuple, List, Union, Optional
 from abc import abstractmethod, ABC
+from tqdm import tqdm
+
 from .smt_dataset import TensorSequence
 
 
@@ -60,20 +62,60 @@ class MinMaxScale(AbstractScale):
         self.given_range = self.feature_range[1] - self.feature_range[0]
 
     def fit(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
-        """ x shape is [..., num_features]. """
+        """
+            x shape is [..., num_features].
+            If self.range == -inf, which means all values are NaN.
+            If self.range == 0, which means all values are the same (not NaN).
+
+        """
         assert x.ndim > 1, "The input tensor must be at least 2D."
 
         nan_mask = torch.isnan(x) if x_mask is None else ~x_mask  # -> [..., num_features]
 
-        self.max = torch.where(nan_mask, torch.tensor(-float('inf')), x).max(dim=0).values  # -> [num_features]
-        self.min = torch.where(nan_mask, torch.tensor(float('inf')), x).min(dim=0).values  # -> [num_features]
+        self.max = torch.where(nan_mask, x.new_tensor(-float('inf')), x).max(dim=0).values  # -> [num_features]
+        self.min = torch.where(nan_mask, x.new_tensor(float('inf')), x).min(dim=0).values  # -> [num_features]
 
         self.range = self.max - self.min
 
         return self
 
     def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
-        normalized_x = (x - self.min) / self.range * self.given_range + self.feature_range[0]
+        """
+            Transform the data using Min-Max normalization. There are two special cases:
+            (1) Columns with all NaN values → leave as NaN (or masked).
+            (2) Columns where all valid values are equal → map to upper bound of feature_range
+
+            :param x: the input tensor, shape is [..., num_features].
+            :param x_mask: the mask tensor, shape is [..., num_features].
+            :return: the normalized tensor, shape is [..., num_features].
+        """
+
+        # Prevent divide by zero
+        zero_range_cols = self.range < 1e-8
+        safe_range = torch.where(zero_range_cols, torch.ones_like(self.range), self.range)
+        normalized_x = (x - self.min) / safe_range * self.given_range + self.feature_range[0]
+
+        # Case 1: columns with all NaN → leave as NaN (or masked)
+        if x_mask is not None:
+            all_nan_cols = (x_mask.sum(dim=0) == 0)  # no valid entries
+        else:
+            all_nan_cols = torch.isnan(self.min) | torch.isnan(self.max)
+
+        if all_nan_cols.any():
+            normalized_x[..., all_nan_cols] = float("nan")
+
+        # Case 2: columns where all valid values are equal → map to upper bound
+        const_cols = zero_range_cols & ~all_nan_cols
+        if const_cols.any():
+            if x_mask is None:
+                normalized_x[..., const_cols] = self.feature_range[1]
+            else:
+                normalized_x[..., const_cols] = torch.where(
+                    x_mask[..., const_cols],
+                    torch.full_like(normalized_x[..., const_cols], self.feature_range[1]),
+                    normalized_x[..., const_cols],  # keep padding/masked positions unchanged
+                )
+
         return normalized_x
 
     def inverse_transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
@@ -163,6 +205,7 @@ class StandardScale(AbstractScale):
         return self
 
     def transform(self, x: torch.Tensor, x_mask: Optional[torch.Tensor] = None):
+        """ Normalization """
         normalized_x = (x - self.miu) / self.sigma
         return normalized_x
 
@@ -263,7 +306,7 @@ class InstanceStandardScale(InstanceScale):
             x_copy[nan_mask] = 0
 
             self.miu = x_copy.sum(dim=dim2reduce, keepdim=True) / (
-                        valid_counts + self.epsilon)  # avoid division by zero
+                    valid_counts + self.epsilon)  # avoid division by zero
             self.sigma = (x_copy.var(dim=dim2reduce, unbiased=False, keepdim=True) + self.epsilon).sqrt()
 
             if self.num_features > 0:
@@ -298,7 +341,7 @@ class InstanceStandardScale(InstanceScale):
 
 def scaler_fit(scaler: AbstractScale,
                ts: Union[torch.Tensor, TensorSequence],
-               mask: Union[torch.Tensor, TensorSequence] = None) -> AbstractScale:
+               mask: Optional[Union[torch.Tensor, TensorSequence]] = None) -> AbstractScale:
     """
         Fit the scaler to the time series data, without modifying the original time series data.
 
@@ -324,45 +367,50 @@ def scaler_fit(scaler: AbstractScale,
     return scaler
 
 
-def scaler_transform(scaler: AbstractScale,
+def scaler_transform(scaler: Union[AbstractScale],
                      ts: Union[torch.Tensor, TensorSequence],
-                     ts_mask: Union[torch.Tensor, TensorSequence] = None) -> Union[torch.Tensor, TensorSequence]:
+                     ts_mask: Optional[Union[torch.Tensor, TensorSequence]] = None,
+                     inplace: bool = False,
+                     show_progress: bool = False) -> Union[torch.Tensor, TensorSequence]:
     """
         Transform the time series data using the fitted scaler.
 
-        :param scaler: the fitted scaler.
-        :param ts: time series tenor, or a list of time series tensors.
-        :param ts_mask: mask tensor or a list of mask tensors.
-        :return: the transformed time series tensor.
+        :params scaler: the fitted scaler.
+        :params ts: time series tensor or a list/tuple of tensors.
+        :params ts_mask: optional mask tensor or list/tuple of mask tensors.
+        :params inplace: whether to modify the original time series tensor in-place. Default is False.
+        :params show_progress: whether to show a progress bar for multiple tensors.
+
+        :return: transformed time series tensor or list of tensors.
     """
+
+    # Validate shapes
     if ts_mask is not None:
         if isinstance(ts, torch.Tensor):
-            assert ts.shape == ts_mask.shape, 'ts and mask must have the same shape.'
+            assert ts.shape == ts_mask.shape, "ts and ts_mask must have the same shape."
         elif isinstance(ts, (Tuple, List)):
-            assert len(ts) == len(ts_mask), 'ts and mask must have the same length.'
+            assert len(ts) == len(ts_mask), "ts and ts_mask must have the same length."
 
-    normalized_ts = None
+    # Single tensor case
     if isinstance(ts, torch.Tensor):
-        normalized_ts = scaler.transform(ts, ts_mask)
-    elif isinstance(ts, (Tuple, List)):
-        normalized_ts = []
-        for i in range(len(ts)):
-            normalized_ts.append(scaler.transform(ts[i], ts_mask[i] if ts_mask is not None else None))
+        out = scaler.transform(ts, ts_mask)
+        if inplace:
+            ts.copy_(out)
+            return ts
+        return out
 
+    # List/tuple of tensors
+    if inplace:
+        for i in tqdm(range(len(ts)), desc="Scaling", leave=False, file=sys.stdout, disable=not show_progress):
+            mask_i = ts_mask[i] if ts_mask is not None else None
+            out_i = scaler.transform(ts[i], mask_i)
+            ts[i].copy_(out_i)
+        return ts
+
+    # List/tuple of tensors: memory-consuming
+    normalized_ts = []
+    for i in tqdm(range(len(ts)), desc="Scaling", leave=False, file=sys.stdout, disable=not show_progress):
+        mask_i = ts_mask[i] if ts_mask is not None else None
+        normalized_ts.append(scaler.transform(ts[i], mask_i))
     return normalized_ts
 
-
-"""
-    Scale name to class. 
-"""
-
-available_scales = {
-    'abstract': AbstractScale,
-    'minmax': MinMaxScale,
-    'max': MaxScale,
-    'mean': MeanScale,
-    'standard': StandardScale,
-    'log': LogScale,
-    'instance': InstanceScale,
-    'instance_standard': InstanceStandardScale,  # a.k.a., ReVIN
-}

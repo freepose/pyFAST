@@ -85,7 +85,7 @@ class Evaluator(AbstractEvaluator):
             'MAPE': MAPE,
             'sMAPE': SMAPE,
             'CV-RMSE': CVRMSE,
-            'PCC': PCC,
+            'PCC': PCC, # Also known as 'CORR' (Correlation Coefficient)
             'RAE': RAE,
             'RSE': RSE,
             'R2': R2,

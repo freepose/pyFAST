@@ -8,7 +8,7 @@
 import torch
 import torch.nn as nn
 
-from ..mts import GAR, AR
+from ...mts import GAR, AR
 
 
 class DSAR(nn.Module):
@@ -27,13 +27,13 @@ class DSAR(nn.Module):
     """
 
     def __init__(self, input_window_size: int, input_vars: int, output_window_size: int = 1,
-                 ex_retain_window_size: int = 1, ex_vars: int = 1):
+                 ex_retain_window_size: int = None, ex_vars: int = 1):
         super(DSAR, self).__init__()
 
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
-        self.ex_retain_window_size = ex_retain_window_size
+        self.ex_retain_window_size = input_window_size if ex_retain_window_size is None else ex_retain_window_size
         self.ex_vars = ex_vars
 
         gain = 0.01
@@ -54,8 +54,8 @@ class DSAR(nn.Module):
 
     def forward(self, x: torch.Tensor, ex: torch.Tensor):
         """
-            :param x: slicing window of the target variable. [batch_size, window_size, input_vars]
-            :param ex: slicing window of exogenous variables.
+            :param x: sliding window of the target variable. [batch_size, window_size, input_vars]
+            :param ex: sliding window of exogenous variables.
                       [batch_size, ex_retain_window_size, ex_vars],
                    or [batch_size, ex_retain_window_size + output_window_size, ex_vars],
                    or [batch_size, output_window_size, ex_vars],

@@ -7,19 +7,15 @@
     Prepare datasets by loading XMCDC case counts as ``SSTDataset`` and ``SMTDataset``.
 """
 
-import os, logging
+import logging
 
 import numpy as np
-import pandas as pd
-import torch
 
 from typing import Literal, List, Union, Tuple
-from fast.data import SSTDataset, SMTDataset
 
-from fast.data.processing import load_sst_datasets, load_smx_datasets
+from fast.data import SMTDataset
+from fast.data.processing import load_sst_datasets, SSTDatasetSequence, SMTDatasetSequence
 
-SSTDatasetSequence = Union[SSTDataset, List[SSTDataset]]
-SMTDatasetSequence = Union[SMTDataset, List[SMTDataset]]
 
 """
 

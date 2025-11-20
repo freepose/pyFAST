@@ -362,13 +362,13 @@ class Informer(nn.Module):
         self.dropout_rate = dropout_rate
 
         # encoder_embedding
-        self.encoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
-        self.encoder_pe = PositionalEncoding(self.d_model)
+        self.encoder_value_embedding = TokenEmbedding(self.input_vars, self.d_model)
+        self.encoder_position_embedding = PositionalEncoding(self.d_model)
         self.encoder_dropout = nn.Dropout(self.dropout_rate)
 
         # decoder_embedding
-        self.decoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
-        self.decoder_pe = PositionalEncoding(self.d_model)
+        self.decoder_value_embedding = TokenEmbedding(self.input_vars, self.d_model)
+        self.decoder_position_embedding = PositionalEncoding(self.d_model)
         self.decoder_dropout = nn.Dropout(self.dropout_rate)
 
         # encoder
@@ -406,17 +406,17 @@ class Informer(nn.Module):
     def forward(self, x: torch.Tensor):
         """ x -> (batch_size, input_window_size, input_vars) """
 
-        x_embedding = self.encoder_embedding(x) + self.encoder_pe(x)  # -> (batch_size, input_window_size, d_model)
+        x_embedding = self.encoder_value_embedding(x) + self.encoder_position_embedding(x)  # -> (batch_size, input_window_size, d_model)
         x_embedding = self.encoder_dropout(x_embedding)
 
         # target -> (batch_size, label_window_size + output_window_size, input_vars)
         batch_size, seq_len, input_vars = x.shape
         target_shape = (batch_size, self.label_window_size + self.output_window_size, input_vars)
         target = torch.zeros(*target_shape, dtype=x.dtype, device=x.device)
-        target[:, :self.label_window_size, :] = x[:, seq_len-self.label_window_size:, :]
+        target[:, :self.label_window_size, :] = x[:, -self.label_window_size:, :]
 
-        # target embedding -> [batch_size, label_window_size + output_window_size, d_model]
-        target_embedding = self.decoder_embedding(target) + self.decoder_pe(target)
+        # target_embedding -> (batch_size, label_window_size + output_window_size, d_model)
+        target_embedding = self.decoder_value_embedding(target) + self.decoder_position_embedding(target)
         target_embedding = self.decoder_dropout(target_embedding)
 
         encoder_out, _ = self.encoder(x_embedding)

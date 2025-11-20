@@ -18,18 +18,18 @@ class MSL(nn.Module):
         :param input_window_size: input window size.
         :param input_vars: number of input variables.
         :param output_window_size: output window size.
-        :param method: method in [``inner_product`` | ``soft_min_distance``]
+        :param distance: method in [``inner_product`` | ``soft_min_distance``]
         :param shapelet_size: the shaplet size
     """
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
-                 method: Literal['inner_product', 'soft_min_distance'] = 'inner_product', shapelet_size: int = 3):
+                 distance: Literal['inner_product', 'soft_min_distance'] = 'inner_product', shapelet_size: int = 3):
         super(MSL, self).__init__()
         self.input_window_size = input_window_size
-        self.input_size = input_vars
+        self.input_vars = input_vars
         self.output_window_size = output_window_size
 
-        self.method = method  # [inner_product, soft_min_distance]
+        self.distance = distance  # [inner_product, soft_min_distance]
         self.shapelet_size = shapelet_size
 
         gain = 0.01  # 1. / math.sqrt(self.window_size * self.shapelet_size)
@@ -38,35 +38,38 @@ class MSL(nn.Module):
 
         self.softmin = nn.Softmin(dim=1)  # softmin on shapelets, which shapelet is more important?
 
-    def forward(self, x: torch.Tensor):
-        """ x -> [batch_size, input_window_size, input_size] """
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor = None) -> torch.Tensor:
+        """ x -> [batch_size, input_window_size, input_vars] """
 
-        if self.method == 'inner_product':
-            b = x.permute(0, 2, 1)  # -> [batch_size, input_size, input_window_size]
+        if x_mask is not None:
+            x[~x_mask] = 0.0  # set missing values to zero
+
+        if self.distance == 'inner_product':
+            b = x.permute(0, 2, 1)  # -> [batch_size, input_vars, input_window_size]
             c = self.centroids.permute(1, 0)  # -> [input_window_size, centroid_size]
-            ret = (b @ c).softmax(dim=2)  # -> [batch_size, input_size, centroid_size]
-            ret = self.l1(ret)  # -> [batch_size, input_size, centroid_size]
-            ret = ret.permute(0, 2, 1)  # -> [batch_size, input_size, output_window_size]
+            ret = (b @ c).softmax(dim=2)  # -> [batch_size, input_vars, centroid_size]
+            ret = self.l1(ret)  # -> [batch_size, input_vars, output_window_size]
+            ret = ret.permute(0, 2, 1)  # -> [batch_size, input_vars, output_window_size]
             # ret = torch.relu(ret)
 
             return ret
-        elif self.method == 'soft_min_distance':
-            # b -> [batch_size, centroid_size, input_window_size, input_size]
+        elif self.distance == 'soft_min_distance':
+            # b -> [batch_size, centroid_size, input_window_size, input_vars]
             b = x.repeat(self.shapelet_size, 1, 1, 1).permute(1, 0, 2, 3)
 
-            # c -> [centroid_size, input_window_size, input_size]
-            c = self.centroids.repeat(self.input_size, 1, 1).permute(1, 2, 0)
+            # c -> [centroid_size, input_window_size, input_vars]
+            c = self.centroids.repeat(self.input_vars, 1, 1).permute(1, 2, 0)
 
-            # distances -> [batch_size, centroid_size, input_size]
+            # distances -> [batch_size, centroid_size, input_vars]
             distances = ((b - c) ** 2).mean(dim=2)
 
-            # soft_min_distance -> [batch_size, centroid_size, input_size]
+            # soft_min_distance -> [batch_size, centroid_size, input_vars]
             soft_min = self.softmin(distances)
 
-            # soft_min_distance -> [batch_size, input_size, centroid_size]
+            # soft_min_distance -> [batch_size, input_vars, centroid_size]
             soft_min = soft_min.permute(0, 2, 1)
 
-            # ret -> [batch_size, input_size, output_window_size]
+            # ret -> [batch_size, input_vars, output_window_size]
             ret = self.l1(soft_min)
 
             ret = ret.permute(0, 2, 1)

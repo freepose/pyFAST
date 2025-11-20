@@ -6,14 +6,18 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
-from typing import Tuple, List
+from typing import Tuple, List, Union
+
+TensorSequence = List[torch.Tensor]
+TensorOrSequence = Union[torch.Tensor, List[torch.Tensor]]
 
 
 def multi_step_ahead_split(time_series: torch.Tensor, input_window_size: int = 10, output_window_size: int = 1,
-                           horizon: int = 1, stride: int = 1) -> tuple:
+                           horizon: int = 1, stride: int = 1) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-        Transform a univariate/multivariate time series to supervised data using slicing windows.
+        Transform a univariate/multivariate time series to supervised data using sliding windows.
         Support both multi-horizon and multistep ahead data split.
+
         :param time_series:         time series feature (a 2d torch array), shape is ``[ts_len, n_vars]``.
         :param input_window_size:   number of y samples to give model
         :param output_window_size:  number of future y samples to predict.
@@ -25,7 +29,7 @@ def multi_step_ahead_split(time_series: torch.Tensor, input_window_size: int = 1
                                     Y shape is ``[sample_num, output_window_size, n_vars]``.
     """
     number_observations, number_time_series = time_series.shape
-    start_position_num = number_observations - input_window_size - output_window_size - horizon + 1
+    start_position_num = number_observations - input_window_size - output_window_size - horizon + 2
 
     inputs_list, output_list = [], []
     for i in range(0, start_position_num + 1, stride):
@@ -77,7 +81,7 @@ class SSTDataset(data.Dataset):
     """
         Single prediction object Single source Time series dataset (SST).
 
-        ``SSTDataset`` transforms a **single** (univariate or multivariate) time series to supervised (input / output) data.
+        ``SSTDataset`` transforms a ** single ** (univariate or multivariate) time series to supervised (input / output) data.
 
         (1) Transformation from target time series to supervised (i.e., input / output) data.
         (2) Support input data == output data for autoencoders or generative models.
@@ -94,8 +98,8 @@ class SSTDataset(data.Dataset):
         :param ex_ts_mask: mask tensor of exogenous time series, the shape is ``[ts_len, ex_vars]``. Support data missing.
         :param ex_ts2: the second exogenous time series, the shape is ``[ts_len, ex2_vars]``.
                        This is designed for **pre-known** exogenous variables, e.g., time, or forecasted weather.
-        :param input_window_size: the window size of samples of **input** tensors.
-        :param output_window_size: the window size of samples of **output** tensors.
+        :param input_window_size: the window size of samples of ** input ** tensors.
+        :param output_window_size: the window size of samples of ** output ** tensors.
         :param horizon: the time step distance between x and y (maybe overlapping).
         :param stride: spacing between two consecutive (input or output) windows.
         :param mark: the mark of the dataset, default is None.
@@ -134,7 +138,8 @@ class SSTDataset(data.Dataset):
         self.ratio = 1.0
         self.mark = mark    # use to mark the (split) dataset
 
-        self.sample_num = (ts.shape[0] - input_window_size - output_window_size - horizon + 1) // stride + 1
+        window_num = ts.shape[0] - self.input_window_size - self.output_window_size - self.horizon + 2
+        self.sample_num = (window_num + self.stride - 1) // self.stride
         assert self.sample_num > 0, "No samples can be generated."
 
         self.ts = ts
@@ -149,7 +154,7 @@ class SSTDataset(data.Dataset):
         """
         return self.sample_num
 
-    def __getitem__(self, index: int) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    def __getitem__(self, index: int) -> Tuple[TensorSequence, TensorSequence]:
         """
             Retrieve the sample at the specified index.
 
@@ -211,15 +216,17 @@ class SSTDataset(data.Dataset):
         })
 
         if self.ts_mask is not None:
+            params['mask'] = True
             density = self.ts_mask.sum() / (self.ts_mask.shape[0] * self.ts_mask.shape[1])
-            params['mask'] = round(float(density), 4)
+            params['density'] = round(float(density), 6)
 
         if self.ex_ts is not None:
             params['ex_vars'] = self.ex_vars
 
             if self.ex_ts_mask is not None:
+                params['ex_ts_mask'] = True
                 ex_density = self.ex_ts_mask.sum() / (self.ex_ts_mask.shape[0] * self.ex_ts_mask.shape[1])
-                params['ex'] = round(float(ex_density), 4)
+                params['ex_density'] = round(float(ex_density), 6)
 
         if self.ex_ts2 is not None:
             params['ex2_vars'] = self.ex2_vars
@@ -244,13 +251,14 @@ class SSTDataset(data.Dataset):
             f"Invalid boundary of split ratios: {start_ratio}, {end_ratio}. They must be in the range [0, 1]."
 
         ts_len = self.ts.shape[0]
-        start, end = int(ts_len * start_ratio), int(ts_len * end_ratio)
+        start, end = int(ts_len * round(start_ratio, 10)), int(ts_len * round(end_ratio, 10))
 
         if not is_strict:
             start = max(0, start - self.input_window_size - self.horizon + 1)
 
         border_len = end - start
-        min_border = border_len - self.input_window_size - self.output_window_size - self.horizon + 1
+        window_size = self.input_window_size + self.output_window_size + self.horizon - 1
+        min_border = border_len - window_size + 1
         if min_border < 0:
             raise ValueError(f"No samples can be generated in the specified range: ({start_ratio}, {end_ratio}].")
 

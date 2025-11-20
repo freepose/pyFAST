@@ -27,7 +27,7 @@ from fast.model.mts_fusion import DSAR, DGR, DGDR, MvT, GAINGE, TSPT
 
 from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
 from dataset.manage_sst_datasets import prepare_sst_datasets
-from dataset.manage_smx_datasets import prepare_smx_datasets
+from dataset.manage_smt_datasets import prepare_smt_datasets
 
 
 def main():
@@ -35,43 +35,45 @@ def main():
     torch_float_type = torch.float32
     ds_device, model_device = 'cpu', 'mps'
 
-    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv'
+    # xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1day.csv'
     # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
     # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, ['bsi'], False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'multivariate', 'use_ex': True}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 8 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
-    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GFM', 5, 3, 1, 3, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GreeceWPF', 10 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
-    overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts)
-    # train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
-    overwrite_ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts) if train_ds.ex_ts is not None else None
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GFM', 5, 3, 1, 3, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'DIgSILENT', 10, 1, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config) # estimation
+
+    # overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts)
+    # scaler_transform(overwrite_scaler, train_ds.ts, inplace=True)
+    # overwrite_ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts) if train_ds.ex_ts is not None else None
     # if val_ds is not None:
-        # val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
-        # val_ds.ex_ts = scaler_transform(overwrite_ex_scaler, val_ds.ex_ts) if val_ds.ex_ts is not None else None
+    #     scaler_transform(overwrite_scaler, val_ds.ts, inplace=True)
+    #     scaler_transform(overwrite_ex_scaler, val_ds.ex_ts, inplace=True) if val_ds.ex_ts is not None else None
     # if test_ds is not None:
-        # test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
-        # test_ds.ex_ts = scaler_transform(overwrite_ex_scaler, test_ds.ex_ts) if test_ds.ex_ts is not None else None
+    #     scaler_transform(overwrite_scaler, test_ds.ts, inplace=True)
+    #     scaler_transform(overwrite_ex_scaler, test_ds.ex_ts, inplace=True) if test_ds.ex_ts is not None else None
 
-    scaler, ex_scaler = None, overwrite_ex_scaler # overwrite_ex_scaler
+    scaler, ex_scaler = None, None # overwrite_ex_scaler
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
-    modeler = {
-        'arx': [ARX, {'ex_retain_window_size': train_ds.input_window_size}],
-        'narx-mlp': [NARXMLP, {'ex_retain_window_size': train_ds.input_window_size // 2,
+    ts_ex_modeler = {
+        'arx': [ARX, {'ex_retain_window_size': train_ds.window_size}],
+        'narx-mlp': [NARXMLP, {'ex_retain_window_size': train_ds.window_size // 2,
                                'hidden_units': [32], 'activation': 'linear'}],
         'narx-rnn': [NARXRNN, {'rnn_cls': 'rnn', 'hidden_size': 64, 'num_layers': 1,
                                'bidirectional': False, 'dropout_rate': 0.}],
-        'dsar': [DSAR, {'ex_retain_window_size': train_ds.input_window_size // 2, 'dropout_rate': 0.}],
-        'dgr': [DGR, {'ex_retain_window_size': train_ds.input_window_size,
+        'dsar': [DSAR, {'ex_retain_window_size': train_ds.window_size // 2, 'dropout_rate': 0.}],
+        'dgr': [DGR, {'ex_retain_window_size': train_ds.window_size,
                       'rnn_cls': 'rnn', 'hidden_size': 256, 'ex_hidden_size': 32, 'num_layers': 3,
                       'bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping'}],
         'dgdr': [DGDR, {'dropout_rate': 0.}],
-        'mvt': [MvT, {'ex_retain_window_size': train_ds.input_window_size // 2, 'dropout_rate': 0.}],
+        'mvt': [MvT, {'ex_retain_window_size': train_ds.window_size // 2, 'dropout_rate': 0.}],
         'gainge': [GAINGE, {'gat_h_dim': 4, 'dropout_rate': 0.01, 'highway_window_size': 7}],
         'tspt': [TSPT, {'ex_linear_layers': [32], 'target_linear_layers': [32],
                         'variable_hidden_size': 16, 'patch_len': 24, 'patch_stride': 24, 'patch_padding': 0,
@@ -80,7 +82,7 @@ def main():
                         'use_instance_scale': True}],
     }
 
-    model_cls, user_args = modeler['narx-rnn']
+    model_cls, user_args = ts_ex_modeler['dgr']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
@@ -92,7 +94,7 @@ def main():
     model_weights = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_weights, lr=0.0005, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
-    stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
+    stopper = EarlyStop(patience=5, delta=0.01, mode='rel')
 
     criterion = MSE()
     evaluator = Evaluator(['MSE', 'RMSE', 'MAE'])

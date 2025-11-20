@@ -9,12 +9,12 @@
 import os, logging
 
 from typing import Literal, List, Tuple, Union, Dict, Any
+
 from fast.data import SSTDataset
-from fast.data.processing import load_sst_datasets
+from fast.data.processing import load_sst_datasets, SSTDatasetSequence
 
 sst_metadata = {
-    # [Disease] Xiamen Center for Disease Control and Prevention (XMCDC): infectious disease surveillance data.
-    # This is a built-in dataset in the pyFAST library.
+    # [Disease] [Built-in] Xiamen Center for Disease Control and Prevention (XMCDC): infection surveillance data.
     "XMCDC_1day": {
         "path": "../../dataset/xmcdc/outpatients_2011_2020_1day.csv",
         "columns": {
@@ -41,225 +41,138 @@ sst_metadata = {
                       'HF1', 'HF2', 'HF3', 'HF4', 'HF5', 'HF6', 'HF7',
                       'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7',
                       'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'],
-            # "time": "Date",   # time format is 'YYYYWW', this cause errors.
             "univariate": ["手足口病"],
             "multivariate": ['手足口病', '肝炎', '其他感染性腹泻'],
-            "exogenous": slice('平均温度', 'D7'),  # meteorological variables
+            "exogenous": slice('平均温度', '最低风速'),  # meteorological variables
         }
     },
 
-    # [Energy] Electronic power load dataset.
-    "SuzhouIPL": {
-        "path": "{root}/energy_electronic_power_load/Suzhou_industrial_park_2016_2021/" +
-                "01_single_source/senzhen_wu/ecpl_1hour_data_li.csv",
-        "time_feature_freq": "h",
-        "columns": {
-            "time": "time",
-            "univariate": ["residential"],
-            "multivariate": ["commercial", "office", "public", "residential"],
-            "exogenous": ["temperature", "humidity"]
-        }
-    },
-    "SuzhouIPL_Sparse": {
-        "path": "{root}/energy_electronic_power_load/Suzhou_industrial_park_2016_2021/" +
-                "01_single_source/Suzhou_ipl_sparse_{freq}.csv",
-        "freq": ["5min", "30min", "1hour"],
-        "time_feature_freq": "5min",
-        "columns": {
-            "time": "Date",
-            "univariate": ["Power_Residential"],
-            "multivariate": ["Power_Commercial", "Power_Office", "Power_Public", "Power_Residential"],
-            "exogenous": ["Temperature (℃)", "Humidity (%RH)"]
-        }
-    },
-
-    # [Energy] Wind turbine active power time series datasets, some of these datasets include exogenous variables.
-    # Public available at: TODO
-    "TurkeyWPF": {
-        "path": "{root}/energy_wind/Kaggle_Turkey_Wind_Turbine_Scada_Dataset_2018/Turkey_wind_turbine_{freq}.csv",
-        "freq": ["10min", "30min", "1hour", "6hour", "12hour", "1day"],
-        "columns": {
-            "time": "Date",
-            "univariate": ["LV ActivePower (kW)"],
-            "multivariate": ["LV ActivePower (kW)"],  # NOTE: only one variable
-            "exogenous": ["Wind Speed (m/s)", "Theoretical_Power_Curve (KWh)", "Wind Direction (°)"]
-        }
-    },
-    "TurkeyWPF_1day": {
-        "path": "{root}/energy_wind/Kaggle_Turkey_Wind_Turbine_Scada_Dataset_2018/Turkey_wind_turbine_1day.csv",
-        "columns": {
-            "time": "Date",
-            "univariate": ["LV ActivePower (kW)"],
-            "multivariate": ["LV ActivePower (kW)"],  # NOTE: only one variable
-            "exogenous": ["Wind Speed (m/s)", "Theoretical_Power_Curve (KWh)", "Wind Direction (°)"]
-        }
-    },
-
-    "GreeceWPF": {
-        "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/Greece_power_{freq}.csv",
-        "freq": ["1day"] + ["1hour", "6hour", "12hour", "1day"],
-        "columns": {
-            "time": "Date",
-            "univariate": ["#36876_power(MW)"],
-            "multivariate": slice("#32947_power(MW)", "#36876_power(MW)"),
-        }
-    },
-    "GreeceWPF_1day": {
-        "path": "{root}/energy_wind/GitHub_Greece_wind_energy_forecasting_2017_2020/01_single_source/Greece_power_1day.csv",
-        "columns": {
-            "time": "Date",
-            "univariate": ["#36876_power(MW)"],
-            "multivariate": slice("#32947_power(MW)", "#36876_power(MW)"),
-            "exogenous": slice("#32947_airTemperature", "#36876_windSpeed")
-        }
-    },
-
-    "SDWPF": {
-        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source/Patv_cubicspline_{freq}.csv",
-        "freq": ["10min", "30min", "1hour", "6hour", "12hour", "1day"],
-        "time_feature_freq": "10min",
-        "columns": {
-            "time": "Date",
-            "univariate": ["134"],
-            "multivariate": slice("1", "134"),
-        }
-    },
-
-    "SDWPF_Sparse": {
-        "path": "{root}/energy_wind/KDDCup2022_Spatial_Dynamic_Wind_Power_Forecasting/01_single_source_sparse/10min/[sparse_fusion]KDD22_wind_turbine_{freq}.csv",
-        "freq": ["10min"],
-        "time_feature_freq": "10min",
-        "columns": {
-            "time": "Date",
-            "univariate": ["134_Patv"],
-            "multivariate": slice("1_Patv", "134_Patv"),
-        }
-    },
-
-    "WSTD2": {
-        "path": "{root}/energy_wind/Zenodo_Wind_Spatio_Temporal_Dataset2_2010_2011/01_single_source/WSTD_linear_{freq}.csv",
-        "freq": ["1hour", "6hour", "12hour", "1day"],
-        "columns": {
-            "time": "Date",
-            "univariate": ["Turbine1_Power"],
-            "multivariate": [f"Turbine{i}_Power" for i in range(1, 201)],
-        }
-    },
-    "WSTD2_Sparse": {
-        "path": "{root}/energy_wind/Zenodo_Wind_Spatio_Temporal_Dataset2_2010_2011/01_single_source/WSTD_sparse_{freq}.csv",
-        "freq": ["1hour", "6hour", "12hour", "1day"],
-        "columns": {
-            "time": "Date",
-            "univariate": ["Turbine1_Power"],
-            "multivariate": [f"Turbine{i}_Power" for i in range(1, 201)],
-        }
-    },
-
-    # General time series datasets are available at: https://zenodo.org/records/15255776
+    # [General_MTS] General time series datasets are available at: https://zenodo.org/records/15255776
     "ETTh1": {
-        "path": "{root}/general_mts/Github_ETT_small/ETTh1.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/Github_ETT_small/ETTh1.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"],
+            "exogenous2": ['hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "ETTh2": {
-        "path": "{root}/general_mts/Github_ETT_small/ETTh2.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/Github_ETT_small/ETTh2.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"],
+            "exogenous2": ['hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "ETTm1": {
-        "path": "{root}/general_mts/Github_ETT_small/ETTm1.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/Github_ETT_small/ETTm1.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"],
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "ETTm2": {
-        "path": "{root}/general_mts/Github_ETT_small/ETTm2.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/Github_ETT_small/ETTm2.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["OT"],
-            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL"]
+            "multivariate": ["HUFL", "HULL", "MUFL", "MULL", "LUFL", "LULL", "OT"],
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
-    "ExchangeRate_x1000": {
-        "path": "{root}/general_mts/Github_exchange_rate/exchange_rate_x1000.csv",
+    "ExchangeRate": {
+        "path": ("{root}/general_mts.zip", "general_mts/Github_exchange_rate/exchange_rate.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["Singapore"],
-            "multivariate": ["Australia", "British", "Canada", "Switzerland", "China",
-                             "Japan", "New Zealand", "Singapore"]
+            "multivariate": ["Australia", "British", "Canada", "Switzerland", "China", "Japan",
+                             "New Zealand", "Singapore"],
+            "exogenous2": ['day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "JenaClimate": {
-        "path": "{root}/general_mts/MaxPlanck_Jena_Climate/mpi_roof_2010a.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/MaxPlanck_Jena_Climate/mpi_roof_2010a.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["CO2 (ppm)"],
             "multivariate": ["p (mbar)", "T (degC)", "Tpot (K)", "Tdew (degC)", "rh (%)", "VPmax (mbar)",
                              "VPact (mbar)", "VPdef (mbar)", "sh (g/kg)", "H2OC (mmol/mol)", "rho (g/m**3)",
                              "wv (m/s)", "max. wv (m/s)", "wd (deg)", "rain (mm)", "raining (s)", "SWDR (W/m)",
-                             "PAR (mol/m/s)", "max. PAR (mol/m/s)", "Tlog (degC)", "CO2 (ppm)"]
+                             "PAR (mol/m/s)", "max. PAR (mol/m/s)", "Tlog (degC)", "CO2 (ppm)"],
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "Electricity": {
-        "path": "{root}/general_mts/UCI_Electricity/electricity_20160701_20190702.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/UCI_Electricity/electricity_20160701_20190702.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["320"],
-            "multivariate": slice("0", "320")
+            "multivariate": slice("0", "320"),
+            "exogenous2": ['hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "PeMS03": {
-        "path": "{root}/general_mts/US_PEMS_03_04_07_08/pems03_flow.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_03_04_07_08/pems03_flow.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["357"],
-            "multivariate": slice("0", "357")
+            "multivariate": slice("0", "357"),
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "PeMS04": {
-        "path": "{root}/general_mts/US_PEMS_03_04_07_08/pems04_flow.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_03_04_07_08/pems04_flow.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["306"],
-            "multivariate": slice("0", "306")
+            "multivariate": slice("0", "306"),
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "PeMS07": {
-        "path": "{root}/general_mts/US_PEMS_03_04_07_08/pems07_flow.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_03_04_07_08/pems07_flow.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["882"],
-            "multivariate": slice("0", "882")
+            "multivariate": slice("0", "882"),
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "PeMS08": {
-        "path": "{root}/general_mts/US_PEMS_03_04_07_08/pems08_flow.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_03_04_07_08/pems08_flow.csv"),
+        # "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_03_04_07_08/pems08_speed.csv"),
+        # "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_03_04_07_08/pems08_occupancy.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["169"],
-            "multivariate": slice("0", "169")
+            "multivariate": slice("0", "169"),
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
+        }
+    },
+    "PeMS-bay": {
+        "path": "{root}/general_mts/US_PeMS-bay_20170101_20170630/00_extract/" + \
+                "[downsample+wide]PeMS-bay_20170101_20170630_5min.csv",  # downsample as the same frequency (5min)
+        "columns": {
+            "univariate": ["400001"],
+            "multivariate": slice("400001", "414694"),
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
+        }
+    },
+    "metr-la": {
+        "path": ("{root}/general_mts.zip",
+                 "general_mts/US_metr-la_201203_201206/00_extract/[wide]metr_la_speed_201203_201206_5min.csv"),
+        "columns": {
+            "univariate": ["773869"],
+            "multivariate": slice("773869", "769373"),
+            "exogenous2": ['minute_of_hour', 'hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
     "Traffic": {
-        "path": "{root}/general_mts/US_PEMS_Traffic/traffic_20160701_20180702.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/US_PEMS_Traffic/traffic_20160701_20180702.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["861"],
-            "multivariate": slice("0", "169")
+            "multivariate": slice("0", "169"),
+            "exogenous2": ['hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
         }
     },
-    "US_CDC_Flu": {
-        "path": "{root}/general_mts/US_CDC_Flu_Activation_Level/US_regional_flu_level_20181004_20250322.csv",
+    "US_CDC_Flu-sparse": {
+        # This is a sparse dataset
+        "path": ("{root}/general_mts.zip",
+                 "general_mts/US_CDC_Flu_Activation_Level/US_regional_flu_level_20181004_20250322.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["Commonwealth of the Northern Mariana Islands"],
             "multivariate": ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
                              "Delaware", "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois",
@@ -269,26 +182,41 @@ sst_metadata = {
                              "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
                              "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
                              "West Virginia", "Wisconsin", "Wyoming", "New York City", "Puerto Rico", "Virgin Islands",
-                             "Commonwealth of the Northern Mariana Islands"]
+                             "Commonwealth of the Northern Mariana Islands"],
+            "exogenous2": ['day_of_month', 'week_of_year']
         }
     },
     "US_CDC_ILI": {
-        "path": "{root}/general_mts/US_CDC_ILI/US_National_ILI_1997_2025.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/US_CDC_ILI/US_National_ILI_1997_2025.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["ILITOTAL"],
             "multivariate": ["WEIGHTED ILI", "UNWEIGHTED ILI", "AGE 0-4", "AGE 5-24",
-                             "AGE 65", "ILITOTAL", "NUM. OF PROVIDERS", "TOTAL PATIENTS"]
+                             "AGE 65", "ILITOTAL", "NUM. OF PROVIDERS", "TOTAL PATIENTS"],
+            "exogenous2": ['day_of_month', 'week_of_year']
         }
     },
     "WHO_JAPAN_ILI": {
-        "path": "{root}/general_mts/WHO_Japan_ILI/Japan_ILI_19961006_20250309.csv",
+        "path": ("{root}/general_mts.zip", "general_mts/WHO_Japan_ILI/Japan_ILI_19961006_20250309.csv"),
         "columns": {
-            "time": "Date",
             "univariate": ["ILI_ACTIVITY"],
             "multivariate": ["AH1", "AH1N12009", "AH3", "AH5", "ANOTSUBTYPED", "INF_A", "BVIC", "BYAM",
-                             "BNOTDETERMINED", "INF_B", "INF_ALL", "INF_NEGATIVE", "ILI_ACTIVITY"]
+                             "BNOTDETERMINED", "INF_B", "INF_ALL", "INF_NEGATIVE", "ILI_ACTIVITY"],
+            "exogenous2": ['day_of_month', 'week_of_year']
         }
+    },
+
+    "dka_1day": {
+        "path": "{root}/energy_solar/heywhale_desert_knowledge_australia_2013_2014/" + \
+                "01_single_source/[downsample+sparse]91-Site_1A-Trina_5W_1day.csv",
+        "columns": {
+            "names": ['Date', 'Active Energy Delivered-Received (kWh)', 'Current Phase Average (A)',
+                      'Active Power (kW)', 'Wind Speed (m/s)', 'Weather Temperature Celsius (°C)',
+                      'Weather Relative Humidity (%)', 'Global Horizontal Radiation (W/m²)',
+                      'Diffuse Horizontal Radiation (W/m²)', 'Wind Direction (Degrees)', 'Weather Daily Rainfall (mm)'],
+            "univariate": ["Active Power (kW)"],
+            "multivariate": ["Active Power (kW)"],
+            "exogenous": slice('Wind Speed (m/s)', 'Weather Daily Rainfall (mm)'),
+        },
     },
 
 }
@@ -302,7 +230,7 @@ def prepare_sst_datasets(data_root: str,
                          stride: int = 1,
                          split_ratios: Union[int, float, Tuple[float, ...], List[float]] = None,
                          device: Union[Literal['cpu', 'mps', 'cuda'], str] = 'cpu',
-                         **task_kwargs: Dict[str, Any]) -> Union[SSTDataset, List[SSTDataset]]:
+                         **task_kwargs: Dict[str, Any]) -> SSTDatasetSequence:
     """
         Prepare several SSTDataset for machine learning tasks.
 
@@ -334,14 +262,21 @@ def prepare_sst_datasets(data_root: str,
         f"Dataset '{dataset_name}' not found in metadata. The dataset name should be one of {list(sst_metadata.keys())}."
     given_metadata = sst_metadata[dataset_name]
 
-    freq = given_metadata['freq'][0] if 'freq' in given_metadata else None
-    filename = given_metadata['path'].format(root=data_root, freq=freq or '')
+    path = given_metadata['path']
+    if isinstance(path, str):
+        path = os.path.normpath(path.format(root=data_root))
+        if not os.path.exists(path):
+            raise FileNotFoundError(f'File not found: {path}')
+    elif (isinstance(path, tuple) or isinstance(path, list)) and len(path) == 2:
+        path = (os.path.normpath(path[0].format(root=data_root)), path[1])
+    else:
+        raise ValueError(f'Invalid path: {path}. It should be a string or a tuple/list of two strings.')
 
     task_ts = task_kwargs.get('ts', 'univariate')
     task_ts_mask = task_kwargs.get('ts_mask', False)
     task_use_ex = task_kwargs.get('use_ex', False)
     task_ex_ts_mask = task_kwargs.get('ex_ts_mask', False)
-    task_use_ex2 = task_kwargs.get('ex2', False)
+    task_use_ex2 = task_kwargs.get('use_ex2', False)
 
     variables = given_metadata['columns'].get(task_ts, None)
     if variables is None:
@@ -349,9 +284,9 @@ def prepare_sst_datasets(data_root: str,
     ex_variables = given_metadata['columns'].get('exogenous', None) if task_use_ex else None
     ex2_variables = given_metadata['columns'].get('exogenous2', None) if task_use_ex2 else None
 
-    logging.getLogger().info('Loading {}'.format(filename))
+    logging.getLogger().info('Loading {}'.format(path))
     load_sst_args = {
-        'filename': filename,
+        'path': path,
         'variables': variables, 'mask_variables': task_ts_mask,
         'ex_variables': ex_variables, 'mask_ex_variables': task_ex_ts_mask,
         'ex2_variables': ex2_variables,
@@ -367,14 +302,14 @@ def prepare_sst_datasets(data_root: str,
 
 def verify_sst_datasets():
     """
-        Verify the metadata.
+        Verify the ``SSTDataset`` metadata.
     """
     data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
 
-    ds_names = list(sst_metadata.keys())
+    ds_names = list(sst_metadata.keys())[2:]
     for i, name in enumerate(ds_names):
-        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex': True, 'use_ex2': True}
         # task_config = {'ts': 'multivariate'}
+        task_config = {'ts': 'multivariate', 'ts_mask': True, 'use_ex': True, 'ex_ts_mask': True, 'use_ex2': True}
         print(i, end='\t')
         sst_datasets = prepare_sst_datasets(data_root, name, 48, 24, 1, 1, (0.7, 0.1, 0.2), **task_config)
         sst_datasets = [sst_datasets] if isinstance(sst_datasets, SSTDataset) else sst_datasets

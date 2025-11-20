@@ -1,17 +1,23 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from typing import Literal
-
 import torch
 import torch.nn as nn
 
-from fast.data import PatchMaker
-from fast.model.base import MLP
-from fast.model.mts.transformer.embedding import PositionalEncoding
+from torch.nn.utils.rnn import pad_sequence
+
+from typing import Literal, Tuple, List
+from ....data import PatchMaker
+from ....model.base import MLP
+
+from ...mts.transformer.embedding import PositionalEncoding
 
 
 class nconv(nn.Module):
+    """
+        Graph convolution using Einstein summation convention.
+    """
+
     def __init__(self):
         super(nconv, self).__init__()
 
@@ -23,6 +29,10 @@ class nconv(nn.Module):
 
 
 class linear(nn.Module):
+    """
+        Linear Transformation to increase channel dimension.
+    """
+
     def __init__(self, c_in, c_out):
         super(linear, self).__init__()
         # self.mlp = nn.Linear(c_in, c_out)
@@ -31,10 +41,19 @@ class linear(nn.Module):
     def forward(self, x):
         # x (B, F, N, M)
         out = self.mlp(x)  # -> (B, F', N, M)
+
+        # B, F, N, M = x.shape
+        # x = x.permute(0, 2, 3, 1).reshape(B*N*M, F)
+        # out = self.mlp(x).reshape(B, N, M, -1).permute(0, 3, 1, 2)
+
         return out
 
 
 class gcn(nn.Module):
+    """
+        Graph Convolutional Network layer.
+    """
+
     def __init__(self, c_in, c_out, dropout, support_len=3, order=2):
         super(gcn, self).__init__()
         self.nconv = nconv()
@@ -80,6 +99,8 @@ class TPatchGNN(nn.Module):
         Account deposits or withdrawals from an ATM are examples of an irregular time series.
 
         -- from https://www.ibm.com/docs/en/streams/4.3.0?topic=series-regular-irregular-time
+
+        The MPS device (Apple Silicon) is not supported.
 
         :param input_window_size: input window size
         :param input_vars: input variables of target time series, is the same as ``output_vars``.
@@ -152,8 +173,8 @@ class TPatchGNN(nn.Module):
         filter_input_dim = self.time_embedding_dim + 1
         self.ttcn_dim = self.hidden_dim - 1
 
-        self.filter_generators = MLP(filter_input_dim, [self.ttcn_dim, self.ttcn_dim], filter_input_dim * self.ttcn_dim,
-                                     None, 'relu')
+        self.filter_generators = MLP(filter_input_dim, [self.ttcn_dim, self.ttcn_dim],
+                                     filter_input_dim * self.ttcn_dim, None, 'relu')
         self.T_bias = nn.Parameter(torch.randn(1, self.ttcn_dim), requires_grad=True)
 
         """
@@ -199,9 +220,9 @@ class TPatchGNN(nn.Module):
         encoder_dim = self.hidden_dim
 
         if self.aggregation == 'linear':
-            self.temporal_agg = nn.Sequential(nn.Linear(self.hidden_dim * self.patch_num, encoder_dim))
+            self.temporal_agg = nn.Linear(self.hidden_dim * self.patch_num, encoder_dim)
         else:
-            self.temporal_agg = nn.Sequential(nn.Conv1d(self.d_model, encoder_dim, kernel_size=self.patch_num))
+            self.temporal_agg = nn.Conv1d(self.d_model, encoder_dim, kernel_size=self.patch_num)
 
         self.ex2_linear1 = nn.Linear(self.ex2_vars, 1)
 
@@ -231,7 +252,7 @@ class TPatchGNN(nn.Module):
             Transformable time-aware convolution (TTCN).
             :param x: shape is (batch_size * input_vars * patch_num, patch_len, 1 + te_dim)
             :param x_mask: shape is (batch_size * input_vars * patch_num, patch_len, 1)
-            :return:
+            :return: shape is (batch_size * input_vars * patch_num, ttcn_dim)
         """
         x_filter = self.filter_generators(x)  # -> (bs * input_vars * patch_num, patch_len, (te_dim + 1) * ttcn_dim)
         x_filter_mask = x_filter * x_mask.float() + (1 - x_mask.float()) * (-1e8)
@@ -240,14 +261,57 @@ class TPatchGNN(nn.Module):
         x_filter_norm = x_filter_norm.unflatten(2, [self.ttcn_dim, -1])
         # -> (bs * input_vars * patch_num, patch_len, ttcn_dim, te_dim + 1)
 
-        x_broadcast = x.unsqueeze(2).repeat(1, 1, self.ttcn_dim, 1)
-        # -> (bs * input_vars * patch_num, patch_len, ttcn_dim, te_dim + 1)
+        # x_broadcast = x.unsqueeze(2).repeat(1, 1, self.ttcn_dim, 1) # -> (bs * input_vars * patch_num, patch_len, ttcn_dim, te_dim + 1)
+        # out = (x_broadcast * x_filter_norm).sum(dim=1).sum(dim=2)  # -> (bs * input_vars * patch_num, ttcn_dim)
+        out = torch.einsum('blf, bldf -> bd', x, x_filter_norm)
 
-        out = (x_broadcast * x_filter_norm).sum(dim=1).sum(2)  # -> (bs * input_vars * patch_num, ttcn_dim)
         out = out + self.T_bias  # -> (bs * input_vars * patch_num, ttcn_dim)
         out = torch.relu(out)
 
         return out
+
+    @staticmethod
+    def shrink_and_pad_patches(x_mask: torch.Tensor, *xs: torch.Tensor) -> Tuple[torch.Tensor, ...]:
+        """
+        Shrink timesteps where all variables are missing (per patch),
+        then pad back to the maximum valid length across the batch.
+
+        Args:
+            x_mask: (B, V_mask, P, L) boolean
+            *xs:    任意多个张量, 每个形状为 (B, V_i, P, L)，
+                    其中 V_i 可以和 V_mask 不同，但 (B, P, L) 必须一致
+
+        Returns:
+            xs_padded:   list of padded tensors, 每个形状 (B, V_i, P, L_max)
+            mask_padded: (B, V_mask, P, L_max)
+        """
+        B, V_mask, P, L = x_mask.shape
+
+        # flatten (B, P) -> (B*P)
+        mask_flat = x_mask.permute(0, 2, 1, 3).reshape(B * P, V_mask, L)
+        xs_flat = [x.permute(0, 2, 1, 3).reshape(B * P, x.shape[1], L) for x in xs]
+
+        # 有效时间步: (B*P, L)
+        valid_timestep_mask = mask_flat.any(dim=1)
+
+        # shrink
+        xs_shrinked = [[xf[:, m] for xf, m in zip(xf_batch, valid_timestep_mask)] for xf_batch in xs_flat]
+        mask_shrinked = [mf[:, m] for mf, m in zip(mask_flat, valid_timestep_mask)]
+
+        # pad helper
+        def pad_list(seq_list):
+            seq_list = [t.transpose(0, 1) for t in seq_list]  # (L_valid, V)
+            return pad_sequence(seq_list, batch_first=True)  # (B*P, L_max, V)
+
+        xs_padded = [pad_list(seq) for seq in xs_shrinked]
+        mask_padded = pad_list(mask_shrinked)
+
+        # reshape back
+        L_max = mask_padded.size(1)
+        xs_out = [x_pad.view(B, P, L_max, x_pad.shape[2]).permute(0, 3, 1, 2) for x_pad in xs_padded]
+        mask_out = mask_padded.view(B, P, L_max, V_mask).permute(0, 3, 1, 2)
+
+        return mask_out, *xs_out
 
     def forward(self, x: torch.Tensor, x_mask: torch.Tensor, ex2: torch.Tensor):
         """
@@ -255,14 +319,17 @@ class TPatchGNN(nn.Module):
             :param x: shape is (batch_size, input_window_size, input_vars)
             :param x_mask: shape is the same as ``x``
             :param ex2: shape is (batch_size, input_window_size + output_window_size, ex2_vars).
-                        The pre-known exogenous variables, e.g., time.
+                        The pre-known exogenous variables, e.g., time. deltas
             :return: shape is (batch_size, output_window_size, output_vars).
         """
-        if x_mask is not None:
-            x[~x_mask] = 0.
+        x[~x_mask] = 0.
 
         x = self.patch_maker(x)  # -> (batch_size, input_vars, patch_num, patch_len)
         x_mask = self.patch_maker(x_mask)  # -> (batch_size, input_vars, patch_num, patch_len)
+        x_input_time = self.patch_maker(ex2[:, :self.input_window_size, :])
+        # -> (batch_size, ex2_vars, patch_num, patch_len)
+
+        x_mask, x, x_input_time = self.shrink_and_pad_patches(x_mask, x, x_input_time)
 
         batch_size, input_vars, patch_num, patch_len = x.shape
 
@@ -272,7 +339,8 @@ class TPatchGNN(nn.Module):
         x_time_emb = self.continuous_time_embedding(x)  # -> (batch_size * input_vars * patch_num, te_dim)
 
         x = torch.cat([x, x_time_emb], dim=-1)  # -> (batch_size * input_vars * patch_num, patch_len, 1 + te_dim)
-        hidden = self.transformable_time_aware_convolution(x, x_mask)  # -> (batch_size * input_vars * patch_num, ttcn_dim)
+        hidden = self.transformable_time_aware_convolution(x, x_mask)
+        # -> (batch_size * input_vars * patch_num, ttcn_dim)
 
         # Mask for the patch, **ttcn_dim + 1 == hidden_dim**
         mask_patch = (x_mask.float().sum(dim=1) > 0)  # -> (batch_size * input_vars * patch_num, 1)
@@ -326,8 +394,8 @@ class TPatchGNN(nn.Module):
         upcoming_time = ex2  # -> (batch_size, ex2_input_window_size, ex2_vars)
 
         upcoming_time = upcoming_time.unsqueeze(1)  # -> (batch_size, 1, ex2_input_window_size, ex2_vars)
-        upcoming_time = upcoming_time.repeat(1, input_vars, 1,
-                                             1)  # -> (batch_size, input_vars, ex2_input_window_size, ex2_vars)
+        upcoming_time = upcoming_time.repeat(1, input_vars, 1, 1)
+        # -> (batch_size, input_vars, ex2_input_window_size, ex2_vars)
 
         upcoming_time = self.ex2_linear1(upcoming_time)  # -> (..., 1)
         upcoming_time_embedding = self.continuous_time_embedding(upcoming_time)  # (..., time_embedding_dim)

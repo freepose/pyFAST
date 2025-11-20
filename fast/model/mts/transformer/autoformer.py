@@ -371,11 +371,11 @@ class Autoformer(nn.Module):
         self.decompose_series = DecomposeSeries(self.moving_avg)
 
         # encoder_embedding
-        self.encoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
+        self.encoder_value_embedding = TokenEmbedding(self.input_vars, self.d_model)
         self.encoder_dropout = nn.Dropout(self.dropout_rate)
 
         # decoder_embedding
-        self.decoder_embedding = TokenEmbedding(self.input_vars, self.d_model)
+        self.decoder_value_embedding = TokenEmbedding(self.input_vars, self.d_model)
         self.decoder_dropout = nn.Dropout(self.dropout_rate)
 
         # encoder
@@ -415,7 +415,7 @@ class Autoformer(nn.Module):
         """ x -> (batch_size, input_window_size, input_vars) """
 
         # encoder_embedding
-        x_embedding = self.encoder_embedding(x)  # -> [batch_size, input_window_size, d_model]
+        x_embedding = self.encoder_value_embedding(x)  # -> [batch_size, input_window_size, d_model]
         x_embedding = self.encoder_dropout(x_embedding)
 
         # seasonal and trend -> [batch_size, label_window_size + output_window_size, input_vars]
@@ -424,14 +424,15 @@ class Autoformer(nn.Module):
         mean = torch.mean(x, dim=1).unsqueeze(1).repeat(1, self.output_window_size, 1)
         zeros = torch.zeros([batch_size, self.output_window_size, self.input_vars], device=x.device)
         trend_init = torch.cat([trend_init[:, seq_len - self.label_window_size:, :], mean], dim=1)
-        seasonal_init = torch.cat([seasonal_init[:, seq_len - self.label_window_size:, :], zeros], dim=1)
+        seasonal_init = torch.cat([seasonal_init[:, - self.label_window_size:, :], zeros], dim=1)
 
-        # target embedding -> [batch_size, label_window_size + output_window_size, d_model]
-        target_embedding = self.decoder_embedding(seasonal_init)
+        # -> [batch_size, label_window_size + output_window_size, d_model]
+        target_embedding = self.decoder_value_embedding(seasonal_init)
         target_embedding = self.decoder_dropout(target_embedding)
 
         encoder_out, attns = self.encoder(x_embedding)
         seasonal_part, trend_part = self.decoder(target_embedding, encoder_out, trend=trend_init)
+
         out = trend_part + seasonal_part
         out = out[:, -self.output_window_size:, :]
 

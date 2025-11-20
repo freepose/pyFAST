@@ -46,6 +46,8 @@ class DecomposeSeries(nn.Module):
             :param kernel_size: the kernel size of moving average, which is an odd value.
         """
         super(DecomposeSeries, self).__init__()
+        assert kernel_size >= 1 and kernel_size % 2 == 1, "kernel size should be an odd value and >= 1."
+
         self.kernel_size = kernel_size
         self.ma = MovingAverage(self.kernel_size, 1)  # stride is fixed at 1
 
@@ -70,7 +72,10 @@ class DecomposeSeriesMultiKernels(nn.Module):
                                  the default value is 1.
         """
         super(DecomposeSeriesMultiKernels, self).__init__()
-        assert len(kernel_sizes) > 1
+        assert len(kernel_sizes) > 1, "the number of kernel sizes should be larger than 1"
+        for k in kernel_sizes:
+            assert k % 2 == 1, "kernel size should be an odd value."
+
         self.kernel_sizes = kernel_sizes
         self.kernel_num = len(kernel_sizes)
 

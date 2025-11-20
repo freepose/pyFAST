@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-
-from typing import Literal
-
 import torch
 import torch.nn as nn
-from fast.model.mts.rnn import MinLSTM
+
+from typing import Literal
+from ....mts.rnn import MinLSTM
 
 
 class SparseNARXRNN(nn.Module):
@@ -22,7 +21,6 @@ class SparseNARXRNN(nn.Module):
         :param num_layers: number of rnn layers.
         :param bidirectional: whether to use bidirectional rnn or not.
         :param dropout_rate: dropout rate.
-        :param use_layer_norm: whether to use layer norm or not.
     """
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1, ex_vars: int = 1,

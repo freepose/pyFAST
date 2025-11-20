@@ -29,7 +29,8 @@ from fast.model.mts import TimeSeriesRNN, Transformer, TSMixer
 from fast.model.mts import COAT, TCOAT, CoDR, CTRL
 from fast.model.mts_fusion import ExogenousDataDrivenPlugin as ExDD
 
-from dataset.manage_smx_datasets import prepare_smx_datasets
+from dataset.manage_smt_datasets import prepare_smt_datasets
+from dataset.manage_smi_datasets import prepare_smi_datasets
 
 
 def ts_mask_ex():
@@ -38,14 +39,17 @@ def ts_mask_ex():
     ds_device, model_device = 'cpu', 'cpu'
 
     task_config = {'ts': 'univariate', 'ts_mask': True, 'use_ex': True, 'dynamic_padding': True}
-    seq, stride, horizon = 1, 1, 1 - 1  # input window is the output window
-    train_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_train', seq, seq, horizon, stride, device=ds_device, **task_config)
-    val_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_val', seq, seq, horizon, seq, device=ds_device, **task_config)
-    test_ds = prepare_smx_datasets(data_root, 'phmd_2d_549_test', seq, seq, horizon, seq, device=ds_device, **task_config)
+    task_config.update(**{'window_size': 256, 'stride': 128})
+    train_ds = prepare_smi_datasets(data_root, 'phmd_2d_549_train', device=ds_device, **task_config)
+    val_ds = prepare_smi_datasets(data_root, 'phmd_2d_549_val', device=ds_device, **task_config)
+    test_ds = prepare_smi_datasets(data_root, 'phmd_2d_549_test', device=ds_device, **task_config)
+
+    # window_size = 10
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'DIgSILENT', window_size, window_size, 1 - window_size, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
-    scaler = scaler_fit(StandardScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask + val_ds.ts_mask)
+    scaler = scaler_fit(StandardScale(), train_ds.ts + val_ds.ts, train_ds.ts_mask_input + val_ds.ts_mask_input)
     ex_scaler = scaler_fit(StandardScale(), train_ds.ex_ts + val_ds.ex_ts, None)
 
     modeler = {
@@ -96,7 +100,7 @@ def ts_mask_ex():
                                                 'dropout_rate': 0.0}}]
     }
 
-    plugin_cls, user_args = modeler['exddm-lstm']
+    plugin_cls, user_args = modeler['exddm-std']
 
     common_ds_args = get_common_kwargs(plugin_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
@@ -110,7 +114,7 @@ def ts_mask_ex():
     model_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
-    stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
+    stopper = EarlyStop(patience=5, delta=0.01, mode='rel')
 
     criterion = MSE()
     evaluator = Evaluator(['MAE', 'RMSE'])

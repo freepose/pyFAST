@@ -4,8 +4,10 @@
 import torch
 import torch.nn as nn
 
-from ...data import InstanceScale, InstanceStandardScale, PatchMaker
-from ..mts import GAR
+from typing import List
+
+from ....data import InstanceScale, InstanceStandardScale, PatchMaker
+from ....model.mts import GAR
 
 
 class TSPT(nn.Module):
@@ -32,7 +34,7 @@ class TSPT(nn.Module):
 
     def __init__(self, input_window_size: int = 1, input_vars: int = 1,
                  output_window_size: int = 1, output_vars: int = 1,
-                 ex_vars: int = 1, ex_linear_layers: list = [32], target_linear_layers: list = [32],
+                 ex_vars: int = 1, ex_linear_layers: List[int] = [32], target_linear_layers: List[int] = [32],
                  variable_hidden_size: int = 16, patch_len: int = 24, patch_stride: int = 24, patch_padding: int = 0,
                  num_layers: int = 3, num_heads: int = 4, d_model: int = 64, dim_ff: int = 128,
                  d_k: int = None, d_v: int = None, dropout_rate: float = 0.1,
@@ -99,8 +101,7 @@ class TSPT(nn.Module):
 
         out_x = x.clone()
         for lin in self.target_linear_layers:
-            out_x = lin(out_x)
-        # [batch_size, input_window_size, variable_hidden_size]
+            out_x = lin(out_x) # [batch_size, input_window_size, variable_hidden_size]
 
         out_ex = self.patch_maker(out_ex)  # [batch_size, variable_hidden_size, patch_num, patch_len]
         out_x = self.patch_maker(out_x)  # [batch_size, variable_hidden_size, patch_num, patch_len]
@@ -119,8 +120,7 @@ class TSPT(nn.Module):
             scores = self.dropout(scores)
 
         # projection
-        out_x = out_x.unflatten(0, (
-            -1, self.variable_hidden_size))  # [batch_size, variable_hidden_size, patch_num, d_model]
+        out_x = out_x.unflatten(0, (-1, self.variable_hidden_size))  # [bs, variable_hidden_size, patch_num, d_model]
         out_x = out_x.flatten(2, 3)  # [batch_size, variable_hidden_size, patch_num * d_model]
         out_x = out_x.transpose(1, 2)  # [batch_size, patch_num * d_model, variable_hidden_size]
         out_x = self.autoregression(out_x)  # [batch_size, output_window_size, variable_hidden_size]

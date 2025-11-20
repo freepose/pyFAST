@@ -6,14 +6,14 @@
     NARX: Nonlinear AutoRegressive model with exogenous inputs.
 
 """
-from typing import Literal
 
 import torch
 import torch.nn as nn
 
-from ..base.mlp import MLP
-from ..mts.ar import AR, VAR
-from ..mts.rnn import MinLSTM
+from typing import Literal
+from ....model.base.mlp import MLP
+from ....model.mts.ar import AR, VAR, GAR
+from ....model.mts.rnn import MinLSTM
 
 
 class ARX(nn.Module):

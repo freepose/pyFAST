@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-"""
-    Multi-view Time Series Model (MvT).
-"""
+
 import torch
 import torch.nn as nn
 
-from ..base.dr import DirectionalRepresentation
-from ..mts import GAR
+from ....model.base.dr import DirectionalRepresentation
+from ....model.mts import GAR
 
 
 class MvT(nn.Module):
@@ -29,12 +27,12 @@ class MvT(nn.Module):
     """
 
     def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1,
-                 ex_retain_window_size: int = 1, ex_vars: int = 1, dropout_rate: float = 0.):
+                 ex_retain_window_size: int = None, ex_vars: int = 1, dropout_rate: float = 0.):
         super(MvT, self).__init__()
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
-        self.ex_retain_window_size = ex_retain_window_size
+        self.ex_retain_window_size = input_window_size if ex_retain_window_size is None else ex_retain_window_size
         self.ex_vars = ex_vars
 
         # For x
@@ -59,7 +57,7 @@ class MvT(nn.Module):
     def forward(self, x: torch.Tensor, ex: torch.Tensor):
         """
             :param x: [batch_size, input_window_size, input_vars]
-            :param ex: [batch_size, ex_retain_window_size, ex_vars]
+            :param ex: [batch_size, input_window_size, ex_vars]
         """
         # For x
         out_x0 = self.dt_x0(x)  # => [batch_size, input_window_size, input_vars]

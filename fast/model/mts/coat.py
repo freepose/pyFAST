@@ -7,8 +7,7 @@ import torch
 import torch.nn as nn
 
 from .ar import GAR
-from ..base import DirectionalRepresentation, SymmetricAttention
-from ..base import MLP
+from ..base import DirectionalRepresentation, SymmetricAttention, ActivationName, MLP
 from ...data.scale import InstanceScale, InstanceStandardScale
 
 
@@ -29,7 +28,8 @@ class COAT(nn.Module):
 
     def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1, output_vars: int = 1,
                  mode: Literal['dr', 'sa', 'dr_sa'] = 'dr',
-                 activation: str = 'linear', use_instance_scale: bool = False,
+                 activation: ActivationName = 'linear',
+                 use_instance_scale: bool = False,
                  dropout_rate: float = 0.):
         super(COAT, self).__init__()
 
@@ -49,15 +49,15 @@ class COAT(nn.Module):
         if self.mode == 'dr':
             self.dr0 = DirectionalRepresentation(input_window_size, input_vars, 0, activation, dropout_rate)
             self.dr1 = DirectionalRepresentation(input_window_size, input_vars, 1, activation, dropout_rate)
-            self.dr2 = DirectionalRepresentation(input_window_size, input_vars, -1, activation, dropout_rate)
+            self.dr2 = DirectionalRepresentation(input_window_size, input_vars, 2, activation, dropout_rate)
         elif self.mode == 'sa':
             self.sa0 = SymmetricAttention(self.input_vars, self.sa_hidden_size, dim=0)
             self.sa1 = SymmetricAttention(self.input_vars, self.sa_hidden_size, dim=1)
             self.sa2 = SymmetricAttention(self.input_vars, self.sa_hidden_size, dim=2)
         elif self.mode == 'dr_sa':
-            self.dr0 = DirectionalRepresentation(input_window_size, input_vars, -1, activation, dropout_rate)
-            self.dr1 = DirectionalRepresentation(input_window_size, input_vars, -1, activation, dropout_rate)
-            self.dr2 = DirectionalRepresentation(input_window_size, input_vars, -1, activation, dropout_rate)
+            self.dr0 = DirectionalRepresentation(input_window_size, input_vars, None, activation, dropout_rate)
+            self.dr1 = DirectionalRepresentation(input_window_size, input_vars, None, activation, dropout_rate)
+            self.dr2 = DirectionalRepresentation(input_window_size, input_vars, None, activation, dropout_rate)
 
             self.sa0 = SymmetricAttention(self.input_vars, self.sa_hidden_size, dim=0)
             self.sa1 = SymmetricAttention(self.input_vars, self.sa_hidden_size, dim=1)
@@ -119,26 +119,34 @@ class CoDR(nn.Module):
         Explainable Time-Varying Directional Representations for Photovoltaic Power Generation Forecasting.
         Journal of Cleaner Production 468 (2024), 143056.
         https://doi.org/10.1016/j.jclepro.2024.143056
+
+        :param input_window_size: input window size.
+        :param input_vars: number of input variables.
+        :param output_window_size: output window size.
+        :param hidden_size: hidden size.
+        :param dropout_rate: dropout rate.
+        :param fluctuate_window_size: window size for fluctuation extraction.
     """
 
     def __init__(self, input_window_size: int, input_vars: int, output_window_size: int,
-                 # output_vars: int,
-                 horizon: int = 1, hidden_size: int = 10,
-                 use_window_fluctuation_extraction: bool = True, dropout_rate: float = 0.):
+                 hidden_size: int = 32,
+                 activation: ActivationName = 'relu',
+                 dropout_rate: float = 0.,
+                 fluctuate_window_size: int = None):
         super(CoDR, self).__init__()
+
+        if fluctuate_window_size is not None:
+            assert fluctuate_window_size > 0, "'fluctuate_window_size' should be positive."
 
         self.input_window_size = input_window_size
         self.input_vars = input_vars
         self.output_window_size = output_window_size
-        # self.output_vars = output_vars
-        self.horizon = horizon
         self.hidden_size = hidden_size
+        self.fluctuate_window_size = fluctuate_window_size
 
-        self.use_window_fluctuation_extraction = use_window_fluctuation_extraction
-
-        self.dr0 = DirectionalRepresentation(self.input_window_size, self.input_vars, 0, 'relu', dropout_rate)
-        self.dr1 = DirectionalRepresentation(self.input_window_size, self.input_vars, 1, 'relu', dropout_rate)
-        self.dr2 = DirectionalRepresentation(self.input_window_size, self.input_vars, 2, 'relu', dropout_rate)
+        self.dr0 = DirectionalRepresentation(self.input_window_size, self.input_vars, 0, activation, dropout_rate)
+        self.dr1 = DirectionalRepresentation(self.input_window_size, self.input_vars, 1, activation, dropout_rate)
+        self.dr2 = DirectionalRepresentation(self.input_window_size, self.input_vars, 2, activation, dropout_rate)
 
         self.ar0 = GAR(self.input_window_size, self.hidden_size)
         self.ar1 = GAR(self.input_window_size, self.hidden_size)
@@ -153,12 +161,11 @@ class CoDR(nn.Module):
         if x_mask is not None:
             x[~x_mask] = 0.0  # set the masked values to zero
 
-        seq_last = x[:, -self.horizon:, :].detach()  # -> [batch_size, horizon, input_vars]
-        seq_last = seq_last.mean(dim=1, keepdim=True)  # -> [batch_size, 1, input_vars]
-
-        # step 1: subtract last
-        if self.use_window_fluctuation_extraction:
-            x = x - seq_last  # -> [batch_size, input_window_size, input_vars]
+        # step 1: subtract fluctuation
+        if self.fluctuate_window_size is not None:
+            seq_last = x[:, -self.fluctuate_window_size:, :].detach()  # -> [batch_size, fluctuate_window_s, input_vars]
+            seq_last_mean = seq_last.mean(dim=1, keepdim=True)  # -> [batch_size, 1, input_vars]
+            x = x - seq_last_mean  # -> [batch_size, input_window_size, input_vars]
 
         # step 2: representations
         out0 = self.ar0(self.dr0(x))  # -> [batch_size, hidden_size, input_vars]
@@ -167,15 +174,16 @@ class CoDR(nn.Module):
 
         out3 = self.ar3(x)  # -> [batch_size, hidden_size, input_vars]
 
-        # step 3: add back last
-        if self.use_window_fluctuation_extraction:
-            out3 = out3 + seq_last  # -> [batch_size, hidden_size, input_vars]
+        # step 3: add back fluctuation
+        if self.fluctuate_window_size is not None:
+            out3 = out3 + seq_last_mean  # -> [batch_size, hidden_size, input_vars]
 
         # step 4: linear combination
         out = out0 + out1 + out2 + out3  # -> [batch_size, hidden_size, input_vars]
 
         # step 5: mapping
         out = self.ar4(out)  # -> [batch_size, output_window_size, input_vars]
+
         return out
 
 
@@ -225,9 +233,9 @@ class TCOAT(nn.Module):
         self.residual_ratio = residual_ratio
 
         # DR_SA
-        self.dr0 = DirectionalRepresentation(self.input_window_size, self.input_vars, -1, 'relu', dropout_rate)
-        self.dr1 = DirectionalRepresentation(self.input_window_size, self.input_vars, -1, 'relu', dropout_rate)
-        self.dr2 = DirectionalRepresentation(self.input_window_size, self.input_vars, -1, 'relu', dropout_rate)
+        self.dr0 = DirectionalRepresentation(self.input_window_size, self.input_vars, None, 'relu', dropout_rate)
+        self.dr1 = DirectionalRepresentation(self.input_window_size, self.input_vars, None, 'relu', dropout_rate)
+        self.dr2 = DirectionalRepresentation(self.input_window_size, self.input_vars, None, 'relu', dropout_rate)
 
         self.sa0 = SymmetricAttention(self.input_vars, self.input_window_size, dim=0)
         self.sa1 = SymmetricAttention(self.input_vars, self.input_window_size, dim=1)
@@ -306,7 +314,7 @@ class CTRL(nn.Module):
 
     def __init__(self, input_window_size: int, input_vars: int = 1, output_window_size: int = 1, output_vars: int = 1,
                  rnn_hidden_size: int = 32, rnn_num_layers: int = 2, rnn_bidirectional: bool = False,
-                 activation: str = 'linear', use_instance_scale: bool = True, dropout_rate: float = 0.):
+                 activation: ActivationName = 'linear', use_instance_scale: bool = True, dropout_rate: float = 0.):
         super(CTRL, self).__init__()
 
         self.input_window_size = input_window_size

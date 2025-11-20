@@ -50,43 +50,54 @@ from fast.model.mts import STID, STNorm, MAGNet, GraphWaveNet, FourierGNN
 from fast.model.mts import TemporalConvNet, CNNRNN, CNNRNNRes, LSTNet
 from fast.model.mts import TimesFM, Timer, TSLANet
 from fast.model.mts import TimesNet, PatchTST, STAEformer, iTransformer, TSMixer, TimeXer, TimeMixer
-from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer
+from fast.model.mts import Transformer, Informer, Autoformer, FiLM, Triformer, FEDformer, Crossformer, Pathformer
 
 from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
 from dataset.manage_sst_datasets import prepare_sst_datasets, verify_sst_datasets
-from dataset.manage_smx_datasets import prepare_smx_datasets, verify_smt_datasets
+from dataset.manage_smt_datasets import prepare_smt_datasets, verify_smt_datasets
 
 
 def main():
-    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
+    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'G:/data/time_series'
     torch_float_type = torch.float32
-    ds_device, model_device = 'cpu', 'mps'
+    ds_device, model_device = 'cpu', 'cpu'
 
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
-    train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
+    # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
     # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
-    task_config = {'ts': 'univariate'}
+    task_config = {'ts': 'multivariate'}
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate_x1000', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'metr-la', 12, 12, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'PeMS-bay', 2 * 24 * 12, 2 * 12, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'GreeceWPF', 7 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SH_diabetes', 6 * 4, 2, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GoiEner_1day', 10, 1, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
 
-    overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts)
-    train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'GreeceWPF', 7 * 24, 1 * 24, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SDWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'WSTD2', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), 'intra', ds_device, **task_config)
+
+    """
+        Overwritable scaler for time series values, which is used to normalize the original time series data.
+        Dynamic scaling strategy is supported, i.e., the scaler is fitted on the training set,
+            and then applied to transform the training, validation, and test sets.
+    """
+
+    overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts)
+    scaler_transform(overwrite_scaler, train_ds.ts, inplace=True)
     if val_ds is not None:
-        val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts)
+        scaler_transform(overwrite_scaler, val_ds.ts, inplace=True)
     if test_ds is not None:
-        test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts)
-    scaler = None # scaler_fit(StandardScale(), train_ds.ts)
+        scaler_transform(overwrite_scaler, test_ds.ts, inplace=True)
+
+    scaler = scaler_fit(MinMaxScale(), train_ds.ts)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -120,7 +131,7 @@ def main():
                           'dropout': 0.0, 'activation': 'ReLU', 'initialization': 'lecun_normal',
                           'batch_normalization': False, 'shared_weights': False, 'naive_level': True}],
         'nlinear': [NLinear, {'mapping': 'gar'}],
-        'dlinear': [DLinear, {'kernel_size': 25, 'mapping': 'gar'}],
+        'dlinear': [DLinear, {'kernel_size': 25, 'mapping': 'gar', 'enable_ps_loss': False}],
         'rlinear': [RLinear, {'dropout_rate': 0., 'use_instance_scale': True, 'mapping': 'gar',
                               'd_model': 128}],  # AAAI 2025
         'std': [STD, {'kernel_size': 7, 'd_model': 128, 'use_instance_scale': True}],
@@ -128,16 +139,16 @@ def main():
                                   'use_instance_scale': True}],   # AAAI 2025
         'patchmlp': [PatchMLP, {'kernel_size': 13, 'd_model': 512, 'patch_lens': [48, 24, 12, 6],
                                 'num_encoder_layers': 1, 'use_instance_scale': True}],   # AAAI 2025
-        'transformer': [Transformer, {'label_window_size': 7, 'd_model': 128, 'num_heads': 8,
-                                      'num_encoder_layers': 1, 'num_decoder_layers': 1,
+        'transformer': [Transformer, {'label_window_size': train_ds.input_window_size // 2, 'd_model': 128,
+                                      'num_heads': 8, 'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                       'dim_ff': 512, 'dropout_rate': 0.}],
-        'informer': [Informer, {'label_window_size': 48, 'd_model': 512, 'num_heads': 8,
-                                'num_encoder_layers': 2, 'num_decoder_layers': 1,
+        'informer': [Informer, {'label_window_size': train_ds.input_window_size // 2, 'd_model': 512,
+                                'num_heads': 8, 'num_encoder_layers': 2, 'num_decoder_layers': 1,
                                 'dim_ff': 2048, 'dropout_rate': 0.05}],
-        'autoformer': [Autoformer, {'label_window_size': 0, 'd_model': 256, 'num_heads': 8,
-                                    'num_encoder_layers': 1, 'num_decoder_layers': 1,
+        'autoformer': [Autoformer, {'label_window_size': train_ds.input_window_size // 2, 'd_model': 256,
+                                    'num_heads': 8, 'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                     'dim_ff': 1024, 'dropout_rate': 0., 'moving_avg': 7}],
-        'fedformer': [FEDformer, {'label_window_size': 4, 'd_model': 256, 'num_heads': 8,
+        'fedformer': [FEDformer, {'label_window_size': train_ds.input_window_size // 2, 'd_model': 256, 'num_heads': 8,
                                   'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                   'dim_ff': 1024, 'activation': 'relu', 'moving_avg': 7, 'dropout_rate': 0.,
                                   'version': 'fourier', 'mode_select': 'random', 'modes': 32}],
@@ -175,6 +186,9 @@ def main():
         'tslanet': [TSLANet, {'patch_len': train_ds.input_window_size // 4, 'patch_stride': None, 'embedding_dim': 64,
                               'mlp_hidden_size': None, 'num_blocks': 3, 'block_type': 'asb_icb',
                               'dropout_rate': 0.5, 'use_instance_scale': True}],  # ICML 2024
+        'pathformer': [Pathformer, {'layer_nums': 3, 'k': 3, 'num_experts_list': None, 'patch_size_list': None,
+                                    'd_model': 4, 'd_ff': 64, 'residual_connection': True, 'use_instance_scale': True,
+                                    'batch_norm': False}],
         'stid': [STID, {'node_dim': 32, 'embed_dim': 1024, 'input_dim': 1, 'num_layer': 1, 'if_node': True}],
         'stnorm': [STNorm, {'tnorm_bool': True, 'snorm_bool': True,
                             'channels': 16, 'kernel_size': 2, 'blocks': 1, 'layers': 2}],
@@ -205,11 +219,11 @@ def main():
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
-    stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.996)
+    stopper = EarlyStop(patience=5, delta=0.01, mode='rel')
 
     criterion = MSE()
-    evaluator = Evaluator(['MSE', 'MAE', 'RMSE', 'MRE'])
+    evaluator = Evaluator(['MSE', 'MAE', 'PCC'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
@@ -217,15 +231,16 @@ def main():
                       scaler=scaler)
     print(trainer)
 
+    batch_size = 32
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=True,
+                epoch_range=(1, 2000), batch_size=batch_size, shuffle=True,
                 verbose=2)
 
     if test_ds is not None:
-        results = trainer.evaluate(test_ds, 32, None, False, is_online=False)
+        results = trainer.evaluate(test_ds, batch_size, None, False, is_online=False)
         print('test {}'.format(results))
     elif val_ds is not None:
-        results = trainer.evaluate(val_ds, 32, None, False, is_online=False)
+        results = trainer.evaluate(val_ds, batch_size, None, False, is_online=False)
         print('val {}'.format(results))
 
     print('Good luck!')
@@ -238,3 +253,4 @@ if __name__ == '__main__':
 
     # verify_sst_datasets()
     # verify_smt_datasets()
+    # verify_smd_datasets()

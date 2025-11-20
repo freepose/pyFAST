@@ -24,4 +24,8 @@ from .mask import AbstractMasker, RandomMasker, BlockMasker, VariableMasker, mas
 from .sst_dataset import SSTDataset, multi_step_ahead_split, train_test_split
 from .smt_dataset import SMTDataset
 from .mmt_dataset import MMTDataset
-from .smd_dataset import SMDDataset
+from .smi_dataset import SMIDataset
+from .smc_dataset import SMCDataset
+from .smir_dataset import SMIrDataset, smir_collate_fn
+from .smir_dataset import AbstractSupervisedStrategy, ThresholdSupervisedStrategy, WindowSupervisedStrategy
+from .smir_dataset import PairwiseSupervisedStrategy

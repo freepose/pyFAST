@@ -20,7 +20,7 @@
 
         The codes avoid the two problems:
         (1.a) Relative time steps/points mis-alignment, such as irregular time series data.
-        (1.b) Randomly dynamic padding on collected vary-length slicing windows, such as irregular time series data.
+        (1.b) Randomly dynamic padding on collected vary-length sliding windows, such as irregular time series data.
 
     (2) Computation efficiency: ITSF can work well on personal computers (PC).
         If dataset is large, it is recommended to load on main memory (RAM).
@@ -40,7 +40,7 @@ from fast.data import StandardScale, MinMaxScale, scaler_fit, scaler_transform
 from fast.data import RandomMasker, BlockMasker, VariableMasker, masker_generate
 from fast.train import Trainer
 from fast.stop import EarlyStop
-from fast.metric import Evaluator, MSE
+from fast.metric import Evaluator, MAE, MSE
 
 from fast.model.base import get_model_info, covert_weight_types
 from fast.model.mts import GAR, AR, VAR, ANN
@@ -51,13 +51,14 @@ from fast.model.mts import COAT, TCOAT, CoDR, CTRL
 
 from dataset.prepare_xmcdc import load_xmcdc_as_sst, load_xmcdc_as_smt
 from dataset.manage_sst_datasets import prepare_sst_datasets
-from dataset.manage_smx_datasets import prepare_smx_datasets
+from dataset.manage_smt_datasets import prepare_smt_datasets
+from dataset.manage_smc_datasets import prepare_smc_datasets
 
 
 def ts_mask():
-    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'D:/data/time_series'
+    data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'G:/data/time_series'
     torch_float_type = torch.float32
-    ds_device, model_device = 'cpu', 'mps'
+    ds_device, model_device = 'cpu', 'cpu'
 
     """
         Sparse long-sequence time series forecasting problems: sparse_fusion decomposition, shapelet representation
@@ -67,37 +68,49 @@ def ts_mask():
     # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, True, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
     task_config = {'ts': 'multivariate', 'ts_mask': True}
-    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'US_CDC_Flu-sparse', 16, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL_Sparse', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SDWPF_Sparse', 24 * 6, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'WSTD2_Sparse', 7 * 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'US_CDC_Flu', 7 * 24, 1, 12, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
-    # train_ds, val_ds, test_ds = prepare_smx_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'HumanActivity', 3000, 1000, 1, 1000, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'USHCN', 745, 31, 1, 31, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'PhysioNet-sparse', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'MIMIC-III-Ext-tPatchGNN-spars', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'MIMIC-III-v1.4-spars', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'MIMIC-IV-v3.1-spars', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device, **task_config)
+
+    # train_ds, val_ds, test_ds = prepare_smt_datasets(data_root, 'SouthPT_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), 'inter', ds_device, **task_config)
+
+    # train_ds, val_ds, test_ds = prepare_smc_datasets(data_root, 'PhysioNet', 1440, 1440, 1, 1, (0.6, 0.2, 0.2), 'inter', ds_device)
 
     """
         Global **static mask**. This simulates the missing mechanism of real world.
+        chose: RandomMasker(0.8) | BlockMasker(12, 0.8) | VariableMasker(0.8)
     """
-    # train_ds.ts_mask = masker_generate(RandomMasker(0.8), train_ds.ts_mask) # BlockMasker(12, 0.8) | VariableMasker(0.8)
+
+    # masker_generate(RandomMasker(0.8), train_ds.ts_mask, inplace=True)
     # if val_ds is not None:
-    #     val_ds.ts_mask = masker_generate(RandomMasker(0.8), val_ds.ts_mask)
+    #     masker_generate(RandomMasker(0.8), val_ds.ts_mask, inplace=True)
     # if test_ds is not None:
-    #     test_ds.ts_mask = masker_generate(RandomMasker(0.8), test_ds.ts_mask)
+    #     masker_generate(RandomMasker(0.8), test_ds.ts_mask, inplace=True)
+    #
+    # dynamic_masker = RandomMasker(0.95)
 
     """
         Overwritable scalers and dynamic scalers. 
     """
-    overwrite_scaler = scaler_fit(MinMaxScale(), train_ds.ts, train_ds.ts_mask)
-    train_ds.ts = scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask)
+    overwrite_scaler = scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
+    scaler_transform(overwrite_scaler, train_ds.ts, train_ds.ts_mask, inplace=True, show_progress=True)
     if val_ds is not None:
-        val_ds.ts = scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask)
+        scaler_transform(overwrite_scaler, val_ds.ts, val_ds.ts_mask, inplace=True, show_progress=True)
     if test_ds is not None:
-        test_ds.ts = scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask)
+        scaler_transform(overwrite_scaler, test_ds.ts, test_ds.ts_mask, inplace=True, show_progress=True)
 
     # Dynamic scaling while training or evaluation.
-    scaler = None # scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
+    scaler = None  # scaler_fit(StandardScale(), train_ds.ts, train_ds.ts_mask)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -127,16 +140,18 @@ def ts_mask():
                           'activation': 'relu', 'dropout_rate': 0.}],
         'tsmixer': [TSMixer, {'num_blocks': 2, 'block_hidden_size': 2048, 'dropout_rate': 0.05,
                               'use_instance_scale': True}],  # TMLR 2023
-        'coat': [COAT, {'mode': 'dr', 'activation': 'linear', 'use_instance_scale': True, 'dropout_rate': 0.}],
+        'coat': [COAT, {
+            'mode': 'dr', 'activation': 'linear', 'use_instance_scale': True, 'dropout_rate': 0.
+        }],
+
         "tcoat": [TCOAT, {"rnn_hidden_size": 8, "rnn_num_layers": 2, "rnn_bidirectional": True,
                           "residual_window_size": 240, "residual_ratio": 0.5, "dropout_rate": 0.05}],
-        "codr": [CoDR, {"horizon": 1, "hidden_size": 179,
-                        "use_window_fluctuation_extraction": True, "dropout_rate": 0.05}],
+
         "ctrl": [CTRL, {"rnn_hidden_size": 32, "rnn_num_layers": 2, "rnn_bidirectional": False,
                         "activation": 'linear', "use_instance_scale": True, "dropout_rate": 0.05}]
     }
 
-    model_cls, user_args = ts_modeler['dlinear']
+    model_cls, user_args = ts_modeler['coat']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}
@@ -148,12 +163,11 @@ def ts_mask():
     # loger.info(str(model))
 
     model_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = optim.Adam(model_params, lr=0.0001, weight_decay=0.)
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.996)
-    stopper = EarlyStop(patience=5, delta=0.01, mode='rel', verbose=False)
-    dynamic_mask = RandomMasker(0.95) # RandomMask(0.95) ｜ VariableMasker(0.95) | BlockMasker(12, 0.95)
+    optimizer = optim.Adam(model_params, lr=0.0005, weight_decay=0.)
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.996)
+    stopper = EarlyStop(patience=5, delta=0.05, mode='rel')
     criterion = MSE()
-    evaluator = Evaluator(['MSE', 'MAE'])
+    evaluator = Evaluator(['MSE', 'MAE', 'PCC'])
 
     trainer = Trainer(get_device(model_device), model, is_initial_weights=True,
                       optimizer=optimizer, lr_scheduler=lr_scheduler, stopper=stopper,
@@ -162,7 +176,7 @@ def ts_mask():
     loger.info(str(trainer))
 
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=32, shuffle=True, # forecast_mask=dynamic_mask,
+                epoch_range=(1, 2000), batch_size=32, shuffle=True,  # forecast_masker=dynamic_masker,
                 verbose=2)
 
     if test_ds is not None:
@@ -178,4 +192,5 @@ def ts_mask():
 if __name__ == '__main__':
     initial_seed(2025)
     initial_logger()
+
     ts_mask()

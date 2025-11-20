@@ -27,7 +27,7 @@ def rolling_forecasting(model, given_x: torch.Tensor, steps: int = 30) -> torch.
     return predictions
 
 
-def count_weights(model: nn.Module, unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> \
+def count_weights(model: nn.Module, unit: Literal['k', 'm', 'g', '', 'auto'] = 'auto') -> \
         Dict[str, Union[int, float, str]]:
     """
     Count parameter numbers of a given torch module.
@@ -46,13 +46,17 @@ def count_weights(model: nn.Module, unit: Literal['k', 'm', 'g', 'auto'] = 'auto
             unit = 'G'
         elif total_params >= 1024 * 1024:  # More than 1 million parameters
             unit = 'M'
-        else:  # Less than 1 million parameters
+        elif total_params >= 1024:  # More than 1 thousand parameters
             unit = 'K'
+        else:  # Less than 1 million parameters
+            unit = ''
     else:
         unit = str.upper(unit)
 
     divisor = 1
-    if unit == 'K':  # a kilo
+    if unit == '':  # no unit
+        divisor = 1
+    elif unit == 'K':  # a kilo
         divisor = 1024
     elif unit == 'M':  # a million
         divisor = 1024 * 1024
@@ -85,7 +89,7 @@ def collect_model_members(model_inst: nn.Module) -> Dict[str, Any]:
     return ret_members
 
 
-def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', 'auto'] = 'auto') -> str:
+def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', '', 'auto'] = 'auto') -> str:
     """
         Get the model information in string format.
         :param model: model instance.
@@ -95,8 +99,12 @@ def get_model_info(model: nn.Module, count_unit: Literal['k', 'm', 'g', 'auto'] 
     """
 
     weight_counts = count_weights(model, count_unit)
-    count_str = '{:.2f}{}/{:.2f}{}'.format(weight_counts['trainable'], weight_counts['unit'],
-                                           weight_counts['total'], weight_counts['unit'])
+
+    if weight_counts['unit'] == '':
+        count_str = '{:.0f}/{:.0f}'.format(weight_counts['trainable'], weight_counts['total'])
+    else:
+        count_str = '{:.2f}{}/{:.2f}{}'.format(weight_counts['trainable'], weight_counts['unit'],
+                                               weight_counts['total'], weight_counts['unit'])
 
     members = collect_model_members(model)
     params_dict = {**members, 'trainable/total': count_str}
@@ -211,7 +219,18 @@ def init_weights(module: nn.Module):
 
 
 def to_string(*kwargs) -> str:
-    """Several numbers to string."""
-    _list = [str(kwargs[0])] + ['{:.6f}'.format(_t) for _t in kwargs[1:]]  # parameters to strings
-    total = '\t'.join(_list)  # join these strings to another string
-    return total
+    """
+        Several kwargs to string with tab separation.
+        :param kwargs: several arguments.
+        :return: the string of arguments separated by tab.
+    """
+    formated_kwargs = []
+    for kw in kwargs:
+        if isinstance(kw, str):
+            formated_kwargs.append(kw)
+        elif isinstance(kw, int):
+            formated_kwargs.append(kw)
+        elif isinstance(kw, float):
+            formated_kwargs.append(f'{kw:.6f}')
+
+    return '\t'.join(formated_kwargs)

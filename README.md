@@ -4,6 +4,11 @@
 
 [pyFAST](https://github.com/freepose/pyFAST) (Forecasting And time-Series in PyTorch) is a **research-driven, modular Python framework** built for **advanced and efficient time series analysis**, especially excelling in **multi-source and sparse data scenarios**.  Leveraging PyTorch, pyFAST provides a unified and flexible platform for forecasting, imputation, and generative modeling, integrating cutting-edge **LLM-inspired architectures**, Variational Autoencoders, and classical time series models.
 
+**Update logs:**
+*   **2025-10-20:** All the models are categorized for better navigation and usability.
+*   **2025-09-15:** ``SMTDataset`` and ``SSTDataset`` supports both CSV file(s) in directories and zipped files at the same time.
+*   **2025-08-26:** Released the software as well as benchmarking results and datasets link.
+
 **Unlock the Power of pyFAST for:**
 
 *   **Alignment-Free Multi-source Time Series Analysis:**  Process and fuse data from diverse sources without the need for strict temporal alignment, inspired by Large Language Model principles.
@@ -33,24 +38,6 @@ As depicted in the Software Overview Diagram above (Figure 1), pyFAST's `fast/` 
 *   **`train.py` Module:**  Provides the `Trainer` class to streamline the entire model training pipeline. Features include device management, model compilation, optimizer and scheduler management, training loop, validation, early stopping, checkpointing, and visualization integration.
 *   **`metric/` package:** Offers a comprehensive suite of evaluation metrics for time series tasks, managed by the `Evaluator` class. Includes standard metrics (MSE, MAE, etc.) and specialized sparse metrics for masked data.
 *   **`generative/` package:** (Optional, if you want to highlight) Focuses on generative time series modeling, providing implementations of Time series VAEs and Transformer-based VAEs.
-
-**Supported Models**
-
-| Exogenous\Target Variables    | Dense            | Sparse                |
-|-------------------------------|------------------|-----------------------|
-| wo Exogenous                  | ✅ ts             | ✅ ts_mask             |
-| Exogenous                     | ✅ ts_ex          | ✅ ts_mask_ex          |
-| Exogenous sparse              | ✅ ts_ex_mask     | ✅ ts_mask_ex_mask     |
-| Exogenous2                    | ✅ ts_ex2         | ✅ ts_mask_ex2         |
-| Exogenous + Exogenous2        | ✅ ts_ex_ex2      | ✅ ts_mask_ex_ex2      |
-| Exogenous sparse + Exogenous2 | ✅ ts_ex_mask_ex2 | ✅ ts_mask_ex_mask_ex2 |
-| Static                        | ❌ ts_static      | ❌ ts_mask_static      |
-
-Symbols: ✅ = supports / typically adaptable, ❌ = does not natively support.
-For example, ``ts`` indicates the target time series is dense without exogenous variables.
-``ts_ex`` indicates the target time series is dense with dense exogenous variables.
-``ts_ex_mask`` indicates the target time series is dense, but the exogenous variables are sparse.
-``ts_mask_ex2`` indicates the target time series is sparse, with preknown exogenous variables.
 
 ## Installation
 
@@ -88,7 +75,7 @@ val_ds = SSTDataset(ts, input_window_size=10, output_window_size=1).split(0.8, 1
 
 # Initialize the model (e.g., ANN)
 model = ANN(
-    input_window_size=train_ds.input_window_size,  # Adapt input window size from dataset
+    input_window_size=train_ds.window_size,  # Adapt input window size from dataset
     output_window_size=train_ds.output_window_size,  # Adapt output window size from dataset, a.k.a. prediction steps
     hidden_sizes=32  # Hidden layer size
 )
@@ -123,6 +110,101 @@ pyFAST is designed to handle various time series data structures:
     *   **Sparse Data Ready:**  Models and metrics are designed to effectively work with sparse time series data and missing values, utilizing masks for accurate computations.
     *   **Exogenous Variable Integration:** Seamlessly incorporate external factors (exogenous variables) to enrich your time series models.
     *   **Variable-Length Sequence Support:**  Utilizes dynamic padding to efficiently process time series with varying lengths within batches, optimizing training and inference.
+
+### Supporting Models
+
+pyFAST offers a wide range of time series models, categorized as follows:
+
+*   **Multivariate Time Series Forecasting:**
+    *   [AR, GAR, VAR](fast/model/mts/ar.py): Autoregressive models.
+    *   [ANN](fast/model/mts/ar.py): Artificial Neural Networks.
+    *   [NLinear](fast/model/mts/dlinear.py): Normalization-Linear models.
+    *   [DLinear](fast/model/mts/dlinear.py): Decomposition-Linear models.
+    *   [RLinear](fast/model/mts/rlinear.py): Revisiting Long-term Time Series Forecasting.
+    *   [STD](fast/model/mts/rlinear.py): Seasonal-Trend Decomposition.
+    *   [TimeSeriesRNN, EncoderDecoder](fast/model/mts/rnn.py): RNN-based forecasting architectures, such as RNN, GRU, LSTM and miniLSTM.
+
+    *   [TemporalConvNet](fast/model/mts/tcn.py): Temporal Convolutional Network.
+    *   [CNN1D, CNNRNN, CNNRNNRes](fast/model/mts/cnn.py): Convolutional sequence models.
+    *   [LSTNet](fast/model/mts/lstnet.py): LSTM + CNN hybrid forecasting model.
+
+    *   [TSMixer](fast/model/mts/tsmixer.py): Time Series Mixer.
+    *   [PatchMLP](fast/model/mts/patchmlp.py): Patch-based MLP forecaster.
+    *   [KAN](fast/model/mts/kan.py): Kolmogorov-Arnold Networks.
+
+    *   [DeepResidualNetwork](fast/model/mts/drn.py): Deep residual forecasting network.
+
+    *   [Amplifier](fast/model/mts/amplifier.py): Feature amplification forecasting model.
+
+    *   [Transformer](fast/model/mts/transformer/transformer.py): Attention is All You Need.
+    *   [Informer](fast/model/mts/transformer/informer.py): Efficient long-sequence forecasting.
+    *   [Autoformer](fast/model/mts/transformer/autoformer.py): Decomposition Transformer.
+    *   [FEDformer](fast/model/mts/transformer/fedformer.py): Frequency-enhanced Transformer.
+    *   [FiLM](fast/model/mts/transformer/film.py): Frequency improved Legendre Memory Model.
+    *   [Triformer](fast/model/mts/transformer/triformer.py): Tri-level Transformer.
+    *   [Crossformer](fast/model/mts/transformer/crossformer.py): Cross-dimension attention.
+    *   [TimesNet](fast/model/mts/transformer/timesnet.py): Multi-periodicity modeling.
+    *   [PatchTST](fast/model/mts/transformer/patchtst.py): Patch-based Transformer.
+    *   [STAEformer](fast/model/mts/transformer/staeformer.py): Spatio-Temporal Adaptive Embedding Transformer.
+    *   [iTransformer](fast/model/mts/transformer/itransformer.py): Inverted Transformers Are Effective for Time Series Forecasting.
+    *   [TimesFM](fast/model/mts/transformer/timesfm.py): Time Series Foundation Model.
+    *   [Timer](fast/model/mts/transformer/timer.py): Time-aware Transformer.
+    *   [TimeXer](fast/model/mts/transformer/timexer.py): Cross-time interaction Transformer.
+    *   [TimeMixer](fast/model/mts/transformer/timemixer.py): Temporal mixing architecture.
+    *   [TSLANet](fast/model/mts/transformer/tslanet.py): TSLANet: Rethinking Transformers for Time Series Representation Learning.
+    *   [Pathformer](fast/model/mts/transformer/pathformer.py): Path-based Transformer.
+
+    *   [STID](fast/model/mts/gnn/stid.py): Spatio-temporal Identity model.
+    *   [STNorm](fast/model/mts/gnn/stnorm.py): Spatio-temporal Normalization.
+    *   [MAGNet](fast/model/mts/gnn/magnat.py): Magnetic Graph Neural Network.
+    *   [GraphWaveNet](fast/model/mts/gnn/gwn.py): WaveNet-style graph model.
+    *   [FourierGNN](fast/model/mts/gnn/fgnn.py): Fourier-based GNN.
+    *   [AGCRN](fast/model/mts/gnn/agcrn.py): Adaptive GCRN.
+    *   [GAIN](fast/model/mts/gnn/gain.py): A multivariate time series graph neural network for district heat load forecasting.
+
+    *   [MSL](fast/model/mts/msl.py): Multivariate Shapelet Learning.
+    *   [COAT, TCOAT, CoDR, CTRL](fast/model/mts/coat.py): COAT (Collaborative Attention), TCOAT (Temporal Collaborative Attention), CoDR (Explainable Time-Varying Directional Representations), CTRL (Collaborative Temporal Representation Learning).
+    *   [DRED](fast/model/mts/dred.py): Directional Representation Encoder–Decoder.
+
+*   **Multivariate Time Series Forecasting with Exogenous Time Series:**
+    *   [ARX, NARXMLP, NARXRNN](fast/model/mts_fusion/ex/narx.py): ARX: AutoRegressive with eXogenous inputs; NARX via MLP/RNN.
+    *   [DSAR](fast/model/mts_fusion/ex/dsar.py): Dual Sides Auto-Regression.
+    *   [DGR](fast/model/mts_fusion/ex/dgr.py): Dual-grained Representation.
+    *   [MvT](fast/model/mts_fusion/ex/mvt.py): Multi-view Time Series Model.
+    *   [DGDR](fast/model/mts_fusion/ex/dgdr.py): Dual-grained Directional Representation.
+    *   [GAINGE](fast/model/mts_fusion/ex/gainge.py): A multivariate time series GNN for district heat load forecasting.
+    *   [Cabin](fast/model/mts_fusion/ex/cabin.py): Cabin: Collaborative and Adaptive Framework integrating ambient variables.
+    *   [TSPT](fast/model/mts_fusion/ex/tspt.py): Temporal Structure-Preserving Transformer.
+    *   [TemporalCausalNet](fast/model/mts_fusion/ex/temporalcausalnet.py): Temporal Causal Net.
+
+
+*   **Sparse Time Series Forecasting:**
+    *   [AR, GAR, VAR, ANN](fast/model/mts/ar.py): AR, GAR, VAR, ANN
+    *   [TimeSeriesRNN, EncoderDecoder](fast/model/mts/rnn.py): RNN-based forecasting architectures, such as RNN, GRU, LSTM and miniLSTM.
+    *   [Transformer](fast/model/mts/transformer/transformer.py): Attention is All You Need.
+
+*   **Sparse Multivariate Time Series Forecasting with Exogenous Time Series:**
+    *   [TPatchGNN](fast/model/sparse_fusion/ex2/tpatchgnn.py): Transformer-Patch Graph Neural Network for sparse fusion.
+    *   [CRU](fast/model/sparse_fusion/ex2/cru.py): CRUWrapper: lightweight continuous-time recurrent unit wrapper.
+
+    *   [TransformerMaskEx2](fast/model/sparse_fusion/ex2/transformer_mask_ex2.py): Transformer for masked sparse exogenous data.
+    *   [InformerMaskEx2](fast/model/sparse_fusion/ex2/informer_mask_ex2.py): Informer variant for masked exogenous inputs.
+    *   [AutoformerMaskEx2](fast/model/sparse_fusion/ex2/autoformer_mask_ex2.py): Autoformer for sparse fusion with masked signals.
+    *   [FEDformerMaskEx2](fast/model/sparse_fusion/ex2/fedformer_mask_ex2.py): FEDformer adapted for masked exogenous data.
+
+
+*   **Irregular Time Series Forecasting:**
+    *   [TimeSeriesRNN, EncoderDecoder](fast/model/mts/rnn.py): RNN-based forecasting architectures, such as RNN, GRU, LSTM and miniLSTM.
+    *   [Transformer](fast/model/mts/transformer/transformer.py): Attention is All You Need.
+
+
+*   **Time Series Imputation:**
+    *   [GRU-D](fast/impute/gru_d.py): Gated Recurrent Unit with Decay.
+    *   [RITS](fast/impute/rits.py): Recurrent Imputation for Time Series.
+    *   [BRITS](fast/impute/brits.py): Bidirectional Recurrent Imputation for Time Series.
+    *   [M-RNN](fast/impute/m_rnn.py): Missing data Recurrent Neural Networks.
+
+
 ## Benchmarking Performance
 
 pyFAST's performance and efficiency have been rigorously evaluated against established time series libraries and models on benchmark datasets.

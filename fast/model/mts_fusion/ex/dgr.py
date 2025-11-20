@@ -4,12 +4,12 @@
 """
     Dual‐grained Representation (DGR).
 """
-from typing import Literal
 
 import torch
 import torch.nn as nn
 
-from ..mts import TimeSeriesRNN
+from typing import Literal
+from ...mts import TimeSeriesRNN
 
 
 class DGR(nn.Module):
@@ -35,7 +35,7 @@ class DGR(nn.Module):
         :param decoder_way: the decoder way is in ['inference', 'mapping'].
     """
     def __init__(self, input_window_size: int = 1, input_vars: int = 1, output_window_size: int = 1,
-                 ex_retain_window_size: int = 1, ex_vars: int = 1,
+                 ex_retain_window_size: int = None, ex_vars: int = 1,
                  rnn_cls: Literal['rnn', 'lstm', 'gru', 'minlstm'] = 'gru',
                  hidden_size: int = 32, ex_hidden_size: int = 32, num_layers: int = 1, bidirectional: bool = False,
                  dropout_rate: float = 0., decoder_way: Literal['inference', 'mapping'] = 'inference'):
@@ -43,7 +43,7 @@ class DGR(nn.Module):
         self.input_window_size = input_window_size
         self.input_size = input_vars
         self.output_window_size = output_window_size
-        self.ex_retain_window_size = ex_retain_window_size
+        self.ex_retain_window_size = input_window_size if ex_retain_window_size is None else ex_retain_window_size
         self.ex_vars = ex_vars
 
         self.rnn_cls = rnn_cls
@@ -72,8 +72,8 @@ class DGR(nn.Module):
 
     def forward(self, x: torch.Tensor, ex: torch.Tensor):
         """
-            :param x: slicing window of the target variable. [batch_size, window_size, input_size]
-            :param ex: slicing window of exogenous variables.
+            :param x: sliding window of the target variable. [batch_size, input_window_size, input_vars]
+            :param ex: sliding window of exogenous variables.
                       [batch_size, ex_retain_window_size, ex_vars],
                    or [batch_size, output_window_size, ex_vars],
         """

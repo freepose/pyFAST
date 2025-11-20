@@ -6,8 +6,8 @@ from typing import Literal, List
 import torch
 import torch.nn as nn
 
-from ..mts import GAR, EncoderDecoder
-from ..base import MLP, DirectionalRepresentation
+from ....model.mts import GAR, EncoderDecoder
+from ....model.base import MLP, DirectionalRepresentation
 
 
 class TemporalCausalNet(nn.Module):

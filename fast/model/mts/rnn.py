@@ -63,15 +63,20 @@ class TimeSeriesRNN(nn.Module):
         rnn_out_dim = self.hidden_size * 2 if self.bidirectional else self.hidden_size
         if self.decoder_way == 'inference':
             self.l1 = nn.Linear(rnn_out_dim, self.input_vars)
-            if self.input_vars != self.output_vars:
-                self.l2 = nn.Linear(self.input_vars, self.output_vars)
+            self.l2 = nn.Linear(self.input_vars, self.output_vars) if self.input_vars != self.output_vars else None
         else:
             self.l3 = nn.Linear(rnn_out_dim, self.output_vars)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor, x_mask: torch.Tensor) -> torch.Tensor:
         """
-        :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x: shape is (batch_size, input_window_size, input_vars).
+            :param x_mask: shape is (batch_size, input_window_size, input_vars).
+            :return: shape is (batch_size, output_window_size, output_vars).
         """
+
+        if x_mask is not None:
+            x[~x_mask] = 0.
+
         x = self.l0(x)  # -> (batch_size, input_window_size, input_vars)
         x = x.relu()
 
@@ -88,7 +93,7 @@ class TimeSeriesRNN(nn.Module):
                 inputs = out
                 outputs[:, t:t+1, :] = self.l2(out) if self.l2 is not None else out
         else:
-            # Decoder: mapping, assure that input_window_size >= output_window_size
+            # Decoder: mapping, assure that ``input_window_size >= output_window_size``
             rnn_output, hidden = self.rnn(x, hidden)    # -> (batch_size, input_window_size, hidden_size)
             out = self.l3(rnn_output)   # -> (batch_size, input_window_size, output_vars)
             outputs = out[:, -self.output_window_size:, :]

@@ -512,7 +512,7 @@ class RAE(AbstractMetric):
     def reset(self):
         self.sum_abs_errors = 0.0
         self.sum_abs_deviation = 0.0
-        self.targets = []
+        self.targets = []   # memory-consuming for large-scale dataset
 
     def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
 
@@ -577,7 +577,7 @@ class RSE(AbstractMetric):
     def reset(self):
         self.sum_squared_errors = 0.0
         self.sum_squared_deviation = 0.0
-        self.targets = []
+        self.targets = []   # memory-consuming for large-scale dataset
         self.mean: float = 0.0
 
     def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
@@ -642,7 +642,7 @@ class R2(AbstractMetric):
     def reset(self):
         self.sum_squared_errors = 0.0
         self.sum_squared_deviation = 0.0
-        self.targets = []
+        self.targets = []   # memory-consuming for large-scale dataset
 
     def update(self, prediction: torch.Tensor, real: torch.Tensor, mask: torch.Tensor = None):
         if mask is not None:
@@ -809,3 +809,6 @@ class PCC(AbstractMetric):
         denominator = (var_x * var_y).sqrt()
 
         return cov_xy / denominator
+
+
+

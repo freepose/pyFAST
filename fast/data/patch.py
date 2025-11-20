@@ -31,7 +31,7 @@ class PatchMaker:
         self.padding = padding
 
         self.padding_layer = nn.ReplicationPad1d((0, self.padding))
-        self.patch_num = (self.seq_len + self.padding - self.patch_len) // self.patch_stride + 1
+        self.patch_num: int = (self.seq_len + self.padding - self.patch_len) // self.patch_stride + 1
         assert self.patch_num > 0, "No patches can be generated."
 
     def __len__(self):
@@ -45,7 +45,11 @@ class PatchMaker:
         x = x.transpose(-2, -1)  # -> (..., n_vars, seq_len)
 
         if self.padding > 0:
-            x = self.padding_layer(x)   # -> (..., n_vars, seq_len + padding)
+            if x.dtype == torch.bool:
+                last = x[..., -1:].expand(*x.shape[:-1], self.padding)
+                x = torch.cat((x, last), dim=-1)  # -> (..., n_vars, seq_len + padding)
+            else:
+                x = self.padding_layer(x)  # -> (..., n_vars, seq_len + padding)
 
         ## The ``unfold`` method is not used here because it does not support padding in some devices (e.g., MPS).
         # patches = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_stride)
