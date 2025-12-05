@@ -70,7 +70,8 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 336, 96, 1, 1, (0.6, 0.2, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 336, 96, 1, 1, (0.6, 0.2, 0.2), ds_device,
+                                                     **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
@@ -97,7 +98,7 @@ def main():
     if test_ds is not None:
         scaler_transform(overwrite_scaler, test_ds.ts, inplace=True)
 
-    scaler = None # scaler_fit(MinMaxScale(), train_ds.ts)
+    scaler = None  # scaler_fit(MinMaxScale(), train_ds.ts)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -120,25 +121,33 @@ def main():
                                   'rnn_cls': 'gru', 'rnn_hidden_size': 32, 'rnn_num_layers': 1,
                                   'rnn_bidirectional': False, 'dropout_rate': 0., 'decoder_way': 'mapping',
                                   'residual_window_size': 5, 'residual_ratio': 0.1}],
-        'lstnet': [LSTNet, {'cnn_out_channels': 50, 'cnn_kernel_size': 9,
-                            'rnn_hidden_size': 50, 'rnn_num_layers': 1,
-                            'skip_window_size': 24, 'skip_gru_hidden_size': 20,
-                            'highway_window_size': 24, 'dropout_rate': 0.}],
-        'nhits': [NHiTS, {'n_blocks': [1, 1, 1], 'n_layers': [2] * 8,
-                          'hidden_size': [[512, 512], [512, 512], [512, 512]],
-                          'pooling_sizes': [8, 8, 8], 'downsample_frequencies': [24, 12, 1],
-                          'pooling_mode': 'max', 'interpolation_mode': 'linear',
-                          'dropout': 0.0, 'activation': 'ReLU', 'initialization': 'lecun_normal',
-                          'batch_normalization': False, 'shared_weights': False, 'naive_level': True}],
+        'lstnet': [LSTNet, {
+            'cnn_out_channels': 50, 'cnn_kernel_size': 9,
+            'rnn_hidden_size': 50, 'rnn_num_layers': 1,
+            'skip_window_size': 24, 'skip_gru_hidden_size': 20,
+            'highway_window_size': 24, 'dropout_rate': 0.
+        }],
+
+        'nhits': [NHiTS, {
+            'n_blocks': [1, 1, 1], 'n_layers': [2] * 8,
+            'hidden_size': [[512, 512], [512, 512], [512, 512]],
+            'pooling_sizes': [8, 8, 8], 'downsample_frequencies': [24, 12, 1],
+            'pooling_mode': 'max', 'interpolation_mode': 'linear',
+            'dropout': 0.0, 'activation': 'ReLU', 'initialization': 'lecun_normal',
+            'batch_normalization': False, 'shared_weights': False, 'naive_level': True
+        }],
+
         'nlinear': [NLinear, {'mapping': 'gar'}],
         'dlinear': [DLinear, {'kernel_size': 25, 'mapping': 'gar', 'enable_ps_loss': False}],
-        'rlinear': [RLinear, {'dropout_rate': 0., 'use_instance_scale': True, 'mapping': 'gar',
-                              'd_model': 128}],  # AAAI 2025
+        'rlinear': [RLinear, {
+            'dropout_rate': 0., 'use_instance_scale': True, 'mapping': 'gar',
+            'd_model': 128
+        }],  # AAAI 2025
         'std': [STD, {'kernel_size': 7, 'd_model': 128, 'use_instance_scale': True}],
         'amplifier': [Amplifier, {'kernel_size': 7, 'hidden_size': 128, 'use_sci_block': True,
-                                  'use_instance_scale': True}],   # AAAI 2025
+                                  'use_instance_scale': True}],  # AAAI 2025
         'patchmlp': [PatchMLP, {'kernel_size': 13, 'd_model': 512, 'patch_lens': [48, 24, 12, 6],
-                                'num_encoder_layers': 1, 'use_instance_scale': True}],   # AAAI 2025
+                                'num_encoder_layers': 1, 'use_instance_scale': True}],  # AAAI 2025
         'transformer': [Transformer, {'label_window_size': train_ds.input_window_size // 2, 'd_model': 128,
                                       'num_heads': 8, 'num_encoder_layers': 1, 'num_decoder_layers': 1,
                                       'dim_ff': 512, 'dropout_rate': 0.}],
@@ -154,11 +163,15 @@ def main():
                                   'version': 'fourier', 'mode_select': 'random', 'modes': 32}],
         'film': [FiLM, {'d_model': 128, 'use_instance_scale': True}],
         'triformer': [Triformer, {'channels': 32, 'patch_sizes': [8, 3], 'mem_dim': 5}],
-        'crossformer': [Crossformer, {'d_model': 128, 'num_heads': 8, 'num_encoder_layers': 1, 'num_decoder_layers': 1,
-                                      'dim_ff': 512, 'dropout_rate': 0., 'factor': 5,
-                                      'seg_len': 24, 'win_size': 2}],
-        'timesnet': [TimesNet, {'d_model': 512, 'num_encoder_layers': 1, 'dim_ff': 2048, 'dropout_rate': 0.,
-                                'num_kernels': 6, 'top_k': 5, 'use_instance_scale': False}],
+        'crossformer': [Crossformer, {
+            'd_model': 128, 'num_heads': 8, 'num_encoder_layers': 1, 'num_decoder_layers': 1,
+            'dim_ff': 512, 'dropout_rate': 0., 'factor': 5,
+            'seg_len': 24, 'win_size': 2
+        }],
+        'timesnet': [TimesNet, {
+            'd_model': 512, 'num_encoder_layers': 1, 'dim_ff': 2048, 'dropout_rate': 0.,
+            'num_kernels': 6, 'top_k': 5, 'use_instance_scale': False
+        }],
         'patchtst': [PatchTST, {'d_model': 64, 'num_heads': 8, 'num_encoder_layers': 6, 'dim_ff': 256,
                                 'patch_len': 5, 'patch_stride': 2, 'patch_padding': 2,
                                 'use_instance_scale': True}],
@@ -193,7 +206,7 @@ def main():
         'stnorm': [STNorm, {'tnorm_bool': True, 'snorm_bool': True,
                             'channels': 16, 'kernel_size': 2, 'blocks': 1, 'layers': 2}],
         'magnet': [MAGNet, {'label_window_size': train_ds.input_window_size, 'conv2d_in_channels': 1,
-                            'residual_channels': 32,  'conv_channels': 32, 'skip_channels': 4, 'end_channels': 128,
+                            'residual_channels': 32, 'conv_channels': 32, 'skip_channels': 4, 'end_channels': 128,
                             'node_dim': 40, 'tanhalpha': 3.0, 'static_feat': None, 'dilation_exponential': 1,
                             'kernel_size': 7, 'gcn_depth': 2, 'gcn_true': False, 'propalpha': 0.05,
                             'layer_norm_affline': True, 'buildA_true': True, 'predefined_A': None, 'dropout': 0.3}],
@@ -208,7 +221,7 @@ def main():
                         'cnn_kernel_size': 3, 'cnn_out_channels': 16, 'highway_window_size': 10, 'dropout_rate': 0.5}],
     }
 
-    model_cls, user_args = ts_modeler['timesnet']
+    model_cls, user_args = ts_modeler['ar']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}

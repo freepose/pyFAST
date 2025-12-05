@@ -42,6 +42,7 @@ from .gnn.agcrn import AGCRN
 from .gnn.gain import GAIN
 
 from .msl import MSL
+from .gshapelet import GShapelets
 from .coat import COAT, TCOAT, CoDR, CTRL
 from .dred import DRED
 from .afts import AFTS
