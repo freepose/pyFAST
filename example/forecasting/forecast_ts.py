@@ -60,7 +60,7 @@ from dataset.manage_smt_datasets import prepare_smt_datasets, verify_smt_dataset
 def main():
     data_root = os.path.expanduser('~/data/time_series') if os.name == 'posix' else 'G:/data/time_series'
     torch_float_type = torch.float32
-    ds_device, model_device = 'cpu', 'cpu'
+    ds_device, model_device = 'cpu', 'mps'
 
     xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
     # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
@@ -70,7 +70,7 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 24, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 336, 96, 1, 1, (0.6, 0.2, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
@@ -97,7 +97,7 @@ def main():
     if test_ds is not None:
         scaler_transform(overwrite_scaler, test_ds.ts, inplace=True)
 
-    scaler = scaler_fit(MinMaxScale(), train_ds.ts)
+    scaler = None # scaler_fit(MinMaxScale(), train_ds.ts)
 
     print('\n'.join([str(ds) for ds in [train_ds, val_ds, test_ds]]))
 
@@ -208,7 +208,7 @@ def main():
                         'cnn_kernel_size': 3, 'cnn_out_channels': 16, 'highway_window_size': 10, 'dropout_rate': 0.5}],
     }
 
-    model_cls, user_args = ts_modeler['ar']
+    model_cls, user_args = ts_modeler['timesnet']
 
     common_ds_args = get_common_kwargs(model_cls.__init__, train_ds.__dict__)
     combined_args = {**common_ds_args, **user_args}

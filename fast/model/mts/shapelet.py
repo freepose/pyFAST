@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from typing import Literal, Tuple, List
-from ...model.mts import AR
+from .ar import AR
 from ...data import PatchMaker
 
 DistanceType = Literal['min_euclidean', 'max_product', 'max_cosine', 'max_cross_correlation']

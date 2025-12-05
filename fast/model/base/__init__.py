@@ -16,4 +16,3 @@ from .utils import freeze_parameters, covert_weight_types, init_weights, to_stri
 
 from .rnn.minlstm import MinLSTM
 
-from .shapelet import GShapelets

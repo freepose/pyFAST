@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyFAST – Project Overview</title>
+    <style>
+        :root {
+            --bg-start: #f0f9ff;
+            --bg-end: #e0f2fe;
+            --card: #ffffff;
+            --border: #bde0fe;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.1);
+            --accent-2: #fb923c;
+            --accent-3: #4ade80;
+            --accent-4: #a78bfa;
+            --text-main: #0c4a6e;
+            --text-sub: #38a1d9;
+            --shadow: rgba(12, 74, 110, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            /*background: radial-gradient(circle at top, var(--bg-start) 0%, var(--bg-end) 100%);*/
+            background: #ffffff;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page {
+            width: min(1400px, 100vw - 24px);
+            aspect-ratio: 16 / 9;
+            background: white;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px var(--shadow);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .page-inner {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 12px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            letter-spacing: 0.02em;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-main);
+        }
+
+        .pill {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            background: var(--bg-start);
+            font-weight: 500;
+        }
+
+        .subtitle {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            max-width: 80ch;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: var(--bg-start);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot-data { background: var(--accent); }
+        .dot-exp { background: var(--accent-2); }
+        .dot-model { background: var(--accent-3); }
+        .dot-fast { background: var(--accent-4); }
+
+        .content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: auto 1fr;
+            gap: 16px;
+            min-height: 0;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            box-shadow: 0 5px 15px var(--shadow);
+            transition: all 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-badge {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: var(--bg-start);
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .card-body {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+        }
+
+        .card-body ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 8px 0 0;
+        }
+
+        .card-body li {
+            margin: 4px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .card-body li::before {
+            content: "→";
+            color: var(--accent);
+            font-size: 0.8rem;
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+
+        .tag-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: var(--bg-start);
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        /* Center pipeline */
+        .pipeline-container {
+            grid-column: 2 / 3;
+            grid-row: 1 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .pipeline {
+            position: relative;
+            border-radius: 16px;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+            border: 1px solid var(--border);
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .pipeline-title {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-main);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .pipeline-track {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        .pipeline-line {
+            position: absolute;
+            left: 20px;
+            right: 20px;
+            top: 50%;
+            height: 3px;
+            background: linear-gradient(to right, var(--accent), var(--accent-2), var(--accent-3), var(--accent-4));
+            opacity: 0.5;
+            border-radius: 3px;
+        }
+
+        .node {
+            position: relative;
+            z-index: 1;
+            background: var(--card);
+            border-radius: 12px;
+            border: 2px solid white;
+            box-shadow: 0 4px 10px var(--shadow);
+            padding: 8px 12px;
+            text-align: center;
+            min-width: 120px;
+            transition: all 0.2s ease-in-out;
+        }
+        .node:hover {
+            transform: scale(1.05);
+            border-color: var(--accent);
+        }
+
+        .node-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .node-sub {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+        }
+
+        .node-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: white;
+            border: 2px solid white;
+        }
+        .node:nth-child(2) .node-badge { background: var(--accent-2); }
+        .node:nth-child(3) .node-badge { background: var(--accent-3); }
+        .node:nth-child(4) .node-badge { background: var(--accent-4); }
+        .node:nth-child(5) .node-badge { background: var(--accent); }
+
+
+        .workflow-card {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 16px;
+            box-shadow: 0 5px 15px var(--shadow);
+        }
+
+        .workflow-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .workflow-steps {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+        }
+
+        .workflow-steps code {
+            background: var(--bg-start);
+            color: var(--text-main);
+            padding: 2px 5px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .stats-grid {
+            grid-column: 1 / 4;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--bg-start), #fff);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 5px 15px var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .stat-card:nth-child(2) .stat-value { color: var(--accent-2); }
+        .stat-card:nth-child(3) .stat-value { color: var(--accent-3); }
+
+        .stat-desc {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="page-inner">
+        <header>
+            <div class="title-block">
+                <h1>pyFAST – Overview</h1>
+                <p class="subtitle">
+                    An end-to-end framework for multivariate, dense, and sparse time series analysis,
+                    built on modular <b style="color: var(--accent)">Data</b>,
+                    <b style="color: var(--accent-3)">Model</b>,
+                    <b style="color: var(--accent-4)">Metric</b>, and
+                    <b style="color: var(--accent-2)">Training</b> layers.
+                </p>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><span class="dot dot-data"></span> Data & Preprocessing</div>
+<!--                <div class="legend-item"><span class="dot dot-exp"></span> Experiment / Config</div>-->
+                <div class="legend-item"><span class="dot dot-model"></span> Models & Imputation</div>
+                <div class="legend-item"><span class="dot dot-fast"></span> Core Framework</div>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Data Coverage</div>
+                <div class="stat-value">30+ Datasets</div>
+                <div class="stat-desc">Medical, Energy, Finance, Public Benchmarks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Model Families</div>
+                <div class="stat-value">50+ Models</div>
+                <div class="stat-desc">Linear, CNN/TCN, Transformer, GNN, VAE</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Core Tasks</div>
+                <div class="stat-value">Forecasting & Imputation</div>
+                <div class="stat-desc">Dense & sparse MTS, mask-aware metrics, visualization</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- LEFT: DATA & PREPROCESSING -->
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Dataset Layer</div>
+                        <span class="card-badge">dataset/</span>
+                    </div>
+                    <div class="card-body">
+                        Handles raw data preparation and provides unified loaders for various time series formats.
+                        <ul>
+                            <li>Management and preparation scripts for datasets.</li>
+                            <li>Loaders for dense & sparse series.</li>
+                            <li>Supports SMC, SMI, SMT, SST, and MMT multisource dataset families.</li>
+                        </ul>
+                        <div class="tag-row">
+                            <span class="tag">`manage_*.py`</span>
+                            <span class="tag">`prepare_*.py`</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Preprocessing</div>
+                        <span class="card-badge">fast/data/</span>
+                    </div>
+                    <div class="card-body">
+                        Focuses on turning raw data into model-ready tensors.
+                        <ul>
+                            <li>Time-series windowing, padding, and truncation.</li>
+                            <li>Mask generation for missing and irregular data points.</li>
+                            <li>Sparsity-aware scaling and normalization.</li>
+                        </ul>
+                        <div class="tag-row">
+                            <span class="tag">`mask.py`</span>
+                            <span class="tag">`scale.py`</span>
+                            <span class="tag">`processing/`</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER: PIPELINE & WORKFLOW -->
+            <div class="pipeline-container">
+                <div class="pipeline">
+                    <div class="pipeline-title">Core Experiment Pipeline</div>
+                    <div class="pipeline-track">
+                        <div class="pipeline-line"></div>
+                        <div class="node">
+                            <span class="node-badge">1</span>
+                            <div class="node-label">Config</div>
+                            <div class="node-sub">`experiment/`</div>
+                        </div>
+                        <div class="node">
+                            <span class="node-badge">2</span>
+                            <div class="node-label">Run</div>
+                            <div class="node-sub">`example/`</div>
+                        </div>
+                        <div class="node">
+                            <span class="node-badge">3</span>
+                            <div class="node-label">Train</div>
+                            <div class="node-sub">`fast/train.py`</div>
+                        </div>
+                        <div class="node">
+                            <span class="node-badge">4</span>
+                            <div class="node-label">Model</div>
+                            <div class="node-sub">`model/`</div>
+                        </div>
+                        <div class="node">
+                            <span class="node-badge">5</span>
+                            <div class="node-label">Evaluate</div>
+                            <div class="node-sub">`metric/`</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="workflow-card">
+                    <div class="workflow-title">Typical Research Workflow</div>
+                    <div class="workflow-steps">
+                        1. Prepare data with scripts in <code>dataset/</code>.<br />
+                        2. Define an experiment in <code>experiment/config_json/</code>.<br />
+                        3. Launch a run using an entrypoint from <code>example/</code>.<br />
+                        4. Analyze results from <code>metric/</code> and <code>fast/visualize.py</code>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: MODEL & METRICS -->
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Model Zoo</div>
+                        <span class="card-badge">model/</span>
+                    </div>
+                    <div class="card-body">
+                        A comprehensive collection of models for forecasting and imputation.
+                        <ul>
+                            <li>Base blocks: Attention, MLP, RNNs in `model/base/`.</li>
+                            <li>Forecasting: DLinear, TCN, Transformers, GNNs in `model/mts/`.</li>
+                            <li>Imputation: GRU-D, BRITS, RITS in `fast/impute/`.</li>
+                        </ul>
+                        <div class="tag-row">
+                            <span class="tag">Dense & Sparse</span>
+                            <span class="tag">UTS / MTS</span>
+                            <span class="tag">Fusion</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Evaluation</div>
+                        <span class="card-badge">metric/</span>
+                    </div>
+                    <div class="card-body">
+                        Provides tools for robust model performance assessment.
+                        <ul>
+                            <li>Unified metric definitions (MSE, MAE, etc.).</li>
+                            <li>Mask-aware evaluation for sparse/missing targets.</li>
+                            <li>Experiment-level aggregation and reporting.</li>
+                        </ul>
+                        <div class="tag-row">
+                            <span class="tag">`metric.py`</span>
+                            <span class="tag">`evaluate.py`</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
