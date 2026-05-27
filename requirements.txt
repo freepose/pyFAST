@@ -4,4 +4,3 @@ pandas
 matplotlib
 tqdm
 scipy
-torchquantum
