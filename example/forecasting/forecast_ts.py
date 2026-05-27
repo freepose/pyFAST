@@ -62,7 +62,7 @@ def main():
     torch_float_type = torch.float32
     ds_device, model_device = 'cpu', 'mps'
 
-    xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
+    # xmcdc_filename = '../../dataset/xmcdc/outpatients_2011_2020_1week.csv'  # Built-in dataset
     # train_ds, val_ds, test_ds = load_xmcdc_as_sst(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
     # train_ds, val_ds, test_ds = load_xmcdc_as_smt(xmcdc_filename, None, False, None, False, 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device)
 
@@ -70,8 +70,7 @@ def main():
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1day', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'XMCDC_1week', 10, 1, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
 
-    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ETTh1', 336, 96, 1, 1, (0.6, 0.2, 0.2), ds_device,
-                                                     **task_config)
+    train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'Ningxia', 336, 96, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'ExchangeRate', 4 * 7, 7, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'SuzhouIPL', 48, 24, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
     # train_ds, val_ds, test_ds = prepare_sst_datasets(data_root, 'TurkeyWPF', 6 * 24, 6 * 6, 1, 1, (0.7, 0.1, 0.2), ds_device, **task_config)
@@ -246,7 +245,7 @@ def main():
 
     batch_size = 32
     trainer.fit(train_ds, val_ds,
-                epoch_range=(1, 2000), batch_size=batch_size, shuffle=True,
+                epoch_range=(1, 500), batch_size=batch_size, shuffle=True,
                 verbose=2)
 
     if test_ds is not None:

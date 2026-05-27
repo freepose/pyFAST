@@ -205,6 +205,19 @@ sst_metadata = {
         }
     },
 
+    "Ningxia": {
+        "path": "{root}/energy_solar/ieee_ningxia_2019/02_single_sync/"
+                "[downsample]1hour/[downsample]ningxia_2019_1hour.csv",
+        "columns": {
+            "names": ["采样起始时刻", "气温", "方位角", "云层不透明度", "露点温度", "DHI（太阳散射辐射指数）",
+                      "DNI（太阳直接辐射指数）", "GHI（太阳总水平辐射）", "GTI（固定倾角辐射）", "大气可降水量", "相对湿度",
+                      "降雪深度", "地面气压", "高度10m风向", "高度10m风速", "天顶角", "实际功率"],
+            "univariate": ["实际功率"],
+            "multivariate": ["实际功率"],
+            "exogenous2": ['hour_of_day', 'day_of_week', 'day_of_month', 'day_of_year']
+        }
+    },
+
     "dka_1day": {
         "path": "{root}/energy_solar/heywhale_desert_knowledge_australia_2013_2014/" + \
                 "01_single_source/[downsample+sparse]91-Site_1A-Trina_5W_1day.csv",
